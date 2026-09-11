@@ -71,7 +71,7 @@
         th { background: var(--primary); color: white; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #fff; width: 95%; max-width: 520px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; position: relative; }
+        .modal-content { background: #fff; width: 95%; max-width: 550px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; position: relative; }
         .close-btn { position: absolute; left: 15px; top: 15px; font-size: 24px; cursor: pointer; color: #888; font-weight: bold; }
         .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
         .info-label { color: #7f8c8d; font-weight: bold; }
@@ -101,6 +101,26 @@
             align-items: center; gap: 8px; cursor: pointer; width: 90%; max-width: 350px; justify-content: center;
         }
 
+        /* شريط تحذيري علوي أحمر عند وجود داتا غير مرفوعة */
+        #dangerSyncWarningBar {
+            display: none; background: #d63031; color: white; text-align: center;
+            padding: 8px 12px; font-size: 12px; font-weight: bold; position: sticky;
+            top: 0; z-index: 9998; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        #kioskCard {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: #ffffff;
+            border-radius: 18px; box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+            padding: 25px; text-align: center; z-index: 99999;
+            width: 85%; max-width: 380px; border: 3px solid var(--accent);
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
         @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
 
@@ -112,7 +132,18 @@
 </head>
 <body>
 
+    <div id="dangerSyncWarningBar">
+        ⚠️ تنبيه أمني: توجد حركات حضور لم تُرفع للسحابة بعد! برجاء عدم إغلاق الصفحة لحين عودة النت ومزامنتها.
+    </div>
+
     <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
+
+    <div id="kioskCard">
+        <div id="kioskIcon" style="font-size:45px; margin-bottom:10px;">👋</div>
+        <h2 id="kioskName" style="margin:0 0 8px 0; color:var(--primary); font-size:20px; border:none;">...</h2>
+        <div id="kioskBadge" style="display:inline-block; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px; margin-bottom:10px; color:white;">...</div>
+        <div id="kioskStats" style="font-size:13px; color:#2d3436; margin-top:8px; line-height:1.5;">...</div>
+    </div>
 
     <div id="pendingSyncBadge" onclick="pushPendingData()">
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
@@ -145,6 +176,12 @@
             <input type="password" id="loginPassword" placeholder="كلمة المرور أو رقم الهاتف" style="margin-bottom:15px;" autocomplete="off">
             <button class="btn-primary" onclick="attemptLogin()">تسجيل الدخول</button>
             <div id="loginError" style="color:red; font-size:12px; margin-top:10px; display:none;">بيانات الدخول غير صحيحة!</div>
+
+            <div style="margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px;">
+                <button type="button" onclick="forceAppUpdate()" style="background: none; border: none; color: #7f8c8d; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;">
+                    🔄 تحديث التطبيق وسحب أحدث نسخة من الخادم
+                </button>
+            </div>
         </div>
     </div>
 
@@ -167,6 +204,12 @@
             </div>
         </div>
 
+        <!-- أزرار الطوارئ والمزامنة السريعة -->
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <button class="btn-mini btn-success" onclick="exportTodaySessionToWhatsApp()" style="flex:1; padding:8px;">📲 إرسال تقرير وكود طوارئ اليوم لأمين الخدمة (WhatsApp)</button>
+            <button class="btn-mini btn-purple admin-only" onclick="importFromEmergencyCode()" style="flex:1; padding:8px;">📥 استيراد ودمج كود طوارئ الحضور</button>
+        </div>
+
         <!-- تبويبات التنقل -->
         <div class="tabs">
             <div class="tab-btn active" onclick="switchTab('dashTab', this)">الرئيسية 📊</div>
@@ -177,7 +220,7 @@
             <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
             <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
             <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
-            <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والإكسيل 📁</div>
+            <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والنسخ الاحتياطي 📁</div>
         </div>
 
         <!-- 1. لوحة التحكم -->
@@ -367,7 +410,7 @@
                 <div class="stat-card"><div>إجمالي الافتقادات المسجلة</div><div class="num" id="statTotalVisitations" style="color:var(--success);">0</div></div>
             </div>
 
-            <h3>جدول التزام الخدام لليوم</h3>
+            <h3>جدول التزام الخدام السنوي واليومي</h3>
             <table id="servantsAttendanceTable">
                 <thead>
                     <tr>
@@ -375,6 +418,7 @@
                         <th>الاسم</th>
                         <th>الهاتف</th>
                         <th>حالة اليوم</th>
+                        <th>نسبة الالتزام السنوية</th>
                         <th>تكليف اليوم بالخطة</th>
                         <th>إجمالي الافتقادات</th>
                         <th class="can-edit">تسجيل / إلغاء حضور</th>
@@ -455,7 +499,22 @@
             </div>
 
             <h2>قائمة المسجلين ومؤشر التخرج</h2>
-            <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم، الكود، أو الهاتف..." onkeyup="renderMembersList()" style="margin-bottom:10px;">
+            <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
+                <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم، الكود، أو الهاتف..." onkeyup="renderMembersList()" style="margin:0; flex:1;">
+                <button class="btn-purple" onclick="openQrSearchModal()" style="width:auto; margin:0; padding:10px 14px; white-space:nowrap; font-size:13px;">
+                    📷 مسح كود الكارنيه
+                </button>
+            </div>
+
+            <div id="qrSearchModal" class="modal" style="display:none; z-index:4000;">
+                <div class="modal-content" style="max-width:380px; text-align:center;">
+                    <span class="close-btn" onclick="closeQrSearchModal()">&times;</span>
+                    <h3 style="margin-top:0; border:none; color:var(--primary);">مسح كارنيه لفتح الملف 🪪</h3>
+                    <p style="font-size:12px; color:#636e72; margin-top:0;">وجّه الكاميرا نحو كود الدارس لفتح ملفه فوراً</p>
+                    <div id="qrSearchReader" style="width:100%; min-height:220px; background:#000; border-radius:8px; overflow:hidden;"></div>
+                </div>
+            </div>
+
             <table id="membersTable">
                 <thead>
                     <tr>
@@ -476,8 +535,12 @@
         <div id="broadcastTab" class="tab-content">
             <h2>المراسلة الجماعية عبر WhatsApp</h2>
             <div style="margin-bottom:10px;">
-                <label>قالب رسالة الغياب الافتراضية:</label>
+                <label>قالب رسالة الغياب والافتقاد:</label>
                 <textarea id="customBroadcastMsg" rows="2">سلام ونعمة، بنطمن على [الاسم] لعدم حضوره اجتماع اليوم، نتمنى لك كل البركة ونراك الأسبوع القادم ❤️</textarea>
+                <div style="margin-top:6px; display:flex; gap:6px;">
+                    <button class="btn-mini btn-primary" onclick="setGeneralBroadcastTemplate()" style="flex:1;">📢 قالب الغياب العام</button>
+                    <button class="btn-mini btn-purple" onclick="setSpiritualBroadcastTemplate()" style="flex:1;">🕊️ قالب الافتقاد الروحي والأسرار</button>
+                </div>
             </div>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="btn-primary" onclick="renderBroadcastList('parents')">أولياء أمور الغائبين</button>
@@ -591,7 +654,7 @@
             <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات</button>
         </div>
 
-        <!-- 9. التقارير والإكسيل -->
+        <!-- 9. التقارير والنسخ الاحتياطي الشامل -->
         <div id="dataTab" class="tab-content">
             <h2>التقارير واستيراد البيانات</h2>
             
@@ -607,12 +670,36 @@
                 <input type="file" id="importFile" accept=".csv, .xlsx, .xls">
                 <button class="btn-primary" onclick="importMembers()" style="margin-top:5px;">استيراد من Excel</button>
             </div>
+
+            <div style="background:#fff; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; margin-bottom:6px;">
+                    <span>سعة التخزين المحلي المستخدمة بالمتصفح:</span>
+                    <span id="storageUsageText">جاري الفحص...</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="storageUsageBar" class="progress-bar" style="width:0%; background:var(--success);"></div>
+                </div>
+            </div>
+
+            <div class="admin-only" style="background:#fdfefe; border:2px dashed var(--primary); padding:15px; border-radius:8px; margin-top:20px;">
+                <h3 style="margin-top:0; border:none; color:var(--primary);">💾 النسخ الاحتياطي الشامل للمنظومة (One-Click Backup & Restore)</h3>
+                <p style="font-size:12px; color:#636e72; margin-top:2px;">
+                    احفظ نسخة أمان كاملة من قاعدة بيانات كورس إعداد الخدام (الدارسين، الخدام، الحضور، التقييم الميداني، وخطة السنة) على فلاشة أو جهازك، واسترجعها في أي وقت بدون إنترنت.
+                </p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                    <button class="btn-purple" onclick="downloadFullBackup()" style="flex:1; padding:10px; margin:0;">💾 تحميل نسخة احتياطية كاملة (JSON)</button>
+                    <label class="btn-warning" style="flex:1; padding:10px; margin:0; text-align:center; cursor:pointer; border-radius:6px; box-sizing:border-box;">
+                        🔄 استعادة نسخة سابقة من ملف
+                        <input type="file" id="restoreBackupFileInput" accept=".json" onchange="restoreFullBackup(event)" style="display:none;">
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- نافذة الملف الشخصي المبوب -->
     <div id="profileModal" class="modal">
-        <div class="modal-content" style="max-width: 550px;">
+        <div class="modal-content">
             <span class="close-btn" onclick="closeProfile()">&times;</span>
             <div style="text-align:center; margin-bottom:10px;">
                 <h3 id="p_name" style="margin:5px 0 0 0; border:none; color:var(--primary);"></h3>
@@ -623,7 +710,11 @@
             
             <div class="info-row" style="border:none;">
                 <span class="info-label">الهاتف:</span>
-                <div><span id="p_phone"></span> <a id="btn_wa" target="_blank" class="btn-mini btn-success" style="padding:4px 8px; margin:0;">واتساب</a></div>
+                <div style="display:flex; gap:4px;">
+                    <span id="p_phone"></span> 
+                    <a id="btn_wa" target="_blank" class="btn-mini btn-success" style="padding:4px 8px; margin:0;">واتساب 💬</a>
+                    <a id="btn_spiritual_wa" target="_blank" class="btn-mini btn-purple" style="padding:4px 8px; margin:0;">افتقاد روحي 🕊️</a>
+                </div>
             </div>
             
             <div style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:8px; margin:10px 0;">
@@ -636,14 +727,13 @@
                 </div>
             </div>
 
-            <!-- أزرار تبويبات الملف الشخصي -->
-            <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px;">
-                <button id="tabBtn_attendance" onclick="switchProfileTab('p_attendance_log', this)" style="flex:1; margin:0; padding:8px; background:var(--primary); color:white; border-radius:6px; font-size:13px; font-weight:bold; border:none; cursor:pointer;">سجل الحضور 🗓️</button>
-                <button id="tabBtn_visitations" onclick="switchProfileTab('p_visitations_tab', this)" style="flex:1; margin:0; padding:8px; background:#dfe6e9; color:#333; border-radius:6px; font-size:13px; font-weight:bold; border:none; cursor:pointer;">الافتقادات 💊</button>
-                <button id="tabBtn_info" onclick="switchProfileTab('p_info_tab', this)" style="flex:1; margin:0; padding:8px; background:#dfe6e9; color:#333; border-radius:6px; font-size:13px; font-weight:bold; border:none; cursor:pointer;">البيانات 👤</button>
+            <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
+                <button id="tabBtn_attendance" onclick="switchProfileTab('p_attendance_log', this)" style="flex:1; margin:0; padding:8px 4px; background:var(--primary); color:white; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer;">سجل الحضور 🗓️</button>
+                <button id="tabBtn_visitations" onclick="switchProfileTab('p_visitations_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer;">الافتقادات 💊</button>
+                <button id="tabBtn_field" onclick="switchProfileTab('p_field_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer;">التربية العملية 🎯</button>
+                <button id="tabBtn_info" onclick="switchProfileTab('p_info_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer;">البيانات 👤</button>
             </div>
 
-            <!-- 1. محتوى سجل الحضور -->
             <div id="p_attendance_log" class="profile-tab-content" style="display:block;">
                 <div style="max-height:180px; overflow-y:auto; border:1px solid #eee; border-radius:6px;">
                     <table style="margin:0; width:100%; border-collapse:collapse; font-size:12px;">
@@ -654,14 +744,11 @@
                                 <th style="padding:8px;">الحالة</th>
                             </tr>
                         </thead>
-                        <tbody id="p_attendance_tbody">
-                            <!-- سيتم حقن سجلات الحضور هنا -->
-                        </tbody>
+                        <tbody id="p_attendance_tbody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 2. محتوى الافتقادات -->
             <div id="p_visitations_tab" class="profile-tab-content">
                 <div class="can-edit">
                     <h4 style="margin:0 0 5px 0; color:var(--primary);">💊 كبسولة الافتقاد السريع:</h4>
@@ -677,10 +764,37 @@
                         <button class="btn-success" style="width:75px; margin:0; padding:6px;" onclick="addManualVisitationNote()">حفظ</button>
                     </div>
                 </div>
-                <div id="visitationHistory" style="max-height:100px; overflow-y:auto; background:#f9f9f9; padding:6px; font-size:12px; border-radius:4px;"></div>
+                <div id="visitationHistory" style="max-height:110px; overflow-y:auto; background:#f9f9f9; padding:6px; font-size:12px; border-radius:4px;"></div>
             </div>
 
-            <!-- 3. محتوى البيانات الأساسية -->
+            <div id="p_field_tab" class="profile-tab-content">
+                <div class="can-edit" style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:10px;">
+                    <h4 style="margin:0 0 8px 0; color:var(--primary); font-size:13px;">➕ تقييم نزول ميداني وإلقاء درس:</h4>
+                    <div class="form-grid" style="gap:6px; margin-bottom:6px;">
+                        <input type="date" id="evalDate">
+                        <input type="text" id="evalClass" placeholder="المرحلة (مثال: خامسة ابتدائي)">
+                        <input type="text" id="evalLessonTitle" placeholder="عنوان الدرس المشروح">
+                        <select id="evalSupervisor">
+                            <option value="">اختر الخادم المشرف المقيم...</option>
+                        </select>
+                    </div>
+
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:4px; color:#2c3e50;">الدرجات (من 25 درجة لكل معيار):</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:6px; font-size:11px;">
+                        <div>تحضير الدرس: <input type="number" id="scorePrep" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                        <div>الأداء والتوصيل: <input type="number" id="scoreDelivery" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                        <div>وسيلة الإيضاح: <input type="number" id="scoreAids" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                        <div>القدوة والانضباط: <input type="number" id="scoreConduct" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                    </div>
+
+                    <input type="text" id="evalNotes" placeholder="ملاحظات وتوجيهات روحية وإيجابيات..." style="margin-bottom:6px;">
+                    <button class="btn-success" onclick="saveFieldEvaluation()" style="padding:8px; margin:0; font-size:12px;">حفظ تقييم النزول الميداني 🚀</button>
+                </div>
+
+                <h4 style="margin:6px 0 4px 0; color:var(--primary); font-size:13px;">📋 تقييمات الدروس الميدانية السابقة:</h4>
+                <div id="fieldEvaluationHistory" style="max-height:150px; overflow-y:auto;"></div>
+            </div>
+
             <div id="p_info_tab" class="profile-tab-content">
                 <div class="info-row"><span class="info-label">ولي الأمر:</span><span id="p_parent_phone"></span></div>
                 <div class="info-row"><span class="info-label">العنوان:</span><span id="p_address"></span></div>
@@ -716,6 +830,7 @@
                     gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
                     osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+                    if (navigator.vibrate) navigator.vibrate(80);
                 } else if (type === 'error') {
                     osc.type = 'sawtooth';
                     osc.frequency.setValueAtTime(220, audioCtx.currentTime);
@@ -733,6 +848,16 @@
             toast.classList.add('show');
             setTimeout(() => { toast.classList.remove('show'); }, 3000);
         }
+
+        // حماية منع إغلاق المتصفح أو التبويب إذا وُجدت بيانات تنتظر المزامنة
+        window.addEventListener('beforeunload', function (e) {
+            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+            if (Object.keys(pending).length > 0) {
+                e.preventDefault();
+                e.returnValue = 'توجد بيانات وحضور لم يتم رفعها للسحابة بعد! هل أنت متأكد من المغادرة؟';
+                return e.returnValue;
+            }
+        });
 
         let members = JSON.parse(localStorage.getItem('my_church_class')) || [];
         let attendanceRecord = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
@@ -796,6 +921,7 @@
                 populatePlanServantsDropdown();
                 checkUpcomingBirthdays();
                 checkUpcomingMasterPlanEvents();
+                checkLocalStorageUsage();
                 updatePendingBadge();
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
@@ -835,9 +961,35 @@
         }
 
         function logout() {
+            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+            if (Object.keys(pending).length > 0) {
+                if (!confirm("⚠️ تنبيه: توجد بيانات لم يتم رفعها للسحابة بعد! هل تريد حقاً تسجيل الخروج الآن؟")) {
+                    return;
+                }
+            }
             sessionStorage.removeItem('my_church_active_user');
             currentUser = null;
             checkSession();
+        }
+
+        async function forceAppUpdate() {
+            if (confirm("هل تريد تحديث التطبيق وسحب أحدث نسخة من الخادم الآن؟")) {
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (let registration of registrations) {
+                            await registration.unregister();
+                        }
+                    }
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    }
+                    window.location.reload(true);
+                } catch (e) {
+                    window.location.reload();
+                }
+            }
         }
 
         function updateRoleUI() {
@@ -1071,6 +1223,25 @@
             };
         }
 
+        function calculateServantCommitment(servantId) {
+            let totalSessions = Object.keys(attendanceRecord).length;
+            if (totalSessions === 0) return { percent: 0, attended: 0, total: 0 };
+
+            let attendedSessions = 0;
+            Object.keys(servantsAttendance).forEach(d => {
+                let present = (servantsAttendance[d] || []).some(s => s.id.toString() === servantId.toString());
+                if (present) attendedSessions++;
+            });
+
+            let percent = Math.round((attendedSessions / totalSessions) * 100);
+            return {
+                percent: percent,
+                attended: attendedSessions,
+                total: totalSessions,
+                isCommitted: percent >= 75
+            };
+        }
+
         function quickCapsuleVisit(capsuleText) { saveVisitation(capsuleText); }
         function addManualVisitationNote() {
             let note = document.getElementById('visitationNote').value.trim();
@@ -1091,12 +1262,241 @@
             localStorage.setItem('my_church_class', JSON.stringify(members));
             syncToCloud('members', members);
             
-            // تحديث العرض فوراً
             let vh = document.getElementById('visitationHistory');
             vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${new Date().toLocaleDateString('en-CA')} (${currentUser ? currentUser.name : 'خادم'}):</strong> ${text}</div>` + vh.innerHTML;
             
             renderServantsAttendanceTable();
+            checkLocalStorageUsage();
             showToast("✅ تم حفظ كبسولة الافتقاد بنجاح!");
+        }
+
+        function saveFieldEvaluation() {
+            let m = members.find(x => x.id.toString() === currentProfileId.toString());
+            if (!m) return;
+
+            let date = document.getElementById('evalDate').value || new Date().toLocaleDateString('en-CA');
+            let className = document.getElementById('evalClass').value.trim();
+            let lessonTitle = document.getElementById('evalLessonTitle').value.trim();
+            let supervisor = document.getElementById('evalSupervisor').value || (currentUser ? currentUser.name : 'خادم مشرف');
+            
+            let sPrep = parseInt(document.getElementById('scorePrep').value) || 0;
+            let sDeliv = parseInt(document.getElementById('scoreDelivery').value) || 0;
+            let sAids = parseInt(document.getElementById('scoreAids').value) || 0;
+            let sCond = parseInt(document.getElementById('scoreConduct').value) || 0;
+            let totalScore = Math.min(100, sPrep + sDeliv + sAids + sCond);
+            let notes = document.getElementById('evalNotes').value.trim();
+
+            if (!lessonTitle) return alert("يرجى كتابة عنوان الدرس المشروح!");
+
+            if (!m.fieldEvaluations) m.fieldEvaluations = [];
+            m.fieldEvaluations.unshift({
+                id: Date.now(),
+                date: date,
+                className: className || "فصل عام",
+                lessonTitle: lessonTitle,
+                supervisor: supervisor,
+                totalScore: totalScore,
+                details: { prep: sPrep, deliv: sDeliv, aids: sAids, cond: sCond },
+                notes: notes
+            });
+
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+            syncToCloud('members', members);
+            renderFieldEvaluationsList(m);
+            checkLocalStorageUsage();
+            showToast(`✅ تم حفظ تقييم النزول الميداني (${totalScore}/100)`);
+
+            document.getElementById('evalLessonTitle').value = '';
+            document.getElementById('evalNotes').value = '';
+            document.getElementById('scorePrep').value = '';
+            document.getElementById('scoreDelivery').value = '';
+            document.getElementById('scoreAids').value = '';
+            document.getElementById('scoreConduct').value = '';
+        }
+
+        function renderFieldEvaluationsList(member) {
+            let box = document.getElementById('fieldEvaluationHistory');
+            if (!box) return;
+            box.innerHTML = '';
+            let evals = member.fieldEvaluations || [];
+
+            if (evals.length === 0) {
+                box.innerHTML = '<div style="text-align:center; padding:15px; color:#888; font-size:12px;">لم يخض الدارس أي نزول ميداني أو تقييمات عملية حتى الآن.</div>';
+                return;
+            }
+
+            evals.forEach(ev => {
+                let badgeColor = ev.totalScore >= 75 ? 'var(--success)' : 'var(--warning)';
+                box.innerHTML += `
+                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:8px; margin-bottom:6px; font-size:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="color:var(--primary); font-size:13px;">${ev.lessonTitle} (${ev.className})</strong>
+                            <span class="role-badge" style="background:${badgeColor}; font-size:11px;">${ev.totalScore} / 100</span>
+                        </div>
+                        <div style="color:#636e72; font-size:11px; margin:3px 0;">التاريخ: ${ev.date} | المشرف المقيم: <strong>${ev.supervisor}</strong></div>
+                        <div style="font-size:11px; color:#2d3436; background:#f1f2f6; padding:4px 6px; border-radius:4px; margin-top:4px;">
+                            تحضير: ${ev.details.prep} | أداء وتوصيل: ${ev.details.deliv} | وسيلة: ${ev.details.aids} | قدوة: ${ev.details.cond}
+                            ${ev.notes ? `<div style="margin-top:2px; font-style:italic;">ملاحظات: ${ev.notes}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function showKioskWelcome(person, isAbsent, type = 'member') {
+            const card = document.getElementById('kioskCard');
+            const icon = document.getElementById('kioskIcon');
+            const name = document.getElementById('kioskName');
+            const badge = document.getElementById('kioskBadge');
+            const stats = document.getElementById('kioskStats');
+
+            if (!card) return;
+
+            if (type === 'servant') {
+                icon.innerText = "👔";
+                name.innerText = person.name;
+                badge.innerText = "خادم مسجل";
+                badge.style.background = "var(--primary)";
+                stats.innerHTML = `تم تسجيل حضورك في تمام <strong>${new Date().toLocaleTimeString('ar-EG')}</strong><br>خدمة مباركة ومثمرة! 🕊️`;
+            } else {
+                let grad = calculateGraduationStatus(person.id);
+                if (isAbsent) {
+                    icon.innerText = "⚠️";
+                    name.innerText = person.name;
+                    badge.innerText = "تأخير شديد";
+                    badge.style.background = "var(--danger)";
+                    stats.innerHTML = `تم رصد حضورك متأخراً في <strong>${new Date().toLocaleTimeString('ar-EG')}</strong><br>نسبة حضورك الأكاديمي: <strong>${grad.percent}%</strong>`;
+                } else {
+                    icon.innerText = "✨";
+                    name.innerText = person.name;
+                    badge.innerText = `حاضر - ${person.stage || 'سنة أولى'}`;
+                    badge.style.background = "var(--success)";
+                    stats.innerHTML = `نورت اجتماعك يا بطل! 🎉<br>نسبة التزامك الكلية: <strong>${grad.percent}%</strong> (${grad.attended}/${grad.total} لقاء)`;
+                }
+            }
+
+            card.style.display = 'block';
+
+            setTimeout(() => {
+                card.style.display = 'none';
+            }, 2500);
+        }
+
+        let qrSearchScanner = null;
+
+        async function openQrSearchModal() {
+            document.getElementById('qrSearchModal').style.display = 'flex';
+            try {
+                if (qrSearchScanner) {
+                    try { await qrSearchScanner.stop(); } catch(e){}
+                }
+                qrSearchScanner = new Html5Qrcode("qrSearchReader");
+                const config = { fps: 10, qrbox: { width: 200, height: 200 } };
+                await qrSearchScanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onQrSearchSuccess,
+                    () => {}
+                );
+            } catch (e) {
+                alert("تعذر تشغيل الكاميرا الخاصة بالبحث: " + e);
+                closeQrSearchModal();
+            }
+        }
+
+        function onQrSearchSuccess(scannedText) {
+            scannedText = scannedText.trim();
+            closeQrSearchModal();
+
+            let member = members.find(m => {
+                let mCode = m.code ? m.code.toString().trim() : "";
+                let mId = m.id ? m.id.toString().trim() : "";
+                let mName = m.name ? m.name.trim() : "";
+                return (mCode === scannedText || mId === scannedText || mName === scannedText || (mCode && scannedText.includes(mCode)));
+            });
+
+            if (member) {
+                playBeepSound('success');
+                openProfile(member.id);
+            } else {
+                playBeepSound('error');
+                alert("❌ لم يتم العثور على أي دارس مطابق لهذا الكود!");
+            }
+        }
+
+        async function closeQrSearchModal() {
+            if (qrSearchScanner) {
+                try {
+                    await qrSearchScanner.stop();
+                    qrSearchScanner.clear();
+                } catch(e){}
+                qrSearchScanner = null;
+            }
+            document.getElementById('qrSearchModal').style.display = 'none';
+        }
+
+        // ==========================================
+        // منظومة طوارئ الواتساب (Export / Import WhatsApp Emergency)
+        // ==========================================
+        function exportTodaySessionToWhatsApp(adminPhone = "201200000000") {
+            let todayData = {
+                date: today,
+                servant: currentUser ? currentUser.name : 'غير محدد',
+                attendance: attendanceRecord[today] || [],
+                servantsAtt: servantsAttendance[today] || []
+            };
+
+            if (todayData.attendance.length === 0 && todayData.servantsAtt.length === 0) {
+                return alert("لا توجد أي حركات حضور مسجلة لليوم لتصديرها!");
+            }
+
+            let payload = btoa(unescape(encodeURIComponent(JSON.stringify(todayData))));
+            let msg = `🚨 *تقرير طوارئ حضور كورس الخدام (${today})*\nمسجل بواسطة: ${todayData.servant}\nعدد الحاضرين: ${todayData.attendance.length}\nعدد الخدام: ${todayData.servantsAtt.length}\n\n*كود المزامنة (انسخه بالكامل):*\n\`\`\`${payload}\`\`\``;
+
+            window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function importFromEmergencyCode() {
+            let code = prompt("الصق كود المزامنة المستلم من رسالة الواتساب هنا:");
+            if (!code) return;
+
+            try {
+                let decodedStr = decodeURIComponent(escape(atob(code.trim())));
+                let imported = JSON.parse(decodedStr);
+
+                if (!imported.date || !imported.attendance) {
+                    return alert("❌ كود غير صالح أو تالف!");
+                }
+
+                let targetDate = imported.date;
+                if (!attendanceRecord[targetDate]) attendanceRecord[targetDate] = [];
+                if (!servantsAttendance[targetDate]) servantsAttendance[targetDate] = [];
+
+                imported.attendance.forEach(newItem => {
+                    if (!attendanceRecord[targetDate].some(x => x.id.toString() === newItem.id.toString())) {
+                        attendanceRecord[targetDate].push(newItem);
+                    }
+                });
+
+                imported.servantsAtt.forEach(newServ => {
+                    if (!servantsAttendance[targetDate].some(x => x.id.toString() === newServ.id.toString())) {
+                        servantsAttendance[targetDate].push(newServ);
+                    }
+                });
+
+                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
+                syncToCloud('attendance', attendanceRecord);
+                syncToCloud('servants_attendance', servantsAttendance);
+
+                renderAttendanceTable();
+                renderServantsAttendanceTable();
+                renderDashboard();
+                checkLocalStorageUsage();
+                alert(`✅ تم استيراد حركات حضور يوم (${targetDate}) بنجاح ودمجها في المنظومة والسحابة!`);
+            } catch (e) {
+                alert("❌ حدث خطأ أثناء فك تشفير الكود: تأكد من نسخه كاملاً.");
+            }
         }
 
         function recordServantAttendance(servant) {
@@ -1111,6 +1511,7 @@
                 syncToCloud('servants_attendance', servantsAttendance);
                 renderServantsAttendanceTable();
                 renderDashboard();
+                checkLocalStorageUsage();
             }
         }
 
@@ -1131,6 +1532,7 @@
                 syncToCloud('servants_attendance', servantsAttendance);
                 renderServantsAttendanceTable();
                 renderDashboard();
+                checkLocalStorageUsage();
             }
         }
 
@@ -1144,6 +1546,7 @@
                 renderAttendanceTable();
                 renderMembersList();
                 renderDashboard();
+                checkLocalStorageUsage();
             }
         }
 
@@ -1214,7 +1617,6 @@
         function markAttendance(scannedText) {
             scannedText = scannedText.trim();
 
-            // نظام البحث الذكي (يقرأ الكارنيه حتى لو مدمج بالاسم والبيانات)
             let member = members.find(m => {
                 let mCode = m.code ? m.code.toString().trim() : "";
                 let mId = m.id ? m.id.toString().trim() : "";
@@ -1235,7 +1637,6 @@
                     
                     let isAbsent = false;
 
-                    // القاعدة: تأخير فقط يوم الجمعة (5)
                     if (currentDayIndex !== 5) {
                         isAbsent = false;
                     } else if (isSummerDay && settings.ignoreSummerDelay) {
@@ -1261,6 +1662,8 @@
                     localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
                     syncToCloud('attendance', attendanceRecord);
 
+                    showKioskWelcome(member, isAbsent, 'member');
+
                     if (isAbsent) {
                         playBeepSound('error');
                         showToast(`⚠️ ${member.name} (تأخير شديد)`, true);
@@ -1271,6 +1674,7 @@
                     renderAttendanceTable();
                     renderMembersList();
                     renderDashboard();
+                    checkLocalStorageUsage();
                 } else {
                     playBeepSound('error');
                     showToast(`⚠️ مسجل بالفعل اليوم: ${member.name}`, true);
@@ -1279,6 +1683,7 @@
                 let s = servants.find(x => (x.code && x.code.toString() === scannedText) || x.id.toString() === scannedText || (x.name && scannedText.includes(x.name)));
                 if (s) {
                     recordServantAttendance(s);
+                    showKioskWelcome(s, false, 'servant');
                     playBeepSound('success');
                     showToast(`✅ تم رصد حضور الخادم: ${s.name}`);
                 } else {
@@ -1389,12 +1794,21 @@
                     ? `<button class="btn-mini btn-danger" onclick="cancelServantAttendance(${s.id})">إلغاء الحضور ❌</button>`
                     : `<button class="btn-mini btn-success" onclick="manualMarkServant(${s.id})">تسجيل حضور ✔️</button>`;
 
+                let commit = calculateServantCommitment(s.id);
+                let commitBadge = `
+                    <div style="font-weight:bold; font-size:11px;">${commit.percent}% (${commit.attended}/${commit.total})</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width:${commit.percent}%; background:${commit.isCommitted ? 'var(--success)' : 'var(--warning)'}"></div>
+                    </div>
+                `;
+
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${s.code || s.id}</td>
                     <td><strong>${s.name}</strong></td>
                     <td>${s.phone}</td>
                     <td>${present ? `<span style="color:green; font-weight:bold;">حاضر (${present.time})</span>` : '<span style="color:red;">لم يحضر</span>'}</td>
+                    <td>${commitBadge}</td>
                     <td>${planInfo}</td>
                     <td><span class="role-badge" style="background:#00b894;">${visits} افتقاد</span></td>
                     <td class="can-edit">${actionBtn}</td>
@@ -1460,14 +1874,12 @@
             });
         }
 
-        // ==========================================
-        // دوال الملف الشخصي المبوب
-        // ==========================================
         function switchProfileTab(tabId, btn) {
             document.querySelectorAll('.profile-tab-content').forEach(el => el.style.display = 'none');
-            document.getElementById('tabBtn_attendance').style.background = '#dfe6e9'; document.getElementById('tabBtn_attendance').style.color = '#333';
-            document.getElementById('tabBtn_visitations').style.background = '#dfe6e9'; document.getElementById('tabBtn_visitations').style.color = '#333';
-            document.getElementById('tabBtn_info').style.background = '#dfe6e9'; document.getElementById('tabBtn_info').style.color = '#333';
+            document.querySelectorAll('#profileModal button[id^="tabBtn_"]').forEach(b => {
+                b.style.background = '#dfe6e9'; 
+                b.style.color = '#333';
+            });
             
             document.getElementById(tabId).style.display = 'block'; 
             btn.style.background = 'var(--primary)'; 
@@ -1498,14 +1910,18 @@
             let cleanPhone = formatWhatsAppPhone(m.phone);
             document.getElementById('btn_wa').href = cleanPhone ? `https://wa.me/${cleanPhone}` : '#';
 
-            // تعبئة الافتقادات
+            let spiritualMsg = encodeURIComponent(`سلام ونعمة يا ${m.name}، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، لو محتاج أي ترتيب أو جلسة صلاة مع أبونا عرفني وربنا يديم بركته في حياتك ❤️🕊️`);
+            let spiritualBtn = document.getElementById('btn_spiritual_wa');
+            if (spiritualBtn) {
+                spiritualBtn.href = cleanPhone ? `https://wa.me/${cleanPhone}?text=${spiritualMsg}` : '#';
+            }
+
             let vh = document.getElementById('visitationHistory');
             vh.innerHTML = '';
             (m.visitations || []).forEach(v => {
                 vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
             });
 
-            // تعبئة سجل الحضور والتأخير
             let atb = document.getElementById('p_attendance_tbody');
             atb.innerHTML = '';
             let dates = Object.keys(attendanceRecord).sort().reverse();
@@ -1522,10 +1938,18 @@
                 atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
             }
 
+            let supSelect = document.getElementById('evalSupervisor');
+            if (supSelect) {
+                supSelect.innerHTML = '<option value="">اختر الخادم المشرف المقيم...</option>';
+                servants.forEach(s => {
+                    supSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+                });
+            }
+            renderFieldEvaluationsList(m);
+
             document.getElementById('profileQrCode').innerHTML = '';
             new QRCode(document.getElementById('profileQrCode'), { text: (m.code || m.id).toString(), width: 110, height: 110 });
 
-            // تفعيل التبويب الأول كافتراضي
             switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
 
             document.getElementById('btn_delete_member').onclick = function() {
@@ -1537,6 +1961,7 @@
                     closeProfile(); 
                     renderMembersList(); 
                     renderDashboard();
+                    checkLocalStorageUsage();
                 }
             };
             document.getElementById('profileModal').style.display = 'flex';
@@ -1544,31 +1969,24 @@
 
         function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
 
-        // ==========================================
-        // التصدير إلى إكسيل (الشيت المزدوج المطابق لنموذجك)
-        // ==========================================
         async function exportAttendance(shareWhatsApp) {
             let dates = Object.keys(attendanceRecord).sort();
             
-            // الشيت الأول: الحضور الشامل (تصميم مشابه لـ Attendance (23).xlsx)
             let attData = [
                 ["أسم الفصل", settings.serviceName, ...Array(dates.length).fill("")],
                 ["الاسم / أيام الحضور", ...dates]
             ];
             
-            // الشيت الثاني: تقرير التأخيرات بالوقت
             let delayData = [
                 ["الاسم", "الكود", "المرحلة", "التاريخ", "وقت المسح", "حالة الحضور"]
             ];
 
             members.forEach(m => {
-                // إعداد صف الشيت الأول
                 let row1 = [m.name];
                 dates.forEach(d => {
                     let e = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
                     if (e) {
                         row1.push('✔');
-                        // تعبئة بيانات الشيت الثاني إذا كان حاضراً
                         delayData.push([
                             m.name,
                             m.code || m.id,
@@ -1586,14 +2004,12 @@
 
             let wb = XLSX.utils.book_new();
 
-            // إنشاء وتنسيق الشيت الأول
             let ws1 = XLSX.utils.aoa_to_sheet(attData);
             let ws1Cols = [{ wch: 30 }];
             dates.forEach(() => ws1Cols.push({ wch: 12 }));
             ws1['!cols'] = ws1Cols;
             XLSX.utils.book_append_sheet(wb, ws1, "سجل الحضور والغياب");
 
-            // إنشاء وتنسيق الشيت الثاني
             let ws2 = XLSX.utils.aoa_to_sheet(delayData);
             ws2['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
             XLSX.utils.book_append_sheet(wb, ws2, "تقرير التأخيرات");
@@ -1603,13 +2019,114 @@
             if (shareWhatsApp) window.open("https://wa.me/", "_blank");
         }
 
-        // ==========================================
-        // وظائف الاستيراد المتطابقة مع شيت "خدمتي برو.xlsx" وتفادي التكرار
-        // ==========================================
+        function checkLocalStorageUsage() {
+            let totalBytes = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    totalBytes += (localStorage[key].length + key.length) * 2;
+                }
+            }
+            
+            const maxBytes = 5 * 1024 * 1024;
+            const usagePercent = Math.min(100, Math.round((totalBytes / maxBytes) * 100));
+            const usageKB = Math.round(totalBytes / 1024);
+
+            const bar = document.getElementById('storageUsageBar');
+            const txt = document.getElementById('storageUsageText');
+
+            if (bar && txt) {
+                bar.style.width = usagePercent + '%';
+                txt.innerText = `${usageKB} KB (${usagePercent}%) من أصل 5 MB`;
+
+                if (usagePercent > 80) {
+                    bar.style.background = 'var(--danger)';
+                    txt.innerHTML += ' <strong style="color:var(--danger);">(⚠️ المساحة قاربت على الامتلاء، يرجى أخذ نسخة احتياطية)</strong>';
+                } else {
+                    bar.style.background = 'var(--success)';
+                }
+            }
+        }
+
+        function downloadFullBackup() {
+            let backupData = {
+                version: "2.2",
+                exportDate: new Date().toISOString(),
+                churchName: settings.churchName,
+                serviceName: settings.serviceName,
+                members: members,
+                servants: servants,
+                attendanceRecord: attendanceRecord,
+                servantsAttendance: servantsAttendance,
+                masterPlan: masterPlan,
+                settings: settings
+            };
+
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            let downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `نسخة_احتياطية_خدمتي_${new Date().toLocaleDateString('en-CA')}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            showToast("💾 تم تحميل ملف النسخة الاحتياطية بنجاح!");
+        }
+
+        function restoreFullBackup(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let imported = JSON.parse(e.target.result);
+                    if (!imported.members || !imported.attendanceRecord) {
+                        return alert("❌ هذا الملف غير صالح أو لا يحتوي على بنية بيانات نظام خدمتي برو!");
+                    }
+
+                    if (confirm("⚠️ تحذير: استعادة هذه النسخة سيستبدل البيانات الحالية بالكامل بالبيانات المستوردة. هل تريد الاستمرار؟")) {
+                        members = imported.members || [];
+                        servants = imported.servants || [];
+                        attendanceRecord = imported.attendanceRecord || {};
+                        servantsAttendance = imported.servantsAttendance || {};
+                        masterPlan = imported.masterPlan || [];
+                        settings = imported.settings || settings;
+
+                        localStorage.setItem('my_church_class', JSON.stringify(members));
+                        localStorage.setItem('my_church_servants', JSON.stringify(servants));
+                        localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                        localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
+                        localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
+                        localStorage.setItem('my_church_settings', JSON.stringify(settings));
+
+                        syncToCloud('members', members);
+                        syncToCloud('servants', servants);
+                        syncToCloud('attendance', attendanceRecord);
+                        syncToCloud('servants_attendance', servantsAttendance);
+                        syncToCloud('master_plan', masterPlan);
+                        syncToCloud('settings', settings);
+
+                        applyServiceBranding();
+                        renderMembersList();
+                        renderAttendanceTable();
+                        renderServantsAttendanceTable();
+                        renderMasterPlanTable();
+                        renderDashboard();
+                        checkLocalStorageUsage();
+
+                        alert("✅ تم استرجاع النسخة الاحتياطية ومزامنتها بنجاح تام!");
+                    }
+                } catch (err) {
+                    alert("❌ حدث خطأ أثناء قراءة ملف النسخة الاحتياطية: " + err.message);
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
         function downloadTemplate(type) {
             let headers = [], sampleRow = [], fileName = "";
             if (type === 'members') {
-                // أعمدة مطابقة حرفياً لشيت (خدمتي برو.xlsx)
                 headers = ["الاسم", "email", "العنوان", "رقم التليون", "رقم تليفون ولي الامر", "تاريخ الميلاد اليوم", "تاريخ الميلاد الشهر", "تاريخ الميلاد السنه", "اب الاعتراف", "كود الامتحان", " نقاط"];
                 sampleRow = ["عادل جورج", "", "المطرية - القاهرة", "01200000000", "01200000000", "15", "5", "2005", "أبونا ميخائيل", "1344", "0"];
                 fileName = "نموذج_استيراد_المخدومين.xlsx";
@@ -1625,7 +2142,6 @@
             XLSX.writeFile(wb, fileName);
         }
 
-        // دالة فحص التكرار المساعدة
         function findExistingMember(code, name) {
             let cleanCode = code ? code.toString().trim() : "";
             let cleanName = name ? name.trim().toLowerCase() : "";
@@ -1656,7 +2172,6 @@
                     let cleanPhone = formatWhatsAppPhone(rawP);
                     let cleanParentPhone = formatWhatsAppPhone(r['رقم تليفون ولي الامر'] || rawP);
                     
-                    // تجميع تاريخ الميلاد من الأعمدة الثلاثة في شيت (خدمتي برو)
                     let bDay = r['تاريخ الميلاد اليوم'] || "";
                     let bMonth = r['تاريخ الميلاد الشهر'] || "";
                     let bYear = r['تاريخ الميلاد السنه'] || "";
@@ -1664,7 +2179,7 @@
                     if(bYear && bMonth && bDay) {
                         fullDob = `${bYear}-${String(bMonth).padStart(2, '0')}-${String(bDay).padStart(2, '0')}`;
                     } else if (r['تاريخ الميلاد']) {
-                        fullDob = r['تاريخ الميلاد']; // دعم للشيتات القديمة
+                        fullDob = r['تاريخ الميلاد'];
                     }
 
                     let address = r['العنوان'] || "";
@@ -1673,7 +2188,6 @@
                     let existingMember = findExistingMember(code, name);
 
                     if (existingMember) {
-                        // تحديث بيانات الشخص الموجود لتفادي التكرار
                         existingMember.phone = cleanPhone || existingMember.phone;
                         existingMember.parent_phone = cleanParentPhone || existingMember.parent_phone;
                         existingMember.address = address || existingMember.address;
@@ -1681,20 +2195,20 @@
                         existingMember.confessor = confessor || existingMember.confessor;
                         updatedCount++;
                     } else {
-                        // إضافة شخص جديد
                         members.push({
                             id: Date.now() + Math.floor(Math.random() * 1000),
                             code: code,
                             name: name,
-                            stage: "سنة أولى", // افتراضي
-                            gender: "بنين", // افتراضي
+                            stage: "سنة أولى",
+                            gender: "بنين",
                             phone: cleanPhone,
                             parent_phone: cleanParentPhone,
                             address: address,
                             dob: fullDob,
                             confessor: confessor,
                             other_data: "",
-                            visitations: []
+                            visitations: [],
+                            fieldEvaluations: []
                         });
                         addedCount++;
                     }
@@ -1705,6 +2219,7 @@
                 renderMembersList(); 
                 renderDashboard(); 
                 checkUpcomingBirthdays();
+                checkLocalStorageUsage();
                 alert(`✅ اكتمل الاستيراد!\n\nتمت إضافة: ${addedCount} دارس جديد.\nتم تحديث: ${updatedCount} دارس موجود مسبقاً.`);
                 
                 document.getElementById('importFile').value = '';
@@ -1712,7 +2227,6 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // تحديث نموذج الإضافة اليدوية لمنع التكرار اليدوي
         document.getElementById('addForm').addEventListener('submit', function(e) {
             e.preventDefault();
             let code = document.getElementById('m_code').value.trim();
@@ -1736,7 +2250,8 @@
                 dob: document.getElementById('m_dob').value,
                 confessor: document.getElementById('m_confessor').value,
                 other_data: document.getElementById('m_other').value,
-                visitations: []
+                visitations: [],
+                fieldEvaluations: []
             });
             localStorage.setItem('my_church_class', JSON.stringify(members));
             syncToCloud('members', members);
@@ -1744,12 +2259,10 @@
             renderMembersList(); 
             renderDashboard(); 
             checkUpcomingBirthdays();
+            checkLocalStorageUsage();
             showToast(`تم إضافة الدارس بنجاح!`);
         });
 
-        // ==========================================
-        // وظيفة نقل المراحل المطورة (الناجحين فقط)
-        // ==========================================
         function batchTransferStage() {
             if (currentPermission !== 'admin') return alert("تحويل المراحل متاح لأمين الخدمة فقط!");
             let sourceStage = document.getElementById('stageFilterSelect').value;
@@ -1783,25 +2296,24 @@
                 document.getElementById('gradFilterSelect').value = 'all';
                 renderMembersList();
                 renderDashboard();
+                checkLocalStorageUsage();
                 alert(`✅ تم نقل (${count}) فرد بنجاح!`);
             }
         }
 
-        // ==========================================
-        // النظام السحابي وحماية الأوفلاين (Watchdog)
-        // ==========================================
         function updatePendingBadge() {
             let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
             let count = Object.keys(pending).length;
             let badge = document.getElementById('pendingSyncBadge');
             let text = document.getElementById('pendingSyncText');
-            if (badge) {
-                if (count > 0) {
-                    badge.style.display = 'flex';
-                    text.innerText = `يوجد (${count}) تعديلات بانتظار الإنترنت`;
-                } else {
-                    badge.style.display = 'none';
-                }
+            let dangerBar = document.getElementById('dangerSyncWarningBar');
+            
+            if (count > 0) {
+                if (badge) { badge.style.display = 'flex'; text.innerText = `يوجد (${count}) تعديلات بانتظار الإنترنت`; }
+                if (dangerBar) { dangerBar.style.display = 'block'; }
+            } else {
+                if (badge) { badge.style.display = 'none'; }
+                if (dangerBar) { dangerBar.style.display = 'none'; }
             }
         }
 
@@ -1839,7 +2351,6 @@
             });
         }
 
-        // كلب حراسة (Watchdog)
         setInterval(() => {
             let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
             if (Object.keys(pending).length > 0 && navigator.onLine) {
@@ -1859,7 +2370,21 @@
 
             if (isFirebaseActive && db && navigator.onLine) {
                 pushPendingData();
+            } else {
+                if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.sync.register('sync-church-data').catch(() => {});
+                    });
+                }
             }
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.action === 'TRIGGER_BACKGROUND_SYNC') {
+                    pushPendingData();
+                }
+            });
         }
 
         function showCloudSetupModal() { document.getElementById('cloudSetupModal').style.display = 'flex'; }
@@ -1935,6 +2460,17 @@
             if (tabId === 'servantsTab') renderServantsTable();
             if (tabId === 'dashTab') { renderDashboard(); checkUpcomingBirthdays(); checkUpcomingMasterPlanEvents(); }
             if (tabId === 'broadcastTab') renderBroadcastList('parents');
+            if (tabId === 'dataTab') checkLocalStorageUsage();
+        }
+
+        function setGeneralBroadcastTemplate() {
+            document.getElementById('customBroadcastMsg').value = 
+                "سلام ونعمة، بنطمن على [الاسم] لعدم حضوره اجتماع اليوم، نتمنى لك كل البركة ونراك الأسبوع القادم ❤️";
+        }
+
+        function setSpiritualBroadcastTemplate() {
+            document.getElementById('customBroadcastMsg').value = 
+                "سلام ونعمة يا [الاسم]، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، محتاجك دايماً شعلة نار في الخدمة وحياتك الروحية ❤️🕊️";
         }
 
         function renderBroadcastList(targetType) {
@@ -1955,11 +2491,10 @@
             });
         }
 
-        // تسجيل Service Worker الحقيقي للعمل أوفلاين
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('تم تفعيل وضع الأوفلاين بنجاح'))
+                    .then(reg => console.log('PWA ServiceWorker جاهز'))
                     .catch(err => console.error('خطأ في تفعيل الأوفلاين', err));
             });
         }
@@ -1975,3 +2510,4 @@
     </script>
 </body>
 </html>
+ 
