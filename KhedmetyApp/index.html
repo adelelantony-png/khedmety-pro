@@ -2,10 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>خدمتي برو الذكي - كورس إعداد الخدام</title>
     <meta name="theme-color" content="#1e3799">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="خدمتي برو">
+    <link rel="apple-touch-icon" href="icon.png">
     
     <link rel="manifest" href="manifest.json">
     
@@ -19,7 +22,7 @@
             --purple: #6c5ce7;
             --dark: #2d3436;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f2f6; margin: 0; padding: 12px; color: var(--dark); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f2f6; margin: 0; padding: 12px; color: var(--dark); -webkit-tap-highlight-color: transparent; }
         .container { max-width: 1040px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         h2, h3 { color: var(--primary); margin-top: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
         
@@ -101,7 +104,6 @@
             align-items: center; gap: 8px; cursor: pointer; width: 90%; max-width: 350px; justify-content: center;
         }
 
-        /* شريط تحذيري علوي أحمر عند وجود داتا غير مرفوعة */
         #dangerSyncWarningBar {
             display: none; background: #d63031; color: white; text-align: center;
             padding: 8px 12px; font-size: 12px; font-weight: bold; position: sticky;
@@ -119,6 +121,13 @@
         @keyframes popIn {
             0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
             100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* شريط زر تثبيت البرنامج */
+        #pwaInstallBanner {
+            display: none; background: #2d3436; color: white; padding: 10px 15px;
+            border-radius: 8px; margin-bottom: 12px; justify-content: space-between;
+            align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
@@ -187,6 +196,13 @@
 
     <!-- التطبيق الرئيسي -->
     <div class="container" id="mainApp" style="display:none;">
+        
+        <!-- إشعار تثبيت التطبيق وسط برامج الموبايل -->
+        <div id="pwaInstallBanner">
+            <div style="font-size: 12px; font-weight: bold;">📱 تثبيت "خدمتي برو" كتطبيق على هاتفك؟</div>
+            <button id="pwaInstallBtn" class="btn-mini btn-success" style="width: auto; padding: 6px 12px; margin: 0;">تثبيت الآن ⬇️</button>
+        </div>
+
         <div class="header-title">
             <h1 id="appChurchName">كنيسة الملاك والروماني بالمطرية</h1>
             <p id="appServiceName">اجتماع القديس بولس الرسول لإعداد الخدام</p>
@@ -206,7 +222,7 @@
 
         <!-- أزرار الطوارئ والمزامنة السريعة -->
         <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <button class="btn-mini btn-success" onclick="exportTodaySessionToWhatsApp()" style="flex:1; padding:8px;">📲 إرسال تقرير وكود طوارئ اليوم لأمين الخدمة (WhatsApp)</button>
+            <button class="btn-mini btn-success" onclick="exportTodaySessionToWhatsApp()" style="flex:1; padding:8px;">📲 إرسال كود طوارئ اليوم لأمين الخدمة (WhatsApp)</button>
             <button class="btn-mini btn-purple admin-only" onclick="importFromEmergencyCode()" style="flex:1; padding:8px;">📥 استيراد ودمج كود طوارئ الحضور</button>
         </div>
 
@@ -258,6 +274,16 @@
                 <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statTotalServantsDash">0</div></div>
                 <div class="stat-card"><div>حضور الخدام اليوم</div><div class="num" id="statTodayServantsCount" style="color:var(--success);">0</div></div>
                 <div class="stat-card"><div>نسبة حضور الخدام</div><div class="num" id="statServantsPercent" style="color:var(--success);">0%</div></div>
+            </div>
+
+            <!-- رادار التنبؤ بالانقطاع والخريطة الحرارية (Heatmap) -->
+            <div style="background:#fff; border:1px solid #dfe6e9; border-radius:10px; padding:15px; margin-bottom:15px; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h4 style="margin:0; color:var(--primary); font-size:14px;">🔥 الخريطة الحرارية ومؤشر خطر الانقطاع (آخر 4 لقاءات)</h4>
+                    <span id="attritionCountBadge" class="role-badge" style="background:var(--danger); font-size:11px;">0 معرض للتسرب</span>
+                </div>
+                <p style="font-size:11px; color:#636e72; margin-top:0;">رصد استباقي لمن بدأ التزامه يتراجع للتدخل بالافتقاد قبل الانقطاع التام.</p>
+                <div id="heatmapContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; margin-top:10px;"></div>
             </div>
 
             <h3>⚠️ رادار المنقطعين (غياب مرتين متتاليتين)</h3>
@@ -684,7 +710,7 @@
             <div class="admin-only" style="background:#fdfefe; border:2px dashed var(--primary); padding:15px; border-radius:8px; margin-top:20px;">
                 <h3 style="margin-top:0; border:none; color:var(--primary);">💾 النسخ الاحتياطي الشامل للمنظومة (One-Click Backup & Restore)</h3>
                 <p style="font-size:12px; color:#636e72; margin-top:2px;">
-                    احفظ نسخة أمان كاملة من قاعدة بيانات كورس إعداد الخدام (الدارسين، الخدام، الحضور، التقييم الميداني، وخطة السنة) على فلاشة أو جهازك، واسترجعها في أي وقت بدون إنترنت.
+                    احفظ نسخة أمان كاملة من قاعدة بيانات كورس إعداد الخدام على جهازك، واسترجعها في أي وقت بدون إنترنت.
                 </p>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
                     <button class="btn-purple" onclick="downloadFullBackup()" style="flex:1; padding:10px; margin:0;">💾 تحميل نسخة احتياطية كاملة (JSON)</button>
@@ -1408,11 +1434,14 @@
             scannedText = scannedText.trim();
             closeQrSearchModal();
 
+            let targetName = scannedText.includes('/') ? scannedText.split('/')[0].trim() : scannedText;
+
             let member = members.find(m => {
+                let mName = m.name ? m.name.trim().toLowerCase() : "";
                 let mCode = m.code ? m.code.toString().trim() : "";
                 let mId = m.id ? m.id.toString().trim() : "";
-                let mName = m.name ? m.name.trim() : "";
-                return (mCode === scannedText || mId === scannedText || mName === scannedText || (mCode && scannedText.includes(mCode)));
+
+                return (mName === targetName.toLowerCase() || mCode === scannedText || mId === scannedText || scannedText.includes(mName));
             });
 
             if (member) {
@@ -1435,9 +1464,6 @@
             document.getElementById('qrSearchModal').style.display = 'none';
         }
 
-        // ==========================================
-        // منظومة طوارئ الواتساب (Export / Import WhatsApp Emergency)
-        // ==========================================
         function exportTodaySessionToWhatsApp(adminPhone = "201200000000") {
             let todayData = {
                 date: today,
@@ -1614,17 +1640,49 @@
             document.getElementById('stopCameraBtn').style.display = 'none';
         }
 
+        // متغيرات مؤقت الأمان لمنع المسح المزدوج
+        let lastScannedCode = "";
+        let lastScannedTime = 0;
+        const SCAN_COOLDOWN_MS = 5000;
+
         function markAttendance(scannedText) {
             scannedText = scannedText.trim();
+            let nowTimestamp = Date.now();
+
+            // فحص منع التكرار اللحظي
+            if (scannedText === lastScannedCode && (nowTimestamp - lastScannedTime) < SCAN_COOLDOWN_MS) {
+                return;
+            }
+
+            lastScannedCode = scannedText;
+            lastScannedTime = nowTimestamp;
+
+            // استخراج الاسم ويوم الميلاد إذا وُجدت "/"
+            let parsedName = scannedText;
+            let parsedDay = "";
+            if (scannedText.includes('/')) {
+                let parts = scannedText.split('/');
+                parsedName = parts[0].trim();
+                parsedDay = parts[1] ? parts[1].trim() : "";
+            }
 
             let member = members.find(m => {
+                let mName = m.name ? m.name.trim() : "";
                 let mCode = m.code ? m.code.toString().trim() : "";
                 let mId = m.id ? m.id.toString().trim() : "";
-                let mName = m.name ? m.name.trim() : "";
 
-                if (mCode === scannedText || mId === scannedText || mName === scannedText) return true;
+                let memberDay = "";
+                if (m.dob) {
+                    let dParts = m.dob.split('-');
+                    memberDay = dParts[2] ? parseInt(dParts[2]).toString() : "";
+                }
+
+                if (parsedDay !== "" && memberDay !== "") {
+                    if (mName.toLowerCase() === parsedName.toLowerCase() && memberDay === parsedDay) return true;
+                }
+                if (mName.toLowerCase() === parsedName.toLowerCase()) return true;
+                if (mCode === scannedText || mId === scannedText) return true;
                 if (mCode !== "" && scannedText.includes(mCode)) return true;
-                if (mName !== "" && scannedText.includes(mName)) return true;
                 return false;
             });
 
@@ -1634,7 +1692,6 @@
                     let now = new Date();
                     let currentDayIndex = now.getDay();
                     let isSummerDay = settings.summerActive && (currentDayIndex.toString() === settings.summerDay);
-                    
                     let isAbsent = false;
 
                     if (currentDayIndex !== 5) {
@@ -1693,6 +1750,87 @@
             }
         }
 
+        // حساب ورسم الخريطة الحرارية للحضور
+        function renderAttendanceHeatmap() {
+            const container = document.getElementById('heatmapContainer');
+            const badge = document.getElementById('attritionCountBadge');
+            if (!container) return;
+
+            container.innerHTML = '';
+            let allDates = Object.keys(attendanceRecord).sort().reverse();
+            let recentDates = allDates.slice(0, 4);
+
+            if (recentDates.length === 0) {
+                container.innerHTML = '<div style="color:#888; font-size:12px; grid-column:1/-1;">لا توجد سجلات حضور كافية لبناء الخريطة الحرارية.</div>';
+                if (badge) badge.style.display = 'none';
+                return;
+            }
+
+            let riskCount = 0;
+
+            members.forEach(m => {
+                let attendedCount = 0;
+                let delayedCount = 0;
+                let historyBlocks = [];
+
+                [...recentDates].reverse().forEach(d => {
+                    let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
+                    if (rec) {
+                        if (rec.isAbsentDueToDelay) {
+                            delayedCount++;
+                            historyBlocks.push('<span title="' + d + ': تأخير شديد" style="display:inline-block; width:18px; height:18px; background:#e17055; border-radius:3px; margin:0 2px;"></span>');
+                        } else {
+                            attendedCount++;
+                            historyBlocks.push('<span title="' + d + ': حاضر" style="display:inline-block; width:18px; height:18px; background:#00b894; border-radius:3px; margin:0 2px;"></span>');
+                        }
+                    } else {
+                        historyBlocks.push('<span title="' + d + ': غائب" style="display:inline-block; width:18px; height:18px; background:#dfe6e9; border:1px solid #b2bec3; border-radius:3px; margin:0 2px;"></span>');
+                    }
+                });
+
+                let statusTag = "";
+                let isAtRisk = false;
+
+                if (attendedCount === 0 || (recentDates.length >= 2 && !attendanceRecord[recentDates[0]]?.some(x => x.id.toString() === m.id.toString()) && !attendanceRecord[recentDates[1]]?.some(x => x.id.toString() === m.id.toString()))) {
+                    statusTag = '<span style="color:var(--danger); font-weight:bold; font-size:11px;">🔴 خطر تسرب مرتفع</span>';
+                    isAtRisk = true;
+                    riskCount++;
+                } else if (attendedCount <= 1 || delayedCount >= 2) {
+                    statusTag = '<span style="color:#d35400; font-weight:bold; font-size:11px;">🟡 تذبذب وتراجع</span>';
+                    isAtRisk = true;
+                    riskCount++;
+                }
+
+                if (isAtRisk) {
+                    let cleanPhone = formatWhatsAppPhone(m.phone);
+                    let waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent('سلام ونعمة يا ' + m.name + '، بنطمن عليك ومستنيينك في اجتماعنا الأسبوع ده ❤️')}` : '#';
+
+                    let card = document.createElement('div');
+                    card.style.cssText = "background:#fbfbfb; border:1px solid #eee; border-left:4px solid " + (attendedCount === 0 ? 'var(--danger)' : 'var(--warning)') + "; border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;";
+                    card.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold; font-size:13px; color:var(--dark);">${m.name}</div>
+                            <div style="font-size:11px; color:#636e72; margin:2px 0;">${m.stage || 'سنة أولى'} • ${statusTag}</div>
+                            <div style="display:flex; align-items:center; margin-top:4px;">${historyBlocks.join('')}</div>
+                        </div>
+                        <div>
+                            <a href="${waLink}" target="_blank" class="btn-mini btn-success" style="padding:5px 9px;">افتقاد 💬</a>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }
+            });
+
+            if (badge) {
+                badge.innerText = `${riskCount} معرض للانقطاع`;
+                badge.style.display = riskCount > 0 ? 'inline-block' : 'none';
+            }
+
+            if (riskCount === 0) {
+                container.innerHTML = '<div style="color:var(--success); font-weight:bold; font-size:12px; padding:6px 0;">🌟 رائع! لا توجد مؤشرات تسرب أو تراجع في الالتزام حالياً.</div>';
+            }
+        }
+
         function renderDashboard() {
             const totalMembers = members.length;
             document.getElementById('statTotalMembers').innerText = totalMembers;
@@ -1720,14 +1858,15 @@
             let alertBox = document.getElementById('absentAlertList');
             if (dates.length < 2) {
                 alertBox.innerHTML = "يتطلب حساب المنقطعين وجود سجلين لاجتماعين على الأقل.";
-                return;
+            } else {
+                let last2Dates = [dates[0], dates[1]];
+                let absentees = members.filter(m => !last2Dates.some(d => (attendanceRecord[d] || []).some(a => a.id.toString() === m.id.toString() && !a.isAbsentDueToDelay)));
+                alertBox.innerHTML = absentees.length > 0 
+                    ? `<strong>تنبيه:</strong> (${absentees.length}) غائبين لآخر اجتماعين متتاليين:<br>` + absentees.map(a => `• <strong>${a.name}</strong> (${a.stage || ''})`).join('<br>') 
+                    : "✅ لا يوجد منقطعين.";
             }
 
-            let last2Dates = [dates[0], dates[1]];
-            let absentees = members.filter(m => !last2Dates.some(d => (attendanceRecord[d] || []).some(a => a.id.toString() === m.id.toString() && !a.isAbsentDueToDelay)));
-            alertBox.innerHTML = absentees.length > 0 
-                ? `<strong>تنبيه:</strong> (${absentees.length}) غائبين لآخر اجتماعين متتاليين:<br>` + absentees.map(a => `• <strong>${a.name}</strong> (${a.stage || ''})`).join('<br>') 
-                : "✅ لا يوجد منقطعين.";
+            renderAttendanceHeatmap();
         }
 
         function renderAttendanceTable() {
@@ -1947,8 +2086,20 @@
             }
             renderFieldEvaluationsList(m);
 
+            // توليد الـ QR Code بصيغة: الاسم/يوم الميلاد
+            let bDay = "00";
+            if (m.dob) {
+                let parts = m.dob.split('-');
+                bDay = parts[2] ? parseInt(parts[2]).toString() : "00";
+            }
+            let qrData = `${m.name.trim()}/${bDay}`;
+
             document.getElementById('profileQrCode').innerHTML = '';
-            new QRCode(document.getElementById('profileQrCode'), { text: (m.code || m.id).toString(), width: 110, height: 110 });
+            new QRCode(document.getElementById('profileQrCode'), { 
+                text: qrData, 
+                width: 110, 
+                height: 110 
+            });
 
             switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
 
@@ -2049,7 +2200,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.2",
+                version: "2.3",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -2491,10 +2642,32 @@
             });
         }
 
+        // ==========================================
+        // تسجيل الـ ServiceWorker ودعم التثبيت المباشر PWA
+        // ==========================================
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.style.display = 'flex';
+        });
+
+        document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('pwaInstallBanner').style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('PWA ServiceWorker جاهز'))
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('PWA ServiceWorker مسجل بنجاح'))
                     .catch(err => console.error('خطأ في تفعيل الأوفلاين', err));
             });
         }
@@ -2510,4 +2683,3 @@
     </script>
 </body>
 </html>
- 
