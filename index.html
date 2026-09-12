@@ -185,12 +185,19 @@
         </div>
     </div>
 
+    <!-- شاشة تسجيل الدخول مع خيار "تذكرني والبقاء مسجل الدخول" -->
     <div id="loginScreen">
         <div class="login-card">
             <h2 id="loginChurchDisplay" style="margin-top:0; border:none; color:var(--primary);">كنيسة الملاك والروماني بالمطرية</h2>
             <p id="loginServiceDisplay" style="font-size:12px; color:#636e72; margin-bottom:18px;">اجتماع القديس بولس الرسول لإعداد الخدام</p>
             <input type="text" id="loginUsername" placeholder="اسم الخادم (أو admin)" style="margin-bottom:12px;" autocomplete="off">
-            <input type="password" id="loginPassword" placeholder="كلمة المرور أو رقم الهاتف" style="margin-bottom:15px;" autocomplete="off">
+            <input type="password" id="loginPassword" placeholder="كلمة المرور أو رقم الهاتف" style="margin-bottom:12px;" autocomplete="off">
+            
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; text-align:right; font-size:13px;">
+                <input type="checkbox" id="rememberMeCheck" checked style="width:18px; height:18px; margin:0;">
+                <label for="rememberMeCheck" style="cursor:pointer; font-weight:bold; color:#2d3436;">تذكرني والبقاء مسجل الدخول دائماً</label>
+            </div>
+
             <button class="btn-primary" onclick="attemptLogin()">تسجيل الدخول</button>
             <div id="loginError" style="color:red; font-size:12px; margin-top:10px; display:none;">بيانات الدخول غير صحيحة!</div>
 
@@ -399,11 +406,15 @@
                 </div>
             </div>
 
-            <div style="background:#eaf2f8; padding:12px; border-radius:8px; margin-top:20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #b8d5e5;">
+            <!-- أزرار التحكم في الحضور (حذف يوم كامل بكلمة مرور الأدمن) -->
+            <div style="background:#eaf2f8; padding:12px; border-radius:8px; margin-top:20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #b8d5e5; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">سجل حضور اليوم (<span id="todayDate"></span>)</h3>
-                <span style="background:var(--primary); color:white; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:14px;">
-                    العدد: <span id="todayAttendanceCount" style="font-size:16px;">0</span>
-                </span>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-danger admin-only" onclick="clearEntireTodayAttendance()" style="padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف يوم الحضور بالكامل</button>
+                    <span style="background:var(--primary); color:white; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:14px;">
+                        العدد: <span id="todayAttendanceCount" style="font-size:16px;">0</span>
+                    </span>
+                </div>
             </div>
 
             <table id="attendanceTable">
@@ -752,8 +763,11 @@
             </div>
 
             <!-- زر تسجيل حضور يدوي فوري من داخل ملف الشخص -->
-            <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:12px;">
+            <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:8px;">
                 ✔️ تسجيل حضور يدوي لهذا الدارس اليوم
+            </button>
+            <button class="btn-warning can-edit" id="btn_profile_edit" style="margin-bottom:12px;" onclick="openEditMemberModal()">
+                ✏️ تعديل بيانات هذا الدارس
             </button>
 
             <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
@@ -839,6 +853,39 @@
         </div>
     </div>
 
+    <!-- نافذة تعديل بيانات الدارس -->
+    <div id="editMemberModal" class="modal" style="z-index:4500;">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="close-btn" onclick="closeEditMemberModal()">&times;</span>
+            <h3 style="margin-top:0; color:var(--primary); border:none;">✏️ تعديل بيانات الدارس</h3>
+            <div class="form-grid">
+                <div><label>كود الامتحان:</label><input type="text" id="edit_m_code"></div>
+                <div><label>الاسم الرباعي:</label><input type="text" id="edit_m_name"></div>
+                <div>
+                    <label>المرحلة:</label>
+                    <select id="edit_m_stage">
+                        <option value="سنة أولى">سنة أولى إعداد خدام</option>
+                        <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
+                        <option value="خريجين">خريجين / تم التخرج</option>
+                    </select>
+                </div>
+                <div>
+                    <label>النوع:</label>
+                    <select id="edit_m_gender">
+                        <option value="بنين">بنين</option>
+                        <option value="بنات">بنات</option>
+                    </select>
+                </div>
+                <div><label>رقم التليفون:</label><input type="text" id="edit_m_phone"></div>
+                <div><label>تليفون ولي الأمر:</label><input type="text" id="edit_m_parent_phone"></div>
+                <div><label>تاريخ الميلاد:</label><input type="date" id="edit_m_dob"></div>
+                <div><label>أب الاعتراف:</label><input type="text" id="edit_m_confessor"></div>
+                <div style="grid-column:1/-1;"><label>العنوان:</label><input type="text" id="edit_m_address"></div>
+            </div>
+            <button class="btn-success" onclick="saveEditedMember()">حفظ التعديلات 💾</button>
+        </div>
+    </div>
+
     <script>
         window.appErrorLogs = [];
 
@@ -848,7 +895,7 @@
 
             let activeUser = null;
             try {
-                activeUser = JSON.parse(sessionStorage.getItem('my_church_active_user'));
+                activeUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
             } catch(e){}
 
             let isAuthorized = activeUser && (
@@ -980,7 +1027,13 @@
             ignoreSummerDelay: true
         };
         let adminPassword = localStorage.getItem('my_church_admin_pwd') || '1234567';
-        let currentUser = JSON.parse(sessionStorage.getItem('my_church_active_user')) || null;
+        
+        // التحقق من الجلسة (دعم الـ LocalStorage للبقاء مسجل الدخول)
+        let currentUser = null;
+        try {
+            currentUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
+        } catch(e) { currentUser = null; }
+
         let currentRole = currentUser ? currentUser.role : 'servant';
         let currentPermission = currentUser ? (currentUser.permission || 'full') : 'view_only';
         let currentProfileId = null;
@@ -1051,6 +1104,7 @@
         function attemptLogin() {
             let u = document.getElementById('loginUsername').value.trim();
             let p = document.getElementById('loginPassword').value.trim();
+            let rememberMe = document.getElementById('rememberMeCheck').checked;
             let err = document.getElementById('loginError');
 
             if (!u || !p) {
@@ -1061,14 +1115,24 @@
 
             if ((u.toLowerCase() === 'admin' || u === 'الأدمن' || u === 'عادل جورج') && (p === adminPassword || p === "1234567")) {
                 currentUser = { name: "عادل جورج", phone: p, role: "admin", permission: "admin", code: "admin" };
-                sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                
+                if (rememberMe) {
+                    localStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                } else {
+                    sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                }
+
                 err.style.display = 'none'; checkSession(); return;
             }
 
             let found = servants.find(s => s.name.trim().toLowerCase() === u.toLowerCase() && (s.phone.trim() === p || (s.code && s.code.toString() === p)));
             if (found) {
                 currentUser = found;
-                sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                if (rememberMe) {
+                    localStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                } else {
+                    sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                }
                 recordServantAttendance(found);
                 err.style.display = 'none'; checkSession();
             } else {
@@ -1084,6 +1148,7 @@
                     return;
                 }
             }
+            localStorage.removeItem('my_church_active_user');
             sessionStorage.removeItem('my_church_active_user');
             currentUser = null;
             checkSession();
@@ -1734,6 +1799,30 @@
             }
         }
 
+        // حذف يوم الحضور بالكامل بكلمة مرور الأدمن
+        function clearEntireTodayAttendance() {
+            let pwd = prompt("⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور اليوم بالكامل!\nأدخل كلمة مرور أمين الخدمة للتأكيد:");
+            if (!pwd) return;
+            if (pwd !== adminPassword && pwd !== "1234567") {
+                return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
+            }
+
+            if (confirm(`هل أنت متأكد نهائياً من مسح كافة حركات حضور المخدومين ليوم (${today})؟`)) {
+                attendanceRecord[today] = [];
+                servantsAttendance[today] = [];
+                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
+                syncToCloud('attendance', attendanceRecord);
+                syncToCloud('servants_attendance', servantsAttendance);
+
+                renderAttendanceTable();
+                renderServantsAttendanceTable();
+                renderDashboard();
+                checkLocalStorageUsage();
+                alert("✅ تم حذف سجل حضور اليوم بالكامل بنجاح!");
+            }
+        }
+
         function registerMemberAttendance(member) {
             let existing = (attendanceRecord[today] || []).find(a => a.id.toString() === member.id.toString());
             if (existing) {
@@ -2303,6 +2392,7 @@
             }
             renderFieldEvaluationsList(m);
 
+            // توليد الباركود العربي الصحيح مع UTF-8 encoding
             let qrWrapper = document.getElementById('profileQrWrapper');
             if (qrWrapper) {
                 qrWrapper.innerHTML = '';
@@ -2339,6 +2429,55 @@
         }
 
         function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
+
+        // دوال تعديل بيانات الدارس من ملفه
+        function openEditMemberModal() {
+            let m = members.find(x => x.id.toString() === currentProfileId.toString());
+            if (!m) return;
+            document.getElementById('edit_m_code').value = m.code || '';
+            document.getElementById('edit_m_name').value = m.name || '';
+            document.getElementById('edit_m_stage').value = m.stage || 'سنة أولى';
+            document.getElementById('edit_m_gender').value = m.gender || 'بنين';
+            document.getElementById('edit_m_phone').value = m.phone || '';
+            document.getElementById('edit_m_parent_phone').value = m.parent_phone || '';
+            document.getElementById('edit_m_dob').value = m.dob || '';
+            document.getElementById('edit_m_confessor').value = m.confessor || '';
+            document.getElementById('edit_m_address').value = m.address || '';
+            document.getElementById('editMemberModal').style.display = 'flex';
+        }
+
+        function closeEditMemberModal() {
+            document.getElementById('editMemberModal').style.display = 'none';
+        }
+
+        function saveEditedMember() {
+            let m = members.find(x => x.id.toString() === currentProfileId.toString());
+            if (!m) return;
+
+            let newName = document.getElementById('edit_m_name').value.trim();
+            let newDob = document.getElementById('edit_m_dob').value;
+            if (!newName) return alert("اسم الدارس مطلوب!");
+
+            m.code = document.getElementById('edit_m_code').value.trim();
+            m.name = newName;
+            m.stage = document.getElementById('edit_m_stage').value;
+            m.gender = document.getElementById('edit_m_gender').value;
+            m.phone = formatWhatsAppPhone(document.getElementById('edit_m_phone').value);
+            m.parent_phone = formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value);
+            m.dob = newDob;
+            m.confessor = document.getElementById('edit_m_confessor').value.trim();
+            m.address = document.getElementById('edit_m_address').value.trim();
+            
+            ensureMemberQrCode(m);
+
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+            syncToCloud('members', members);
+            closeEditMemberModal();
+            openProfile(m.id);
+            renderMembersList();
+            renderDashboard();
+            showToast("✅ تم تحديث بيانات الدارس بنجاح!");
+        }
 
         async function exportAttendance(shareWhatsApp) {
             let dates = Object.keys(attendanceRecord).sort();
@@ -2420,7 +2559,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.6",
+                version: "2.7",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
