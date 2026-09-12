@@ -112,10 +112,21 @@
         .tag-retreat { background: #e17055; }
         .tag-grad { background: #d63031; }
 
+        /* الجداول الافتراضية مع دعم الدوران بالعرض */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: clamp(11px, 2.5vw, 13px); white-space: nowrap; }
         th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
         th { background: var(--primary); color: white; }
+
+        /* عند وضع الموبايل بالطول (Portrait) يتحول الجدول الذكي لبطاقات رأسية منعاً للتمرير الخفي */
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            .adaptive-card-table thead { display: none; }
+            .adaptive-card-table, .adaptive-card-table tbody, .adaptive-card-table tr, .adaptive-card-table td { display: block; width: 100%; white-space: normal !important; }
+            .adaptive-card-table tr { background: #fff; margin-bottom: 12px; border: 1px solid #dcdde1; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); padding: 8px; }
+            .adaptive-card-table td { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 6px 10px; border: none; border-bottom: 1px solid #f1f2f6; font-size: 13px; }
+            .adaptive-card-table td:last-child { border-bottom: none; }
+            .adaptive-card-table td::before { content: attr(data-label); font-weight: bold; color: var(--primary); text-align: right; margin-left: 10px; }
+        }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: #fff; width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; position: relative; box-sizing: border-box; }
@@ -406,7 +417,7 @@
 
             <h3>جدول أحداث ومحطات السنة مرتبة زمنياً</h3>
             <div class="table-responsive">
-                <table id="masterPlanTable">
+                <table id="masterPlanTable" class="adaptive-card-table">
                     <thead>
                         <tr>
                             <th>التاريخ</th>
@@ -461,7 +472,7 @@
             </div>
 
             <div class="table-responsive">
-                <table id="attendanceTable">
+                <table id="attendanceTable" class="adaptive-card-table">
                     <thead>
                         <tr>
                             <th>كود الامتحان</th>
@@ -490,7 +501,7 @@
 
             <h3>جدول التزام الخدام السنوي واليومي</h3>
             <div class="table-responsive">
-                <table id="servantsAttendanceTable">
+                <table id="servantsAttendanceTable" class="adaptive-card-table">
                     <thead>
                         <tr>
                             <th>كود الخادم</th>
@@ -509,7 +520,7 @@
 
             <h3 style="margin-top:25px;">📝 سجل أحدث الافتقادات الميدانية</h3>
             <div class="table-responsive">
-                <table id="recentVisitationsTable">
+                <table id="recentVisitationsTable" class="adaptive-card-table">
                     <thead>
                         <tr>
                             <th>التاريخ</th>
@@ -598,7 +609,7 @@
             </div>
 
             <div class="table-responsive">
-                <table id="membersTable">
+                <table id="membersTable" class="adaptive-card-table">
                     <thead>
                         <tr>
                             <th>كود الامتحان</th>
@@ -632,7 +643,7 @@
                 <button class="btn-warning" onclick="renderBroadcastList('members')" style="flex:1;">هواتف الغائبين مباشرة</button>
             </div>
             <div class="table-responsive">
-                <table id="broadcastTable">
+                <table id="broadcastTable" class="adaptive-card-table">
                     <thead><tr><th>الاسم</th><th>المرحلة</th><th>المستلم ورقم الهاتف</th><th>إرسال المحادثة</th></tr></thead>
                     <tbody></tbody>
                 </table>
@@ -660,7 +671,7 @@
 
             <h3 style="margin-top:25px;">قائمة الخدام والصلاحيات</h3>
             <div class="table-responsive">
-                <table id="servantsTable">
+                <table id="servantsTable" class="adaptive-card-table">
                     <thead>
                         <tr>
                             <th>كود الخادم</th>
@@ -837,7 +848,7 @@
 
             <div id="p_attendance_log" class="profile-tab-content" style="display:block;">
                 <div style="max-height:180px; overflow-y:auto; border:1px solid #eee; border-radius:6px;" class="table-responsive">
-                    <table style="margin:0; width:100%; border-collapse:collapse; font-size:12px;">
+                    <table style="margin:0; width:100%; border-collapse:collapse; font-size:12px;" class="adaptive-card-table">
                         <thead style="position:sticky; top:0; background:var(--primary); color:white;">
                             <tr>
                                 <th style="padding:8px;">التاريخ</th>
@@ -954,7 +965,7 @@
             <input type="text" id="manualModalSearchBox" placeholder="🔍 بحث سريع في القائمة..." onkeyup="renderManualAttendanceModalList()" style="margin-bottom:12px;">
 
             <div class="table-responsive" style="max-height:350px; overflow-y:auto; border:1px solid #ddd; border-radius:8px;">
-                <table id="manualAttendanceModalTable" style="margin:0; width:100%;">
+                <table id="manualAttendanceModalTable" style="margin:0; width:100%;" class="adaptive-card-table">
                     <thead style="position:sticky; top:0; background:var(--primary); color:white;">
                         <tr>
                             <th style="width:50px; padding:6px;">حضور</th>
@@ -1300,13 +1311,13 @@
             servants.forEach(s => {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${s.code || s.id}</td>
-                    <td><strong>${s.name}</strong></td>
-                    <td>${s.phone}</td>
-                    <td>${s.dob || '-'}</td>
-                    <td><span class="role-badge" style="background:var(--accent);">${s.permission || s.role || 'خادم'}</span></td>
-                    <td class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل</button></td>
-                    <td class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف</button></td>
+                    <td data-label="كود الخادم">${s.code || s.id}</td>
+                    <td data-label="الاسم"><strong>${s.name}</strong></td>
+                    <td data-label="الهاتف">${s.phone}</td>
+                    <td data-label="تاريخ الميلاد">${s.dob || '-'}</td>
+                    <td data-label="الصلاحية"><span class="role-badge" style="background:var(--accent);">${s.permission || s.role || 'خادم'}</span></td>
+                    <td data-label="تعديل" class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل</button></td>
+                    <td data-label="حذف" class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -1428,13 +1439,13 @@
                 let tagClass = tagClasses[item.type] || 'tag-lecture';
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${item.date}</strong></td>
-                    <td><span class="plan-tag ${tagClass}">${item.type}</span></td>
-                    <td><strong>${item.title}</strong></td>
-                    <td>${item.location}</td>
-                    <td>${item.stage}</td>
-                    <td><strong style="color:var(--primary);">${item.responsible}</strong></td>
-                    <td class="admin-only">
+                    <td data-label="التاريخ"><strong>${item.date}</strong></td>
+                    <td data-label="النوع"><span class="plan-tag ${tagClass}">${item.type}</span></td>
+                    <td data-label="العنوان"><strong>${item.title}</strong></td>
+                    <td data-label="المكان">${item.location}</td>
+                    <td data-label="المرحلة">${item.stage}</td>
+                    <td data-label="المسؤول"><strong style="color:var(--primary);">${item.responsible}</strong></td>
+                    <td data-label="إجراء" class="admin-only">
                         <button class="btn-mini btn-danger" onclick="deleteMasterPlanEvent(${item.id})">حذف</button>
                     </td>
                 `;
@@ -2029,12 +2040,12 @@
                 let isPresent = todayPresentIds.has(m.id.toString());
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="text-align:center;">
+                    <td data-label="حضور" style="text-align:center;">
                         <input type="checkbox" ${isPresent ? 'checked' : ''} onchange="toggleMemberAttendanceFromModal('${m.id}', this.checked)" style="width:20px; height:20px; cursor:pointer;">
                     </td>
-                    <td><strong>${m.code || '-'}</strong></td>
-                    <td style="text-align:right; font-weight:bold;">${m.name}</td>
-                    <td>${m.stage || 'سنة أولى'}</td>
+                    <td data-label="كود الامتحان"><strong>${m.code || '-'}</strong></td>
+                    <td data-label="الاسم" style="text-align:right; font-weight:bold;">${m.name}</td>
+                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2321,14 +2332,14 @@
                 let tr = document.createElement('tr');
                 let status = a.isAbsentDueToDelay ? '<span style="color:red">تأخير شديد</span>' : '<span style="color:green">حاضر</span>';
                 tr.innerHTML = `
-                    <td><strong style="color:var(--primary); font-size:14px;">${a.code || a.id}</strong></td>
-                    <td>${a.name}</td>
-                    <td>${a.stage || '-'}</td>
-                    <td>${a.gender || '-'}</td>
-                    <td dir="ltr">${a.time}</td>
-                    <td>${status}</td>
-                    <td>${a.scannedBy || '-'}</td>
-                    <td class="can-attend">
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${a.code || a.id}</strong></td>
+                    <td data-label="الاسم">${a.name}</td>
+                    <td data-label="المرحلة">${a.stage || '-'}</td>
+                    <td data-label="النوع">${a.gender || '-'}</td>
+                    <td data-label="وقت المسح" dir="ltr">${a.time}</td>
+                    <td data-label="الحالة">${status}</td>
+                    <td data-label="المسجِّل">${a.scannedBy || '-'}</td>
+                    <td data-label="إجراء" class="can-attend">
                         <button class="btn-mini btn-danger" onclick="cancelMemberAttendance('${a.id}')">إلغاء ❌</button>
                     </td>
                 `;
@@ -2385,14 +2396,14 @@
 
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${s.code || s.id}</td>
-                    <td><strong>${s.name}</strong></td>
-                    <td>${s.phone}</td>
-                    <td>${present ? `<span style="color:green; font-weight:bold;">حاضر (${present.time})</span>` : '<span style="color:red;">لم يحضر</span>'}</td>
-                    <td>${commitBadge}</td>
-                    <td>${planInfo}</td>
-                    <td><span class="role-badge" style="background:#00b894;">${visits} افتقاد</span></td>
-                    <td class="can-edit">${actionBtn}</td>
+                    <td data-label="كود الخادم">${s.code || s.id}</td>
+                    <td data-label="الاسم"><strong>${s.name}</strong></td>
+                    <td data-label="الهاتف">${s.phone}</td>
+                    <td data-label="حالة اليوم">${present ? `<span style="color:green; font-weight:bold;">حاضر (${present.time})</span>` : '<span style="color:red;">لم يحضر</span>'}</td>
+                    <td data-label="النسبة السنوية">${commitBadge}</td>
+                    <td data-label="تكليف اليوم">${planInfo}</td>
+                    <td data-label="الافتقادات"><span class="role-badge" style="background:#00b894;">${visits} افتقاد</span></td>
+                    <td data-label="إجراء" class="can-edit">${actionBtn}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2404,7 +2415,7 @@
             } else {
                 allVisitationsList.slice(0, 10).forEach(v => {
                     let tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${v.date}</td><td><strong>${v.servant}</strong></td><td style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td>${v.text}</td>`;
+                    tr.innerHTML = `<td data-label="التاريخ">${v.date}</td><td data-label="الخادم المسؤول"><strong>${v.servant}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td data-label="الملاحظات">${v.text}</td>`;
                     recentTbody.appendChild(tr);
                 });
             }
@@ -2445,19 +2456,19 @@
 
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong style="color:var(--primary); font-size:14px;">${m.code || '-'}</strong></td>
-                    <td><strong>${m.name}</strong></td>
-                    <td>${m.stage || 'سنة أولى'}</td>
-                    <td>${m.phone}</td>
-                    <td>
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${m.code || '-'}</strong></td>
+                    <td data-label="الاسم"><strong>${m.name}</strong></td>
+                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="التليفون">${m.phone}</td>
+                    <td data-label="الحضور التراكمي">
                         <div style="font-weight:bold; font-size:11px;">${grad.percent}% (${grad.attended}/${grad.total})</div>
                         <div class="progress-bar-container">
                             <div class="progress-bar" style="width:${grad.percent}%; background:${grad.qualified ? 'var(--success)' : 'var(--warning)'}"></div>
                         </div>
                     </td>
-                    <td>${gradBadge}</td>
-                    <td>${manualBtn}</td>
-                    <td><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile('${m.id}')">الملف 🪪</button></td>
+                    <td data-label="أهلية التخرج">${gradBadge}</td>
+                    <td data-label="تسجيل يدوي">${manualBtn}</td>
+                    <td data-label="الملف"><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile('${m.id}')">الملف 🪪</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2555,7 +2566,7 @@
                     if (rec) {
                         hasAtt = true;
                         let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : '<span style="color:green; font-weight:bold;">حاضر</span>';
-                        atb.innerHTML += `<tr><td style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
+                        atb.innerHTML += `<tr><td data-label="التاريخ" style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td data-label="الوقت" dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td data-label="الحالة" style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
                     }
                 });
                 if (!hasAtt) {
@@ -2737,7 +2748,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.10",
+                version: "2.11",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -3190,7 +3201,7 @@
                 let label = targetType === 'parents' ? `ولي أمر (${m.name})` : m.name;
                 if (!cleanPhone) return;
                 let tr = document.createElement('tr');
-                tr.innerHTML = `<td>${m.name} [كود: ${m.code || m.id}]</td><td>${m.stage || '-'}</td><td>${label} (${cleanPhone})</td><td><a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(template.replace('[الاسم]', m.name))}" target="_blank" class="btn-mini btn-success">إرسال 📲</a></td>`;
+                tr.innerHTML = `<td data-label="الاسم">${m.name} [كود: ${m.code || m.id}]</td><td data-label="المرحلة">${m.stage || '-'}</td><td data-label="المستلم">${label} (${cleanPhone})</td><td data-label="إرسال"><a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(template.replace('[الاسم]', m.name))}" target="_blank" class="btn-mini btn-success">إرسال 📲</a></td>`;
                 tbody.appendChild(tr);
             });
         }
