@@ -1214,7 +1214,6 @@
             const canAttend = (isAdmin || currentPermission === 'attend_only' || currentPermission === 'full' || isScannerOnly);
             const canEdit = (isAdmin || currentPermission === 'full');
 
-            // إذا كان الحساب مخصصاً للمسح بالكاميرا فقط: إخفاء التبويبات بالكامل وإظهار الحضور فقط
             if (isScannerOnly) {
                 document.querySelector('.tabs').style.display = 'none';
                 document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
