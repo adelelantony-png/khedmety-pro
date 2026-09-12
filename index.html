@@ -1219,10 +1219,7 @@
                 document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
                 document.getElementById('attendanceTab').style.display = 'block';
                 document.getElementById('attendanceTab').classList.add('active');
-                
-                setTimeout(() => {
-                    if (typeof startCamera === 'function') startCamera();
-                }, 500);
+                // تم إزالة التشغيل التلقائي المسبب للخطأ، وترك زر (فتح الكاميرا للمسح) بضغط الخادم اليدوي الآمن
                 return;
             } else {
                 document.querySelector('.tabs').style.display = 'flex';
@@ -2071,7 +2068,7 @@
 
             } catch (err) {
                 stopCamera();
-                alert("❌ تم رفض إذن الكاميرا. يرجى تفعيل الإذن من المتصفح.");
+                alert("❌ تم رفض إذن الكاميرا. يرجى التأكد من إعطاء إذن الكاميرا للمتصفح.");
             }
         }
 
