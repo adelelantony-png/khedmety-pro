@@ -396,13 +396,11 @@
                 
                 <div id="reader"></div>
 
-                <div style="background:#fff3e0; border:2px dashed #ff9800; padding:15px; border-radius:10px; margin-top:20px;">
-                    <h4 style="margin:0 0 6px 0; color:#e65100;">✍️ تسجيل حضور يدوي سريع (لمن نسي أو فقد الكارنيه):</h4>
-                    <p style="font-size:12px; color:#555; margin:0 0 10px 0;">ابحث بكود الامتحان (مثلاً: 664) أو بالاسم لتسجيل حضوره فوراً دون كاميرا:</p>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <input type="text" id="manualAttendInput" placeholder="اكتب كود الامتحان أو جزء من الاسم..." style="flex:2; min-width:200px; margin:0;">
-                        <button class="btn-warning" onclick="manualMarkMemberFromInput()" style="flex:1; min-width:140px; margin:0; padding:10px;">تسجيل حضور يدوي ✔️</button>
-                    </div>
+                <!-- زر فتح قائمة الأسماء لتسجيل الحضور السريع -->
+                <div style="margin-top:15px;">
+                    <button class="btn-purple" onclick="openManualAttendanceModal()" style="padding:14px; font-size:15px;">
+                        👥 تسجيل حضور يدوي من قائمة الأسماء (بحث وتحديد سريع)
+                    </button>
                 </div>
             </div>
 
@@ -596,6 +594,7 @@
                 <input type="date" id="newServantDob" placeholder="تاريخ الميلاد للتهنئة">
                 <select id="newServantPermission">
                     <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
+                    <option value="scanner_only">مسح الحضور بالكاميرا فقط (شاشة الكاميرا المباشرة)</option>
                     <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
                     <option value="view_only">مشاهدة واطلاع فقط</option>
                     <option value="developer">خادم ومطور نظام (صلاحيات كاملة + فاحص أخطاء Log)</option>
@@ -886,6 +885,32 @@
         </div>
     </div>
 
+    <!-- نافذة قائمة الحضور اليدوي السريع (Checkboxes) -->
+    <div id="manualAttendanceModal" class="modal" style="z-index:4000;">
+        <div class="modal-content" style="max-width:550px;">
+            <span class="close-btn" onclick="closeManualAttendanceModal()">&times;</span>
+            <h3 style="margin-top:0; color:var(--primary); border:none;">👥 تسجيل حضور سريع من قائمة الأسماء</h3>
+            <p style="font-size:12px; color:#636e72; margin-top:0;">ابحث بالاسم أو الكود، وضع علامة صح لتسجيل الحضور أو إزالتها فوراً:</p>
+            
+            <input type="text" id="manualModalSearchBox" placeholder="🔍 بحث سريع في القائمة..." onkeyup="renderManualAttendanceModalList()" style="margin-bottom:12px;">
+
+            <div style="max-height:350px; overflow-y:auto; border:1px solid #ddd; border-radius:8px;">
+                <table id="manualAttendanceModalTable" style="margin:0; width:100%;">
+                    <thead style="position:sticky; top:0; background:var(--primary); color:white;">
+                        <tr>
+                            <th style="width:50px; padding:6px;">حضور</th>
+                            <th style="padding:6px;">كود الامتحان</th>
+                            <th style="padding:6px;">الاسم</th>
+                            <th style="padding:6px;">المرحلة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="manualAttendanceModalTbody"></tbody>
+                </table>
+            </div>
+            <button class="btn-primary" onclick="closeManualAttendanceModal()" style="margin-top:12px;">إغلاق وتمت المتابعة ✔️</button>
+        </div>
+    </div>
+
     <script>
         window.appErrorLogs = [];
 
@@ -1028,7 +1053,6 @@
         };
         let adminPassword = localStorage.getItem('my_church_admin_pwd') || '1234567';
         
-        // التحقق من الجلسة (دعم الـ LocalStorage للبقاء مسجل الدخول)
         let currentUser = null;
         try {
             currentUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
@@ -1178,14 +1202,32 @@
             let label = 'خادم';
             if (currentPermission === 'admin') label = 'أمين خدمة (أدمن)';
             else if (currentPermission === 'developer') label = 'خادم ومطور نظام';
+            else if (currentPermission === 'scanner_only') label = 'مسح الحضور بالكاميرا فقط';
             else if (currentPermission === 'view_only') label = 'مشاهدة فقط';
             else if (currentPermission === 'attend_only') label = 'تسجيل حضور فقط';
             else if (currentPermission === 'full') label = 'خادم متكامل';
 
             document.getElementById('currentRoleBadge').innerText = label;
+
             const isAdmin = (currentPermission === 'admin' || currentPermission === 'developer');
-            const canAttend = (isAdmin || currentPermission === 'attend_only' || currentPermission === 'full');
+            const isScannerOnly = (currentPermission === 'scanner_only');
+            const canAttend = (isAdmin || currentPermission === 'attend_only' || currentPermission === 'full' || isScannerOnly);
             const canEdit = (isAdmin || currentPermission === 'full');
+
+            // إذا كان الحساب مخصصاً للمسح بالكاميرا فقط: إخفاء التبويبات بالكامل وإظهار الحضور فقط
+            if (isScannerOnly) {
+                document.querySelector('.tabs').style.display = 'none';
+                document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+                document.getElementById('attendanceTab').style.display = 'block';
+                document.getElementById('attendanceTab').classList.add('active');
+                
+                setTimeout(() => {
+                    if (typeof startCamera === 'function') startCamera();
+                }, 500);
+                return;
+            } else {
+                document.querySelector('.tabs').style.display = 'flex';
+            }
 
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
             document.querySelectorAll('.can-attend').forEach(el => el.style.display = canAttend ? '' : 'none');
@@ -1799,7 +1841,6 @@
             }
         }
 
-        // حذف يوم الحضور بالكامل بكلمة مرور الأدمن
         function clearEntireTodayAttendance() {
             let pwd = prompt("⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور اليوم بالكامل!\nأدخل كلمة مرور أمين الخدمة للتأكيد:");
             if (!pwd) return;
@@ -1895,6 +1936,88 @@
                 playBeepSound('error');
                 alert(`❌ لم يتم العثور على أي دارس بهذا الكود أو الاسم: (${input})`);
             }
+        }
+
+        function openManualAttendanceModal() {
+            document.getElementById('manualModalSearchBox').value = '';
+            renderManualAttendanceModalList();
+            document.getElementById('manualAttendanceModal').style.display = 'flex';
+        }
+
+        function closeManualAttendanceModal() {
+            document.getElementById('manualAttendanceModal').style.display = 'none';
+        }
+
+        function renderManualAttendanceModalList() {
+            const tbody = document.getElementById('manualAttendanceModalTbody');
+            const search = document.getElementById('manualModalSearchBox').value.toLowerCase();
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let todayPresentIds = new Set((attendanceRecord[today] || []).map(a => a.id.toString()));
+
+            let filtered = members.filter(m => {
+                let mName = (m.name || '').toLowerCase();
+                let mCode = (m.code || '').toString().toLowerCase();
+                let mPhone = (m.phone || '').toString();
+                return mName.includes(search) || mCode.includes(search) || mPhone.includes(search);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:#888; padding:15px;">لا توجد نتائج مطابقة للبحث.</td></tr>';
+                return;
+            }
+
+            filtered.forEach(m => {
+                let isPresent = todayPresentIds.has(m.id.toString());
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">
+                        <input type="checkbox" ${isPresent ? 'checked' : ''} onchange="toggleMemberAttendanceFromModal('${m.id}', this.checked)" style="width:20px; height:20px; cursor:pointer;">
+                    </td>
+                    <td><strong>${m.code || '-'}</strong></td>
+                    <td style="text-align:right; font-weight:bold;">${m.name}</td>
+                    <td>${m.stage || 'سنة أولى'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleMemberAttendanceFromModal(memberId, isChecked) {
+            let member = members.find(x => x.id.toString() === memberId.toString());
+            if (!member) return;
+
+            if (isChecked) {
+                let existing = (attendanceRecord[today] || []).some(a => a.id.toString() === memberId.toString());
+                if (!existing) {
+                    let now = new Date();
+                    if (!attendanceRecord[today]) attendanceRecord[today] = [];
+                    attendanceRecord[today].push({
+                        id: member.id,
+                        code: member.code || member.id,
+                        name: member.name,
+                        stage: member.stage || 'سنة أولى',
+                        gender: member.gender || 'بنين',
+                        time: now.toLocaleTimeString('ar-EG'),
+                        isAbsentDueToDelay: false,
+                        scannedBy: currentUser ? currentUser.name : 'قائمة يدوية'
+                    });
+                    localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                    syncToCloud('attendance', attendanceRecord);
+                    playBeepSound('success');
+                    showToast(`✅ تم تسجيل حضور: ${member.name}`);
+                }
+            } else {
+                attendanceRecord[today] = (attendanceRecord[today] || []).filter(a => a.id.toString() !== memberId.toString());
+                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                syncToCloud('attendance', attendanceRecord);
+                showToast(`ℹ️ تم إلغاء حضور: ${member.name}`, true);
+            }
+
+            renderAttendanceTable();
+            renderMembersList();
+            renderDashboard();
+            checkLocalStorageUsage();
         }
 
         let html5QrCode = null;
@@ -2392,7 +2515,6 @@
             }
             renderFieldEvaluationsList(m);
 
-            // توليد الباركود العربي الصحيح مع UTF-8 encoding
             let qrWrapper = document.getElementById('profileQrWrapper');
             if (qrWrapper) {
                 qrWrapper.innerHTML = '';
@@ -2430,7 +2552,6 @@
 
         function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
 
-        // دوال تعديل بيانات الدارس من ملفه
         function openEditMemberModal() {
             let m = members.find(x => x.id.toString() === currentProfileId.toString());
             if (!m) return;
@@ -2559,7 +2680,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.7",
+                version: "2.9",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
