@@ -2309,7 +2309,8 @@
                 try {
                     if (typeof qrcode !== 'undefined') {
                         let qr = qrcode(0, 'L');
-                        qr.addData(qrString);
+                        let utf8String = unescape(encodeURIComponent(qrString));
+                        qr.addData(utf8String);
                         qr.make();
                         qrWrapper.innerHTML = qr.createImgTag(4, 8);
                     }
