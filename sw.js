@@ -1,10 +1,10 @@
-const CACHE_NAME = 'khedmety-offline-v6';
+const CACHE_NAME = 'khedmety-offline-v7';
 const urlsToCache = [
     '/',
     '/index.html',
     '/manifest.json',
     '/icon.png',
-    'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
     'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
     'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
