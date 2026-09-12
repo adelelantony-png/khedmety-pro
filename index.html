@@ -588,7 +588,8 @@
                     <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
                     <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
                     <option value="view_only">مشاهدة واطلاع فقط</option>
-                    <option value="admin">أمين خدمة (أدمن كامل الصلاحيات)</option>
+                    <option value="developer">خادم ومطور نظام (صلاحيات كاملة + فاحص أخطاء Log)</option>
+                    <option value="admin">أمين خدمة (أدمن كامل الصلاحيات + Log)</option>
                 </select>
             </div>
             <button class="btn-success" onclick="addServantManual()">حفظ الخادم</button>
@@ -840,6 +841,64 @@
     </div>
 
     <script>
+        // مصفوفة تجميع الأخطاء البرمجية
+        window.appErrorLogs = [];
+
+        // كاشف الأخطاء الحصري لأمين الخدمة والمطور
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            let errText = `[سطر ${lineNo}] ${msg}`;
+            window.appErrorLogs.push(errText);
+
+            let activeUser = JSON.parse(sessionStorage.getItem('my_church_active_user'));
+            let isAuthorized = activeUser && (
+                activeUser.role === 'admin' || 
+                activeUser.permission === 'admin' || 
+                activeUser.permission === 'developer'
+            );
+
+            if (!isAuthorized) return false;
+
+            let errBanner = document.getElementById('liveErrorLog');
+            if (!errBanner) {
+                errBanner = document.createElement('div');
+                errBanner.id = 'liveErrorLog';
+                errBanner.style.cssText = `
+                    position: fixed;
+                    bottom: 12px;
+                    left: 12px;
+                    background: #2d3436;
+                    color: #ff7675;
+                    border-left: 5px solid #d63031;
+                    padding: 10px 14px;
+                    font-size: 11px;
+                    font-family: monospace;
+                    z-index: 999999;
+                    border-radius: 8px;
+                    max-width: 90%;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                    direction: ltr;
+                    text-align: left;
+                `;
+                document.body.appendChild(errBanner);
+            }
+
+            errBanner.innerHTML = `
+                <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:4px;">
+                    <strong style="color:#fab1a0;">⚠️ تم رصد خطأ برمجي (خاص بالأدمن):</strong>
+                    <span onclick="document.getElementById('liveErrorLog').remove()" style="cursor:pointer; color:#fff; font-weight:bold;">[إغلاق ✕]</span>
+                </div>
+                <div style="max-height:80px; overflow-y:auto; word-break:break-word;">
+                    ${errText}
+                </div>
+                <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الأخطاء!')" 
+                        style="margin-top:6px; padding:3px 8px; font-size:10px; background:#0984e3; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                    نسخ تفاصيل الخطأ 📋
+                </button>
+            `;
+
+            return false;
+        };
+
         function checkInAppBrowser() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             const isWhatsApp = ua.indexOf('WhatsApp') > -1 || ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1;
@@ -974,6 +1033,7 @@
                 currentRole = currentUser.role || 'servant';
                 currentPermission = currentUser.permission || (currentRole === 'admin' ? 'admin' : 'full');
                 updateRoleUI();
+                renderServantsTable();
                 populatePlanServantsDropdown();
                 checkUpcomingBirthdays();
                 checkUpcomingMasterPlanEvents();
@@ -1051,12 +1111,13 @@
         function updateRoleUI() {
             let label = 'خادم';
             if (currentPermission === 'admin') label = 'أمين خدمة (أدمن)';
+            else if (currentPermission === 'developer') label = 'خادم ومطور نظام';
             else if (currentPermission === 'view_only') label = 'مشاهدة فقط';
             else if (currentPermission === 'attend_only') label = 'تسجيل حضور فقط';
             else if (currentPermission === 'full') label = 'خادم متكامل';
 
             document.getElementById('currentRoleBadge').innerText = label;
-            const isAdmin = (currentPermission === 'admin');
+            const isAdmin = (currentPermission === 'admin' || currentPermission === 'developer');
             const canAttend = (isAdmin || currentPermission === 'attend_only' || currentPermission === 'full');
             const canEdit = (isAdmin || currentPermission === 'full');
 
@@ -1064,6 +1125,82 @@
             document.querySelectorAll('.can-attend').forEach(el => el.style.display = canAttend ? '' : 'none');
             document.querySelectorAll('.can-edit').forEach(el => el.style.display = canEdit ? '' : 'none');
             document.querySelectorAll('.admin-or-servant').forEach(el => el.style.display = (isAdmin || currentPermission === 'full') ? '' : 'none');
+        }
+
+        // دالة عرض وإدارة جدول الخدام
+        function renderServantsTable() {
+            const tbody = document.querySelector('#servantsTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            servants.forEach(s => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s.code || s.id}</td>
+                    <td><strong>${s.name}</strong></td>
+                    <td>${s.phone}</td>
+                    <td>${s.dob || '-'}</td>
+                    <td><span class="role-badge" style="background:var(--accent);">${s.permission || s.role || 'خادم'}</span></td>
+                    <td class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل</button></td>
+                    <td class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            updateRoleUI();
+        }
+
+        function addServantManual() {
+            let name = document.getElementById('newServantName').value.trim();
+            let phone = document.getElementById('newServantPhone').value.trim();
+            let code = document.getElementById('newServantCode').value.trim();
+            let dob = document.getElementById('newServantDob').value;
+            let perm = document.getElementById('newServantPermission').value;
+
+            if (!name || !phone) return alert("يرجى إدخال اسم ورقم هاتف الخادم!");
+
+            servants.push({
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                code: code || (servants.length + 101).toString(),
+                dob: dob,
+                role: perm === 'admin' ? 'admin' : 'servant',
+                permission: perm
+            });
+
+            localStorage.setItem('my_church_servants', JSON.stringify(servants));
+            syncToCloud('servants', servants);
+            renderServantsTable();
+            renderServantsAttendanceTable();
+            populatePlanServantsDropdown();
+            showToast("✅ تم حفظ الخادم بنجاح!");
+            document.getElementById('newServantName').value = '';
+            document.getElementById('newServantPhone').value = '';
+            document.getElementById('newServantCode').value = '';
+        }
+
+        function editServant(id) {
+            let s = servants.find(x => x.id === id);
+            if (!s) return;
+            let newName = prompt("تعديل اسم الخادم:", s.name);
+            if (newName) s.name = newName.trim();
+            let newPhone = prompt("تعديل رقم الهاتف:", s.phone);
+            if (newPhone) s.phone = newPhone.trim();
+            
+            localStorage.setItem('my_church_servants', JSON.stringify(servants));
+            syncToCloud('servants', servants);
+            renderServantsTable();
+            renderServantsAttendanceTable();
+        }
+
+        function deleteServant(id) {
+            if (confirm("هل أنت متأكد من حذف هذا الخادم؟")) {
+                servants = servants.filter(s => s.id !== id);
+                localStorage.setItem('my_church_servants', JSON.stringify(servants));
+                syncToCloud('servants', servants);
+                renderServantsTable();
+                renderServantsAttendanceTable();
+            }
         }
 
         function populatePlanServantsDropdown() {
@@ -1220,7 +1357,7 @@
                 }
             });
 
-            if (currentPermission === 'admin' || currentPermission === 'full') {
+            if (currentPermission === 'admin' || currentPermission === 'developer' || currentPermission === 'full') {
                 servants.forEach(s => {
                     if (s.dob) {
                         let parts = s.dob.toString().split(/[-/]/);
@@ -1310,7 +1447,9 @@
             syncToCloud('members', members);
             
             let vh = document.getElementById('visitationHistory');
-            vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${new Date().toLocaleDateString('en-CA')} (${currentUser ? currentUser.name : 'خادم'}):</strong> ${text}</div>` + vh.innerHTML;
+            if (vh) {
+                vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${new Date().toLocaleDateString('en-CA')} (${currentUser ? currentUser.name : 'خادم'}):</strong> ${text}</div>` + vh.innerHTML;
+            }
             
             renderServantsAttendanceTable();
             checkLocalStorageUsage();
@@ -2165,11 +2304,22 @@
             let qrBox = document.getElementById('profileQrCode');
             if (qrBox) {
                 qrBox.innerHTML = '';
-                new QRCode(qrBox, { 
-                    text: qrString, 
-                    width: 115, 
-                    height: 115 
-                });
+                try {
+                    new QRCode(qrBox, { 
+                        text: qrString || "0", 
+                        width: 115, 
+                        height: 115,
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                } catch (qrErr) {
+                    console.warn("تنبيه الباركود:", qrErr);
+                    new QRCode(qrBox, { 
+                        text: (m.code || m.id || "0").toString(), 
+                        width: 115, 
+                        height: 115,
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                }
             }
             let qrText = document.getElementById('profileQrText');
             if (qrText) qrText.innerText = `QR: ${qrString}`;
@@ -2273,7 +2423,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.5",
+                version: "2.6",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -2334,6 +2484,7 @@
                         renderMembersList();
                         renderAttendanceTable();
                         renderServantsAttendanceTable();
+                        renderServantsTable();
                         renderMasterPlanTable();
                         renderDashboard();
                         checkLocalStorageUsage();
@@ -2764,6 +2915,7 @@
         renderMembersList();
         renderAttendanceTable();
         renderServantsAttendanceTable();
+        renderServantsTable();
         renderMasterPlanTable();
         renderDashboard();
     </script>
