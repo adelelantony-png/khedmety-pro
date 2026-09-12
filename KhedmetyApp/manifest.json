@@ -1,7 +1,33 @@
 {
   "name": "خدمتي برو الذكي - كورس إعداد الخدام",
   "short_name": "خدمتي برو",
-  "description": "منظومة ذكية لإدارة حضور وتقييمات كورس إعداد الخدام",
+  "description": "منظومة تسجيل الحضور والمتابعة الميدانية لكورس إعداد الخدام",
+  "id": "/",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1e3799",
+  "theme_color": "#1e3799",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}{
+  "name": "خدمتي برو الذكي - كورس إعداد الخدام",
+  "short_name": "خدمتي برو",
+  "description": "منظومة تسجيل الحضور والمتابعة الميدانية لكورس إعداد الخدام",
   "id": "/",
   "start_url": "/index.html",
   "scope": "/",
