@@ -138,7 +138,7 @@
         @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -371,7 +371,7 @@
             </table>
         </div>
 
-        <!-- 3. تسجيل الحضور (الكاميرا + اليدوي) -->
+        <!-- 3. تسجيل الحضور -->
         <div id="attendanceTab" class="tab-content">
             <div class="can-attend">
                 <h2>تسجيل الحضور بالكاميرا</h2>
@@ -389,7 +389,6 @@
                 
                 <div id="reader"></div>
 
-                <!-- شريط تسجيل الحضور اليدوي السريع لمن نسي الكارنيه -->
                 <div style="background:#fff3e0; border:2px dashed #ff9800; padding:15px; border-radius:10px; margin-top:20px;">
                     <h4 style="margin:0 0 6px 0; color:#e65100;">✍️ تسجيل حضور يدوي سريع (لمن نسي أو فقد الكارنيه):</h4>
                     <p style="font-size:12px; color:#555; margin:0 0 10px 0;">ابحث بكود الامتحان (مثلاً: 664) أو بالاسم لتسجيل حضوره فوراً دون كاميرا:</p>
@@ -641,7 +640,7 @@
                 </div>
             </div>
 
-            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin:10px 0;">
+            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin-long:10px 0;">
                 <h4 style="margin:0 0 8px 0; color:var(--primary);">☀️ إعدادات الموعد الإضافي (فترة الصيف / الأنشطة):</h4>
                 <div class="form-grid">
                     <div>
@@ -833,7 +832,7 @@
             </div>
 
             <div style="text-align:center; margin:15px 0;">
-                <div id="profileQrCode" style="display:inline-block;"></div>
+                <canvas id="profileQrCanvas" style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);"></canvas>
                 <div id="profileQrText" style="font-size:11px; color:#636e72; margin-top:5px; direction:ltr; font-family:monospace;"></div>
             </div>
             <button class="btn-danger admin-only" id="btn_delete_member" style="padding:8px;">حذف الفرد نهائياً</button>
@@ -841,15 +840,17 @@
     </div>
 
     <script>
-        // مصفوفة تجميع الأخطاء البرمجية
         window.appErrorLogs = [];
 
-        // كاشف الأخطاء الحصري لأمين الخدمة والمطور
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             let errText = `[سطر ${lineNo}] ${msg}`;
             window.appErrorLogs.push(errText);
 
-            let activeUser = JSON.parse(sessionStorage.getItem('my_church_active_user'));
+            let activeUser = null;
+            try {
+                activeUser = JSON.parse(sessionStorage.getItem('my_church_active_user'));
+            } catch(e){}
+
             let isAuthorized = activeUser && (
                 activeUser.role === 'admin' || 
                 activeUser.permission === 'admin' || 
@@ -1127,7 +1128,6 @@
             document.querySelectorAll('.admin-or-servant').forEach(el => el.style.display = (isAdmin || currentPermission === 'full') ? '' : 'none');
         }
 
-        // دالة عرض وإدارة جدول الخدام
         function renderServantsTable() {
             const tbody = document.querySelector('#servantsTable tbody');
             if (!tbody) return;
@@ -2221,6 +2221,8 @@
                 return;
             }
 
+            document.getElementById('profileModal').style.display = 'flex';
+
             let qrString = ensureMemberQrCode(m);
 
             document.getElementById('p_name').innerText = m.name || "";
@@ -2301,26 +2303,20 @@
             }
             renderFieldEvaluationsList(m);
 
-            let qrBox = document.getElementById('profileQrCode');
-            if (qrBox) {
-                qrBox.innerHTML = '';
-                try {
-                    new QRCode(qrBox, { 
-                        text: qrString || "0", 
-                        width: 115, 
-                        height: 115,
-                        correctLevel: QRCode.CorrectLevel.L
-                    });
-                } catch (qrErr) {
-                    console.warn("تنبيه الباركود:", qrErr);
-                    new QRCode(qrBox, { 
-                        text: (m.code || m.id || "0").toString(), 
-                        width: 115, 
-                        height: 115,
-                        correctLevel: QRCode.CorrectLevel.L
+            try {
+                let qrCanvas = document.getElementById('profileQrCanvas');
+                if (qrCanvas) {
+                    new QRious({
+                        element: qrCanvas,
+                        value: qrString,
+                        size: 130,
+                        level: 'L'
                     });
                 }
+            } catch (e) {
+                console.error("فشل رسم الباركود:", e);
             }
+
             let qrText = document.getElementById('profileQrText');
             if (qrText) qrText.innerText = `QR: ${qrString}`;
 
@@ -2338,7 +2334,6 @@
                     checkLocalStorageUsage();
                 }
             };
-            document.getElementById('profileModal').style.display = 'flex';
         }
 
         function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
