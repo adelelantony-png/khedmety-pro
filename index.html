@@ -930,7 +930,6 @@
         if (!attendanceRecord[today]) attendanceRecord[today] = [];
         if (!servantsAttendance[today]) servantsAttendance[today] = [];
 
-        // ضبط الـ QR Code الخاص بكل دارس بصيغة الاسم/اليوم تلقائياً
         function ensureMemberQrCode(m) {
             let bDay = "01";
             if (m.dob) {
@@ -1596,7 +1595,6 @@
             }
         }
 
-        // تسجيل حضور عضو (برمجياً ويدوياً وبالمسح)
         function registerMemberAttendance(member) {
             let existing = (attendanceRecord[today] || []).find(a => a.id.toString() === member.id.toString());
             if (existing) {
@@ -1625,7 +1623,7 @@
 
             attendanceRecord[today].push({
                 id: member.id,
-                code: member.code || member.id, // كود الامتحان
+                code: member.code || member.id,
                 name: member.name,
                 stage: member.stage || 'سنة أولى',
                 gender: member.gender || 'بنين',
@@ -1652,7 +1650,6 @@
             checkLocalStorageUsage();
         }
 
-        // تسجيل الحضور اليدوي السريع من حقل البحث
         function manualMarkMemberFromInput() {
             let input = document.getElementById('manualAttendInput').value.trim();
             if (!input) return alert("يرجى كتابة كود الامتحان أو اسم الدارس أولاً!");
@@ -1765,7 +1762,6 @@
                 let mId = m.id ? m.id.toString().trim() : "";
                 let mQr = m.qrCode ? m.qrCode.toLowerCase() : "";
 
-                // التطابق مع كود الامتحان أو صيغة الاسم/اليوم أو اسم الشخص
                 if (mCode === scannedText) return true;
                 if (mQr !== "" && mQr === scannedText.toLowerCase()) return true;
                 if (mName === parsedName.toLowerCase()) return true;
@@ -2053,7 +2049,7 @@
                     </td>
                     <td>${gradBadge}</td>
                     <td>${manualBtn}</td>
-                    <td><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile(${m.id})">الملف 🪪</button></td>
+                    <td><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile('${m.id}')">الملف 🪪</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2078,14 +2074,17 @@
         }
 
         function openProfile(id) {
-            currentProfileId = id;
-            let m = members.find(x => x.id.toString() === id.toString());
-            if (!m) return;
+            if (!id) return;
+            currentProfileId = id.toString();
+            let m = members.find(x => x.id && x.id.toString() === currentProfileId);
+            if (!m) {
+                console.error("لم يتم العثور على ملف المخدوم ذو المعرف:", id);
+                return;
+            }
 
-            // التأكد من كود الـ QR المناسب للكارنيه
             let qrString = ensureMemberQrCode(m);
 
-            document.getElementById('p_name').innerText = m.name;
+            document.getElementById('p_name').innerText = m.name || "";
             document.getElementById('p_exam_code').innerText = m.code || '-';
             document.getElementById('p_stage').innerText = m.stage || 'سنة أولى';
             document.getElementById('p_gender').innerText = m.gender || 'بنين';
@@ -2101,21 +2100,22 @@
             document.getElementById('p_grad_progress').style.width = `${grad.percent}%`;
             document.getElementById('p_grad_progress').style.background = grad.qualified ? 'var(--success)' : 'var(--warning)';
 
-            // تفعيل زر تسجيل الحضور اليدوي من الملف
             let isAttendedToday = (attendanceRecord[today] || []).some(a => a.id.toString() === m.id.toString());
             let manualProfileBtn = document.getElementById('btn_profile_manual_attend');
-            if (isAttendedToday) {
-                manualProfileBtn.innerText = "✔️ تم تسجيل حضور هذا الدارس اليوم";
-                manualProfileBtn.disabled = true;
-                manualProfileBtn.style.opacity = "0.7";
-            } else {
-                manualProfileBtn.innerText = "✔️ تسجيل حضور يدوي لهذا الدارس اليوم";
-                manualProfileBtn.disabled = false;
-                manualProfileBtn.style.opacity = "1";
-                manualProfileBtn.onclick = function() {
-                    registerMemberAttendance(m);
-                    openProfile(m.id);
-                };
+            if (manualProfileBtn) {
+                if (isAttendedToday) {
+                    manualProfileBtn.innerText = "✔️ تم تسجيل حضور هذا الدارس اليوم";
+                    manualProfileBtn.disabled = true;
+                    manualProfileBtn.style.opacity = "0.7";
+                } else {
+                    manualProfileBtn.innerText = "✔️ تسجيل حضور يدوي لهذا الدارس اليوم";
+                    manualProfileBtn.disabled = false;
+                    manualProfileBtn.style.opacity = "1";
+                    manualProfileBtn.onclick = function() {
+                        registerMemberAttendance(m);
+                        openProfile(m.id);
+                    };
+                }
             }
 
             let cleanPhone = formatWhatsAppPhone(m.phone);
@@ -2128,25 +2128,29 @@
             }
 
             let vh = document.getElementById('visitationHistory');
-            vh.innerHTML = '';
-            (m.visitations || []).forEach(v => {
-                vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
-            });
+            if (vh) {
+                vh.innerHTML = '';
+                (m.visitations || []).forEach(v => {
+                    vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
+                });
+            }
 
             let atb = document.getElementById('p_attendance_tbody');
-            atb.innerHTML = '';
-            let dates = Object.keys(attendanceRecord).sort().reverse();
-            let hasAtt = false;
-            dates.forEach(d => {
-                let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
-                if (rec) {
-                    hasAtt = true;
-                    let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : '<span style="color:green; font-weight:bold;">حاضر</span>';
-                    atb.innerHTML += `<tr><td style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
+            if (atb) {
+                atb.innerHTML = '';
+                let dates = Object.keys(attendanceRecord).sort().reverse();
+                let hasAtt = false;
+                dates.forEach(d => {
+                    let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
+                    if (rec) {
+                        hasAtt = true;
+                        let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : '<span style="color:green; font-weight:bold;">حاضر</span>';
+                        atb.innerHTML += `<tr><td style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
+                    }
+                });
+                if (!hasAtt) {
+                    atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
                 }
-            });
-            if(!hasAtt) {
-                atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
             }
 
             let supSelect = document.getElementById('evalSupervisor');
@@ -2158,21 +2162,24 @@
             }
             renderFieldEvaluationsList(m);
 
-            // توليد الـ QR code المطابق للكارنيه المطبوع (الاسم/اليوم)
-            document.getElementById('profileQrCode').innerHTML = '';
-            new QRCode(document.getElementById('profileQrCode'), { 
-                text: qrString, 
-                width: 115, 
-                height: 115 
-            });
-            document.getElementById('profileQrText').innerText = `QR: ${qrString}`;
+            let qrBox = document.getElementById('profileQrCode');
+            if (qrBox) {
+                qrBox.innerHTML = '';
+                new QRCode(qrBox, { 
+                    text: qrString, 
+                    width: 115, 
+                    height: 115 
+                });
+            }
+            let qrText = document.getElementById('profileQrText');
+            if (qrText) qrText.innerText = `QR: ${qrString}`;
 
             switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
 
             document.getElementById('btn_delete_member').onclick = function() {
                 if (currentPermission !== 'admin') return alert("متاح لأمين الخدمة فقط!");
                 if (confirm(`حذف ${m.name} نهائياً؟`)) {
-                    members = members.filter(x => x.id !== m.id);
+                    members = members.filter(x => x.id.toString() !== m.id.toString());
                     localStorage.setItem('my_church_class', JSON.stringify(members));
                     syncToCloud('members', members);
                     closeProfile(); 
@@ -2370,7 +2377,6 @@
             });
         }
 
-        // استيراد الإكسيل بالمطابقة الدقيقة لشيتك
         function importMembers() {
             let file = document.getElementById('importFile').files[0];
             if (!file) return alert("اختر ملف إكسيل أولاً");
@@ -2472,8 +2478,8 @@
 
             members.push({
                 id: Date.now(),
-                code: examCode, // كود الامتحان
-                qrCode: generatedQr, // الاسم/اليوم
+                code: examCode,
+                qrCode: generatedQr,
                 name: name,
                 gender: document.getElementById('m_gender').value,
                 stage: document.getElementById('m_stage').value,
