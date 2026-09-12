@@ -1,4 +1,4 @@
-const CACHE_NAME = 'khedmety-offline-v5';
+const CACHE_NAME = 'khedmety-offline-v6';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -45,7 +45,6 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// استقبال حدث المزامنة الخلفية الصامتة
 self.addEventListener('sync', event => {
     if (event.tag === 'sync-church-data') {
         event.waitUntil(notifyClientsToSync());
