@@ -123,6 +123,13 @@
             100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
 
+        /* شريط تنبيه متصفح واتساب الداخلي */
+        #inAppBrowserAlert {
+            display: none; background: #25D366; color: white; padding: 12px;
+            border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: bold;
+            text-align: center; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
         /* شريط زر تثبيت البرنامج */
         #pwaInstallBanner {
             display: none; background: #2d3436; color: white; padding: 10px 15px;
@@ -143,6 +150,12 @@
 
     <div id="dangerSyncWarningBar">
         ⚠️ تنبيه أمني: توجد حركات حضور لم تُرفع للسحابة بعد! برجاء عدم إغلاق الصفحة لحين عودة النت ومزامنتها.
+    </div>
+
+    <!-- تنبيه الفتح من داخل واتساب -->
+    <div id="inAppBrowserAlert">
+        📲 أنت تفتح التطبيق من متصفح واتساب الداخلي!<br>
+        اضغط على <strong>الثلاث نقاط (⁝)</strong> بأعلى الشاشة واختر <strong>"فتح في Chrome"</strong> لتتمكن من تثبيت التطبيق والعمل بدون نت.
     </div>
 
     <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
@@ -473,7 +486,7 @@
                 <h2>إضافة دارس جديد</h2>
                 <form id="addForm">
                     <div class="form-grid">
-                        <input type="text" id="m_code" placeholder="كود الامتحان / الكارنيه" required>
+                        <input type="text" id="m_code" placeholder="كود الامتحان (أو سيُنشأ تلقائياً)">
                         <input type="text" id="m_name" placeholder="الاسم الرباعي" required>
                         <select id="m_gender" required>
                             <option value="بنين" selected>بنين (ولد)</option>
@@ -526,7 +539,7 @@
 
             <h2>قائمة المسجلين ومؤشر التخرج</h2>
             <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
-                <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم، الكود، أو الهاتف..." onkeyup="renderMembersList()" style="margin:0; flex:1;">
+                <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم، الكود (الاسم/اليوم)، أو الهاتف..." onkeyup="renderMembersList()" style="margin:0; flex:1;">
                 <button class="btn-purple" onclick="openQrSearchModal()" style="width:auto; margin:0; padding:10px 14px; white-space:nowrap; font-size:13px;">
                     📷 مسح كود الكارنيه
                 </button>
@@ -544,7 +557,7 @@
             <table id="membersTable">
                 <thead>
                     <tr>
-                        <th>الكود</th>
+                        <th>الكود (الاسم/اليوم)</th>
                         <th>الاسم</th>
                         <th>المرحلة</th>
                         <th>التليفون</th>
@@ -678,6 +691,12 @@
             <textarea id="firebaseConfigInput" rows="4" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
             <button class="btn-primary" onclick="saveFirebaseConfig()" style="margin-top:6px;">حفظ والاتصال بالسحابة ☁️</button>
             <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات</button>
+
+            <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
+                <button class="btn-warning" onclick="upgradeAllMembersQrCodes()">
+                    🔄 تحديث إجباري لكافة الأكواد لصيغة (الاسم/يوم الميلاد) ومزامنتها
+                </button>
+            </div>
         </div>
 
         <!-- 9. التقارير والنسخ الاحتياطي الشامل -->
@@ -834,6 +853,16 @@
     </div>
 
     <script>
+        // كاشف متصفح واتساب والتطبيقات الداخلية
+        function checkInAppBrowser() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isWhatsApp = ua.indexOf('WhatsApp') > -1 || ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1;
+            const alertBox = document.getElementById('inAppBrowserAlert');
+            if (isWhatsApp && alertBox) {
+                alertBox.style.display = 'block';
+            }
+        }
+
         function formatWhatsAppPhone(rawPhone) {
             if (!rawPhone) return "";
             let digits = rawPhone.toString().replace(/\D/g, '');
@@ -875,7 +904,6 @@
             setTimeout(() => { toast.classList.remove('show'); }, 3000);
         }
 
-        // حماية منع إغلاق المتصفح أو التبويب إذا وُجدت بيانات تنتظر المزامنة
         window.addEventListener('beforeunload', function (e) {
             let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
             if (Object.keys(pending).length > 0) {
@@ -915,6 +943,53 @@
         document.getElementById('todayDate').innerText = today;
         if (!attendanceRecord[today]) attendanceRecord[today] = [];
         if (!servantsAttendance[today]) servantsAttendance[today] = [];
+
+        // دالة الفحص والترقية التلقائية الصامتة لأكواد الدارسين
+        function autoMigrateMemberCodes() {
+            let changed = false;
+            members.forEach(m => {
+                let bDay = "00";
+                if (m.dob) {
+                    let parts = m.dob.split('-');
+                    bDay = parts[2] ? parseInt(parts[2]).toString() : "00";
+                }
+                let correctCode = `${m.name.trim()}/${bDay}`;
+                if (m.code !== correctCode) {
+                    m.code = correctCode;
+                    changed = true;
+                }
+            });
+            if (changed) {
+                localStorage.setItem('my_church_class', JSON.stringify(members));
+                syncToCloud('members', members);
+            }
+        }
+
+        function upgradeAllMembersQrCodes() {
+            if (!confirm("هل تريد تحديث أكواد جميع الدارسين المسجلين لتصبح بصيغة (الاسم كامل/يوم الميلاد) ومزامنتها؟")) {
+                return;
+            }
+
+            let updatedCount = 0;
+            members.forEach(m => {
+                let bDay = "00";
+                if (m.dob) {
+                    let parts = m.dob.split('-');
+                    bDay = parts[2] ? parseInt(parts[2]).toString() : "00";
+                }
+                m.code = `${m.name.trim()}/${bDay}`;
+                updatedCount++;
+            });
+
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+            syncToCloud('members', members);
+
+            renderMembersList();
+            renderDashboard();
+            checkLocalStorageUsage();
+
+            alert(`✅ تم تحديث أكواد (${updatedCount}) دارس بنجاح إلى صيغة (الاسم/يوم الميلاد)!`);
+        }
 
         function applyServiceBranding() {
             let cName = settings.churchName || "كنيسة الملاك والروماني بالمطرية";
@@ -1640,7 +1715,6 @@
             document.getElementById('stopCameraBtn').style.display = 'none';
         }
 
-        // متغيرات مؤقت الأمان لمنع المسح المزدوج
         let lastScannedCode = "";
         let lastScannedTime = 0;
         const SCAN_COOLDOWN_MS = 5000;
@@ -1649,7 +1723,6 @@
             scannedText = scannedText.trim();
             let nowTimestamp = Date.now();
 
-            // فحص منع التكرار اللحظي
             if (scannedText === lastScannedCode && (nowTimestamp - lastScannedTime) < SCAN_COOLDOWN_MS) {
                 return;
             }
@@ -1657,7 +1730,6 @@
             lastScannedCode = scannedText;
             lastScannedTime = nowTimestamp;
 
-            // استخراج الاسم ويوم الميلاد إذا وُجدت "/"
             let parsedName = scannedText;
             let parsedDay = "";
             if (scannedText.includes('/')) {
@@ -1750,7 +1822,6 @@
             }
         }
 
-        // حساب ورسم الخريطة الحرارية للحضور
         function renderAttendanceHeatmap() {
             const container = document.getElementById('heatmapContainer');
             const badge = document.getElementById('attritionCountBadge');
@@ -2030,8 +2101,20 @@
             let m = members.find(x => x.id.toString() === id.toString());
             if (!m) return;
 
+            let bDay = "00";
+            if (m.dob) {
+                let parts = m.dob.split('-');
+                bDay = parts[2] ? parseInt(parts[2]).toString() : "00";
+            }
+            let expectedCode = `${m.name.trim()}/${bDay}`;
+            if (m.code !== expectedCode) {
+                m.code = expectedCode;
+                localStorage.setItem('my_church_class', JSON.stringify(members));
+                syncToCloud('members', members);
+            }
+
             document.getElementById('p_name').innerText = m.name;
-            document.getElementById('p_code').innerText = m.code || m.id;
+            document.getElementById('p_code').innerText = m.code;
             document.getElementById('p_stage').innerText = m.stage || 'سنة أولى';
             document.getElementById('p_gender').innerText = m.gender || 'بنين';
             document.getElementById('p_phone').innerText = m.phone || "-";
@@ -2086,17 +2169,9 @@
             }
             renderFieldEvaluationsList(m);
 
-            // توليد الـ QR Code بصيغة: الاسم/يوم الميلاد
-            let bDay = "00";
-            if (m.dob) {
-                let parts = m.dob.split('-');
-                bDay = parts[2] ? parseInt(parts[2]).toString() : "00";
-            }
-            let qrData = `${m.name.trim()}/${bDay}`;
-
             document.getElementById('profileQrCode').innerHTML = '';
             new QRCode(document.getElementById('profileQrCode'), { 
-                text: qrData, 
+                text: m.code, 
                 width: 110, 
                 height: 110 
             });
@@ -2200,7 +2275,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.3",
+                version: "2.4",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -2257,6 +2332,7 @@
                         syncToCloud('master_plan', masterPlan);
                         syncToCloud('settings', settings);
 
+                        autoMigrateMemberCodes();
                         applyServiceBranding();
                         renderMembersList();
                         renderAttendanceTable();
@@ -2318,7 +2394,6 @@
 
                 data.forEach(r => {
                     let name = r['الاسم'] || r['Name'] || "بدون اسم";
-                    let code = r['كود الامتحان'] || r['كود'] || r['Code'] || "";
                     let rawP = r['رقم التليون'] || r['رقم الهاتف'] || r['الهاتف'] || "";
                     let cleanPhone = formatWhatsAppPhone(rawP);
                     let cleanParentPhone = formatWhatsAppPhone(r['رقم تليفون ولي الامر'] || rawP);
@@ -2333,12 +2408,16 @@
                         fullDob = r['تاريخ الميلاد'];
                     }
 
+                    let dayNum = bDay ? parseInt(bDay).toString() : (fullDob ? parseInt(fullDob.split('-')[2] || "0").toString() : "00");
+                    let dynamicCode = `${name.trim()}/${dayNum}`;
+
                     let address = r['العنوان'] || "";
                     let confessor = r['اب الاعتراف'] || "";
                     
-                    let existingMember = findExistingMember(code, name);
+                    let existingMember = findExistingMember(dynamicCode, name);
 
                     if (existingMember) {
+                        existingMember.code = dynamicCode;
                         existingMember.phone = cleanPhone || existingMember.phone;
                         existingMember.parent_phone = cleanParentPhone || existingMember.parent_phone;
                         existingMember.address = address || existingMember.address;
@@ -2348,7 +2427,7 @@
                     } else {
                         members.push({
                             id: Date.now() + Math.floor(Math.random() * 1000),
-                            code: code,
+                            code: dynamicCode,
                             name: name,
                             stage: "سنة أولى",
                             gender: "بنين",
@@ -2380,10 +2459,17 @@
 
         document.getElementById('addForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            let code = document.getElementById('m_code').value.trim();
             let name = document.getElementById('m_name').value.trim();
+            let dob = document.getElementById('m_dob').value;
             
-            let existingMember = findExistingMember(code, name);
+            let bDay = "00";
+            if (dob) {
+                let parts = dob.split('-');
+                bDay = parts[2] ? parseInt(parts[2]).toString() : "00";
+            }
+            let generatedCode = `${name}/${bDay}`;
+            
+            let existingMember = findExistingMember(generatedCode, name);
             if (existingMember) {
                 alert(`❌ هذا الشخص مسجل بالفعل في المنظومة!\nالاسم: ${existingMember.name}\nالكود: ${existingMember.code}`);
                 return;
@@ -2391,14 +2477,14 @@
 
             members.push({
                 id: Date.now(),
-                code: code,
+                code: generatedCode,
                 name: name,
                 gender: document.getElementById('m_gender').value,
                 stage: document.getElementById('m_stage').value,
                 phone: formatWhatsAppPhone(document.getElementById('m_phone').value),
                 parent_phone: formatWhatsAppPhone(document.getElementById('m_parent_phone').value),
                 address: document.getElementById('m_address').value,
-                dob: document.getElementById('m_dob').value,
+                dob: dob,
                 confessor: document.getElementById('m_confessor').value,
                 other_data: document.getElementById('m_other').value,
                 visitations: [],
@@ -2411,7 +2497,7 @@
             renderDashboard(); 
             checkUpcomingBirthdays();
             checkLocalStorageUsage();
-            showToast(`تم إضافة الدارس بنجاح!`);
+            showToast(`تم إضافة الدارس بنجاح بكود: ${generatedCode}`);
         });
 
         function batchTransferStage() {
@@ -2591,7 +2677,7 @@
                 }
 
                 db.ref('settings').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('settings')) { settings = snap.val(); localStorage.setItem('my_church_settings', JSON.stringify(settings)); applyServiceBranding(); } });
-                db.ref('members').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('members')) { members = snap.val(); localStorage.setItem('my_church_class', JSON.stringify(members)); renderMembersList(); renderDashboard(); checkUpcomingBirthdays(); } });
+                db.ref('members').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('members')) { members = snap.val(); localStorage.setItem('my_church_class', JSON.stringify(members)); autoMigrateMemberCodes(); renderMembersList(); renderDashboard(); checkUpcomingBirthdays(); } });
                 db.ref('attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('attendance')) { attendanceRecord = snap.val(); if (!attendanceRecord[today]) attendanceRecord[today] = []; localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); renderAttendanceTable(); renderMembersList(); renderDashboard(); } });
                 db.ref('servants_attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants_attendance')) { servantsAttendance = snap.val(); if (!servantsAttendance[today]) servantsAttendance[today] = []; localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); renderServantsAttendanceTable(); renderDashboard(); } });
                 db.ref('servants').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants')) { servants = snap.val(); localStorage.setItem('my_church_servants', JSON.stringify(servants)); renderServantsTable(); renderServantsAttendanceTable(); populatePlanServantsDropdown(); renderDashboard(); checkUpcomingBirthdays(); } });
@@ -2642,9 +2728,6 @@
             });
         }
 
-        // ==========================================
-        // تسجيل الـ ServiceWorker ودعم التثبيت المباشر PWA
-        // ==========================================
         let deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -2672,6 +2755,8 @@
             });
         }
 
+        checkInAppBrowser();
+        autoMigrateMemberCodes();
         applyServiceBranding();
         checkSession();
         initFirebase();
