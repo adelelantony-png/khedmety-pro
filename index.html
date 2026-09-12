@@ -138,7 +138,7 @@
         @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -640,7 +640,7 @@
                 </div>
             </div>
 
-            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin-long:10px 0;">
+            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin:10px 0;">
                 <h4 style="margin:0 0 8px 0; color:var(--primary);">☀️ إعدادات الموعد الإضافي (فترة الصيف / الأنشطة):</h4>
                 <div class="form-grid">
                     <div>
@@ -832,7 +832,7 @@
             </div>
 
             <div style="text-align:center; margin:15px 0;">
-                <canvas id="profileQrCanvas" style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);"></canvas>
+                <canvas id="profileQrCanvas" style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); background:#ffffff; padding:4px;"></canvas>
                 <div id="profileQrText" style="font-size:11px; color:#636e72; margin-top:5px; direction:ltr; font-family:monospace;"></div>
             </div>
             <button class="btn-danger admin-only" id="btn_delete_member" style="padding:8px;">حذف الفرد نهائياً</button>
@@ -2303,18 +2303,15 @@
             }
             renderFieldEvaluationsList(m);
 
-            try {
-                let qrCanvas = document.getElementById('profileQrCanvas');
-                if (qrCanvas) {
-                    new QRious({
-                        element: qrCanvas,
-                        value: qrString,
-                        size: 130,
-                        level: 'L'
-                    });
-                }
-            } catch (e) {
-                console.error("فشل رسم الباركود:", e);
+            let qrCanvas = document.getElementById('profileQrCanvas');
+            if (qrCanvas) {
+                QRCode.toCanvas(qrCanvas, qrString, {
+                    width: 150,
+                    margin: 3,
+                    errorCorrectionLevel: 'L'
+                }, function (error) {
+                    if (error) console.error("خطأ الباركود:", error);
+                });
             }
 
             let qrText = document.getElementById('profileQrText');
