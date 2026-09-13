@@ -89,7 +89,11 @@
         .stat-card { background: #f8f9fa; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
         .stat-card .num { font-size: clamp(18px, 4vw, 24px); font-weight: bold; color: var(--accent); }
 
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        /* تعديل شبكة النماذج لمنع التداخل وضبط المساحات */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: var(--dark); min-height: 38px; display: flex; align-items: center; }
+
         input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-size: 14px; font-family: inherit; }
         button { width: 100%; padding: 12px; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 6px; transition: 0.2s; }
         .btn-primary { background: var(--accent); }
@@ -370,7 +374,7 @@
             <div class="admin-only" style="background:#f8f9fa; border:1px solid #dfe6e9; padding:15px; border-radius:8px; margin-bottom:15px;">
                 <h4 style="margin:0 0 10px 0; color:var(--primary);">➕ إدراج فعالية جديدة في خطة السنة:</h4>
                 <div class="form-grid">
-                    <div>
+                    <div class="form-group">
                         <label>نوع الفعالية:</label>
                         <select id="planType">
                             <option value="محاضرة">محاضرة دراسية</option>
@@ -381,19 +385,19 @@
                             <option value="حفل تخرج">حفل تخرج ورسامة</option>
                         </select>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>تاريخ الفعالية:</label>
                         <input type="date" id="planDate" required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>عنوان الفعالية / الموضوع:</label>
                         <input type="text" id="planTitle" placeholder="مثال: مؤتمر العقيدة..." required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>المكان / الملاحظات:</label>
                         <input type="text" id="planLocation" placeholder="مثال: قاعة الكنيسة...">
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>المرحلة المستهدفة:</label>
                         <select id="planStage">
                             <option value="عام لكل الخدمة">عام لكل الخدمة والدارسين</option>
@@ -402,7 +406,7 @@
                             <option value="الخدام فقط">اجتماع الخدام فقط</option>
                         </select>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>الخادم المسؤول / المحاضر:</label>
                         <select id="planResponsibleServant">
                             <option value="">اختر الخادم المسؤول...</option>
@@ -535,23 +539,27 @@
                 <h2>إضافة دارس جديد</h2>
                 <form id="addForm">
                     <div class="form-grid">
-                        <input type="text" id="m_code" placeholder="كود الامتحان (مثلاً: 664)" required>
-                        <input type="text" id="m_name" placeholder="الاسم الرباعي" required>
-                        <select id="m_gender" required>
-                            <option value="بنين" selected>بنين (ولد)</option>
-                            <option value="بنات">بنات</option>
-                        </select>
-                        <select id="m_stage" required>
-                            <option value="سنة أولى" selected>سنة أولى إعداد خدام</option>
-                            <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
-                            <option value="خريجين">خريجين / تم التخرج</option>
-                        </select>
-                        <input type="text" id="m_phone" placeholder="رقم التليفون" required>
-                        <input type="text" id="m_parent_phone" placeholder="تليفون ولي الأمر">
-                        <input type="text" id="m_address" placeholder="العنوان">
-                        <input type="date" id="m_dob" placeholder="تاريخ الميلاد" required>
-                        <input type="text" id="m_confessor" placeholder="أب الاعتراف">
-                        <input type="text" id="m_other" placeholder="ملاحظات أخرى">
+                        <div class="form-group"><input type="text" id="m_code" placeholder="كود الامتحان (مثلاً: 664)" required></div>
+                        <div class="form-group"><input type="text" id="m_name" placeholder="الاسم الرباعي" required></div>
+                        <div class="form-group">
+                            <select id="m_gender" required>
+                                <option value="بنين" selected>بنين (ولد)</option>
+                                <option value="بنات">بنات</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <select id="m_stage" required>
+                                <option value="سنة أولى" selected>سنة أولى إعداد خدام</option>
+                                <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
+                                <option value="خريجين">خريجين / تم التخرج</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><input type="text" id="m_phone" placeholder="رقم التليفون" required></div>
+                        <div class="form-group"><input type="text" id="m_parent_phone" placeholder="تليفون ولي الأمر"></div>
+                        <div class="form-group"><input type="text" id="m_address" placeholder="العنوان"></div>
+                        <div class="form-group"><input type="date" id="m_dob" placeholder="تاريخ الميلاد" required></div>
+                        <div class="form-group"><input type="text" id="m_confessor" placeholder="أب الاعتراف"></div>
+                        <div class="form-group"><input type="text" id="m_other" placeholder="ملاحظات أخرى"></div>
                     </div>
                     <button type="submit" class="btn-primary">حفظ في المنظومة</button>
                 </form>
@@ -649,18 +657,20 @@
         <div id="servantsTab" class="tab-content">
             <h2>إدارة حسابات الخدام والصلاحيات (سري لأمين الخدمة)</h2>
             <div class="form-grid">
-                <input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)">
-                <input type="text" id="newServantName" placeholder="اسم الخادم الرباعي">
-                <input type="text" id="newServantPhone" placeholder="رقم الهاتف (كلمة المرور)">
-                <input type="date" id="newServantDob" placeholder="تاريخ الميلاد للتهنئة">
-                <select id="newServantPermission">
-                    <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
-                    <option value="scanner_only">مسح الحضور بالكاميرا فقط (شاشة الكاميرا المباشرة)</option>
-                    <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
-                    <option value="view_only">مشاهدة واطلاع فقط</option>
-                    <option value="developer">خادم ومطور نظام (صلاحيات كاملة + فاحص أخطاء Log)</option>
-                    <option value="admin">أمين خدمة (أدمن كامل الصلاحيات + Log)</option>
-                </select>
+                <div class="form-group"><input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)"></div>
+                <div class="form-group"><input type="text" id="newServantName" placeholder="اسم الخادم الرباعي"></div>
+                <div class="form-group"><input type="text" id="newServantPhone" placeholder="رقم الهاتف (كلمة المرور)"></div>
+                <div class="form-group"><input type="date" id="newServantDob" placeholder="تاريخ الميلاد للتهنئة"></div>
+                <div class="form-group">
+                    <select id="newServantPermission">
+                        <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
+                        <option value="scanner_only">مسح الحضور بالكاميرا فقط (شاشة الكاميرا المباشرة)</option>
+                        <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
+                        <option value="view_only">مشاهدة واطلاع فقط</option>
+                        <option value="developer">خادم ومطور نظام (صلاحيات كاملة + فاحص أخطاء Log)</option>
+                        <option value="admin">أمين خدمة (أدمن كامل الصلاحيات + Log)</option>
+                    </select>
+                </div>
             </div>
             <button class="btn-success" onclick="addServantManual()">حفظ الخادم</button>
 
@@ -689,26 +699,35 @@
             
             <h3>اسم الكنيسة والخدمة</h3>
             <div class="form-grid">
-                <div><label>اسم الكنيسة / الإيبارشية:</label><input type="text" id="setChurchName"></div>
-                <div><label>اسم الخدمة / الأسرة:</label><input type="text" id="setServiceName"></div>
-                <div><label>رقم واتساب أمين الخدمة:</label><input type="text" id="setAdminWhatsApp" placeholder="مثال: 201200000000"></div>
+                <div class="form-group">
+                    <label>اسم الكنيسة / الإيبارشية:</label>
+                    <input type="text" id="setChurchName">
+                </div>
+                <div class="form-group">
+                    <label>اسم الخدمة / الأسرة:</label>
+                    <input type="text" id="setServiceName">
+                </div>
+                <div class="form-group">
+                    <label>رقم واتساب أمين الخدمة:</label>
+                    <input type="text" id="setAdminWhatsApp" placeholder="مثال: 201200000000">
+                </div>
             </div>
 
             <h3>مواعيد الاجتماع ونظام الصيف المرن</h3>
             <div class="form-grid">
-                <div>
+                <div class="form-group">
                     <label><strong>الموعد الأساسي (يوم الجمعة):</strong></label>
                     <input type="time" id="setStartTime">
                 </div>
-                <div>
+                <div class="form-group">
                     <label>سماح التأخير للاجتماع الأساسي (دقائق):</label>
                     <input type="number" id="setAllowed">
                 </div>
-                <div>
+                <div class="form-group">
                     <label>اعتباره غائباً بعد (دقائق):</label>
                     <input type="number" id="setAbsentAfter">
                 </div>
-                <div>
+                <div class="form-group">
                     <label>كلمة مرور أمين الخدمة العام:</label>
                     <input type="password" id="setAdminPassword">
                 </div>
@@ -717,14 +736,14 @@
             <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin:10px 0;">
                 <h4 style="margin:0 0 8px 0; color:var(--primary);">☀️ إعدادات الموعد الإضافي (فترة الصيف / الأنشطة):</h4>
                 <div class="form-grid">
-                    <div>
+                    <div class="form-group">
                         <label>تفعيل الموعد الصيفي الإضافي:</label>
                         <select id="setSummerActive">
                             <option value="false">معطل (الجمعة فقط)</option>
                             <option value="true">مفعل</option>
                         </select>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>يوم النشاط الصيفي الإضافي:</label>
                         <select id="setSummerDay">
                             <option value="0">الأحد</option>
@@ -735,13 +754,13 @@
                             <option value="6">السبت</option>
                         </select>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label>موعد بدء النشاط الصيفي:</label>
                         <input type="time" id="setSummerStartTime">
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:22px;">
+                    <div class="form-group" style="display:flex; flex-direction:row; align-items:center; gap:8px; margin-top:auto;">
                         <input type="checkbox" id="setIgnoreSummerDelay" checked style="width:20px; height:20px; margin:0;">
-                        <label for="setIgnoreSummerDelay" style="font-weight:bold; color:green; font-size:13px;">إلغاء احتساب التأخير نهائياً (حضور مفتوح دون غياب)</label>
+                        <label for="setIgnoreSummerDelay" style="font-weight:bold; color:green; font-size:13px; margin:0;">إلغاء احتساب التأخير نهائياً (حضور مفتوح دون غياب)</label>
                     </div>
                 </div>
             </div>
