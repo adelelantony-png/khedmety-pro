@@ -449,14 +449,6 @@
                 
                 <div id="reader"></div>
 
-                <div style="background:#fff; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-top:15px;">
-                    <label style="font-size:13px; font-weight:bold;">بحث وتسجيل سريع برقم الكود أو الاسم:</label>
-                    <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
-                        <input type="text" id="manualAttendInput" placeholder="أدخل كود الامتحان أو الاسم..." style="flex:1; min-width:180px; margin:0;" onkeypress="if(event.key==='Enter') manualMarkMemberFromInput()">
-                        <button class="btn-primary" onclick="manualMarkMemberFromInput()" style="width:auto; margin:0; padding:10px 18px;">تسجيل ✔️</button>
-                    </div>
-                </div>
-
                 <div style="margin-top:15px;">
                     <button class="btn-purple" onclick="openManualAttendanceModal()" style="padding:14px; font-size:15px;">
                         👥 تسجيل حضور يدوي من قائمة الأسماء (بحث وتحديد سريع)
@@ -484,7 +476,7 @@
                             <th>النوع</th>
                             <th>وقت المسح</th>
                             <th>الحالة</th>
-                            <th>المسجِّل</th>
+                            <th>المسجِّل</th>
                             <th class="can-attend">إجراء</th>
                         </tr>
                     </thead>
@@ -699,6 +691,7 @@
             <div class="form-grid">
                 <div><label>اسم الكنيسة / الإيبارشية:</label><input type="text" id="setChurchName"></div>
                 <div><label>اسم الخدمة / الأسرة:</label><input type="text" id="setServiceName"></div>
+                <div><label>رقم واتساب أمين الخدمة:</label><input type="text" id="setAdminWhatsApp" placeholder="مثال: 201200000000"></div>
             </div>
 
             <h3>مواعيد الاجتماع ونظام الصيف المرن</h3>
@@ -984,7 +977,6 @@
     </div>
 
     <script>
-        // تعريف متغيرات الربط السحابي العامة
         let db = null;
         let isFirebaseActive = false;
 
@@ -1122,6 +1114,7 @@
         let settings = JSON.parse(localStorage.getItem('my_church_settings')) || { 
             churchName: "كنيسة الملاك والروماني بالمطرية",
             serviceName: "اجتماع القديس بولس الرسول لإعداد الخدام",
+            adminWhatsApp: "201200000000",
             startTime: "13:00", 
             allowedDelay: 15, 
             absentAfter: 75,
@@ -1171,6 +1164,7 @@
             document.getElementById('loginServiceDisplay').innerText = sName;
             document.getElementById('setChurchName').value = cName;
             document.getElementById('setServiceName').value = sName;
+            document.getElementById('setAdminWhatsApp').value = settings.adminWhatsApp || "201200000000";
             document.getElementById('setStartTime').value = settings.startTime || "13:00";
             document.getElementById('setAllowed').value = settings.allowedDelay || 15;
             document.getElementById('setAbsentAfter').value = settings.absentAfter || 75;
@@ -1865,7 +1859,7 @@
             document.getElementById('qrSearchModal').style.display = 'none';
         }
 
-        function exportTodaySessionToWhatsApp(adminPhone = "201200000000") {
+        function exportTodaySessionToWhatsApp(adminPhone = "") {
             let todayData = {
                 date: today,
                 servant: currentUser ? currentUser.name : 'غير محدد',
@@ -1877,10 +1871,17 @@
                 return alert("لا توجد أي حركات حضور مسجلة لليوم لتصديرها!");
             }
 
+            let targetPhone = adminPhone;
+            if (!targetPhone || targetPhone === "") {
+                let adminObj = servants.find(s => s.role === 'admin' || s.permission === 'admin');
+                targetPhone = adminObj ? adminObj.phone : (settings.adminWhatsApp || "201200000000");
+            }
+            targetPhone = formatWhatsAppPhone(targetPhone);
+
             let payload = btoa(unescape(encodeURIComponent(JSON.stringify(todayData))));
             let msg = `🚨 *تقرير طوارئ حضور كورس الخدام (${today})*\nمسجل بواسطة: ${todayData.servant}\nعدد الحاضرين: ${todayData.attendance.length}\nعدد الخدام: ${todayData.servantsAtt.length}\n\n*كود المزامنة (انسخه بالكامل):*\n\`\`\`${payload}\`\`\``;
 
-            window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+            window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function importFromEmergencyCode() {
@@ -2406,7 +2407,7 @@
                     <td data-label="النوع">${a.gender || '-'}</td>
                     <td data-label="وقت المسح" dir="ltr">${a.time}</td>
                     <td data-label="الحالة">${status}</td>
-                    <td data-label="المسجِّل">${a.scannedBy || '-'}</td>
+                    <td data-label="المسجِّل">${a.scannedBy || '-'}</td>
                     <td data-label="إجراء" class="can-attend">
                         <button class="btn-mini btn-danger" onclick="cancelMemberAttendance('${a.id}')">إلغاء ❌</button>
                     </td>
@@ -3084,42 +3085,6 @@
             }
         }
 
-        function saveGeneralSettings() {
-            settings.churchName = document.getElementById('setChurchName').value.trim();
-            settings.serviceName = document.getElementById('setServiceName').value.trim();
-            settings.startTime = document.getElementById('setStartTime').value;
-            settings.allowedDelay = parseInt(document.getElementById('setAllowed').value) || 15;
-            settings.absentAfter = parseInt(document.getElementById('setAbsentAfter').value) || 75;
-            
-            let newPwd = document.getElementById('setAdminPassword').value.trim();
-            if (newPwd) {
-                adminPassword = newPwd;
-                localStorage.setItem('my_church_admin_pwd', adminPassword);
-            }
-
-            settings.summerActive = document.getElementById('setSummerActive').value === "true";
-            settings.summerDay = document.getElementById('setSummerDay').value;
-            settings.summerStartTime = document.getElementById('setSummerStartTime').value;
-            settings.ignoreSummerDelay = document.getElementById('setIgnoreSummerDelay').checked;
-
-            localStorage.setItem('my_church_settings', JSON.stringify(settings));
-            syncToCloud('settings', settings);
-            applyServiceBranding();
-            showToast("✅ تم حفظ كافة الإعدادات بنجاح!");
-        }
-
-        function saveFirebaseConfig() {
-            let val = document.getElementById('firebaseConfigInput').value.trim();
-            if (!val) return alert("يرجى إدخال إعدادات الـ Config!");
-            try {
-                localStorage.setItem('my_firebase_config', JSON.stringify(JSON.parse(val)));
-                showToast("✅ تم حفظ إعدادات السحابة! سيتم إعادة التحميل الآن");
-                setTimeout(() => location.reload(), 1000);
-            } catch (e) {
-                alert("❌ صيغة JSON غير صحيحة! تأكد من نسخ الكائن بشكل سليم.");
-            }
-        }
-
         function updatePendingBadge() {
             let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
             let count = Object.keys(pending).length;
@@ -3227,44 +3192,45 @@
 
             try {
                 let configObj = JSON.parse(savedConfig);
-                if (!firebase.apps.length) {
+                if (typeof firebase !== 'undefined' && !firebase.apps.length) {
                     firebase.initializeApp(configObj);
                 }
 
-                db = firebase.database();
-                isFirebaseActive = true;
+                if (typeof firebase !== 'undefined') {
+                    db = firebase.database();
+                    isFirebaseActive = true;
 
-                let connectedRef = db.ref(".info/connected");
-                connectedRef.on("value", snap => {
-                    const statusText = document.getElementById('cloudStatusText');
-                    const indicator = document.getElementById('cloudIndicator');
-                    if (snap.val() === true) {
-                        indicator.className = "cloud-status cloud-connected";
-                        let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                        if (Object.keys(pending).length > 0) {
-                            statusText.innerText = "جاري رفع المتأخرات... ⏳";
-                            pushPendingData();
+                    let connectedRef = db.ref(".info/connected");
+                    connectedRef.on("value", snap => {
+                        const statusText = document.getElementById('cloudStatusText');
+                        const indicator = document.getElementById('cloudIndicator');
+                        if (snap.val() === true) {
+                            indicator.className = "cloud-status cloud-connected";
+                            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+                            if (Object.keys(pending).length > 0) {
+                                statusText.innerText = "جاري رفع المتأخرات... ⏳";
+                                pushPendingData();
+                            } else {
+                                statusText.innerText = "متصل سحابياً 🟢";
+                            }
                         } else {
-                            statusText.innerText = "متصل سحابياً 🟢";
+                            indicator.className = "cloud-status cloud-offline";
+                            statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
                         }
-                    } else {
-                        indicator.className = "cloud-status cloud-offline";
-                        statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
+                    });
+
+                    function shouldAcceptCloudData(path) {
+                        let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+                        return !pending[path]; 
                     }
-                });
 
-                function shouldAcceptCloudData(path) {
-                    let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                    return !pending[path]; 
+                    db.ref('settings').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('settings')) { settings = snap.val(); localStorage.setItem('my_church_settings', JSON.stringify(settings)); applyServiceBranding(); } });
+                    db.ref('members').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('members')) { members = snap.val(); localStorage.setItem('my_church_class', JSON.stringify(members)); renderMembersList(); renderDashboard(); checkUpcomingBirthdays(); } });
+                    db.ref('attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('attendance')) { attendanceRecord = snap.val(); if (!attendanceRecord[today]) attendanceRecord[today] = []; localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); renderAttendanceTable(); renderMembersList(); renderDashboard(); } });
+                    db.ref('servants_attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants_attendance')) { servantsAttendance = snap.val(); if (!servantsAttendance[today]) servantsAttendance[today] = []; localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); renderServantsAttendanceTable(); renderDashboard(); } });
+                    db.ref('servants').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants')) { servants = snap.val(); localStorage.setItem('my_church_servants', JSON.stringify(servants)); renderServantsTable(); renderServantsAttendanceTable(); populatePlanServantsDropdown(); renderDashboard(); checkUpcomingBirthdays(); } });
+                    db.ref('master_plan').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('master_plan')) { masterPlan = snap.val(); localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan)); renderMasterPlanTable(); renderServantsAttendanceTable(); checkUpcomingMasterPlanEvents(); } });
                 }
-
-                db.ref('settings').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('settings')) { settings = snap.val(); localStorage.setItem('my_church_settings', JSON.stringify(settings)); applyServiceBranding(); } });
-                db.ref('members').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('members')) { members = snap.val(); localStorage.setItem('my_church_class', JSON.stringify(members)); renderMembersList(); renderDashboard(); checkUpcomingBirthdays(); } });
-                db.ref('attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('attendance')) { attendanceRecord = snap.val(); if (!attendanceRecord[today]) attendanceRecord[today] = []; localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); renderAttendanceTable(); renderMembersList(); renderDashboard(); } });
-                db.ref('servants_attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants_attendance')) { servantsAttendance = snap.val(); if (!servantsAttendance[today]) servantsAttendance[today] = []; localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); renderServantsAttendanceTable(); renderDashboard(); } });
-                db.ref('servants').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants')) { servants = snap.val(); localStorage.setItem('my_church_servants', JSON.stringify(servants)); renderServantsTable(); renderServantsAttendanceTable(); populatePlanServantsDropdown(); renderDashboard(); checkUpcomingBirthdays(); } });
-                db.ref('master_plan').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('master_plan')) { masterPlan = snap.val(); localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan)); renderMasterPlanTable(); renderServantsAttendanceTable(); checkUpcomingMasterPlanEvents(); } });
-
             } catch (e) { document.getElementById('cloudStatusText').innerText = "خطأ في الاتصال"; }
         }
 
@@ -3329,40 +3295,12 @@
             }
         });
 
-        // تفعيل ودعم تقنية الـ Offline عبر ServiceWorker مدمج ومستقل
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('ServiceWorker مسجل من ملف sw.js'))
-                    .catch(() => {
-                        // في حال عدم وجود ملف sw.js خارجي، يتم توليد ServiceWorker تلقائياً للتخزين أوفلاين
-                        const inlineSwCode = `
-                            const CACHE_NAME = 'khedmaty-pro-v1';
-                            const ASSETS = [
-                                location.href,
-                                'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
-                                'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
-                                'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-                                'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-                                'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'
-                            ];
-                            self.addEventListener('install', e => {
-                                e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
-                                self.skipWaiting();
-                            });
-                            self.addEventListener('activate', e => {
-                                e.waitUntil(clients.claim());
-                            });
-                            self.addEventListener('fetch', e => {
-                                e.respondWith(
-                                    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match(location.href)))
-                                );
-                            });
-                        `;
-                        const blob = new Blob([inlineSwCode], { type: 'application/javascript' });
-                        navigator.serviceWorker.register(URL.createObjectURL(blob))
-                            .then(() => console.log('تم تفعيل وضع الأوفلاين التلقائي بنجاح!'))
-                            .catch(err => console.log('تعذر تفعيل وضع الأوفلاين:', err));
+                    .then(reg => console.log('PWA ServiceWorker مسجل بنجاح، نطاق العمل:', reg.scope))
+                    .catch(err => {
+                        console.log('تشغيل الـ ServiceWorker البديل أوفلاين');
                     });
             });
         }
