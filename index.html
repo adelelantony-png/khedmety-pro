@@ -105,13 +105,6 @@
         .progress-bar-container { background: #e2e8f0; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; margin-top: 4px; }
         .progress-bar { height: 100%; border-radius: 10px; transition: width 0.4s; }
 
-        .plan-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
-        .tag-lecture { background: #0984e3; }
-        .tag-trip { background: #00b894; }
-        .tag-camp { background: #6c5ce7; }
-        .tag-retreat { background: #e17055; }
-        .tag-grad { background: #d63031; }
-
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: clamp(11px, 2.5vw, 13px); white-space: nowrap; }
         th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
@@ -131,10 +124,24 @@
         .close-btn { position: absolute; left: 15px; top: 15px; font-size: 24px; cursor: pointer; color: #888; font-weight: bold; }
         .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; gap: 5px; flex-wrap: wrap; }
         .info-label { color: #7f8c8d; font-weight: bold; }
-        
-        .profile-tab-content { display: none; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
+
+        /* شاشة الكاميرا والمسح المباشر بنمط الكروت السريعة */
+        .live-scanner-container { background: #fff; border-radius: 16px; border: 2px solid #dcdde1; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); margin-top: 10px; }
+        .live-stream-header { display: flex; justify-content: space-between; align-items: center; background: #eaf2f8; padding: 8px 14px; border-radius: 8px; margin-top: 15px; font-weight: bold; color: var(--primary); }
+        .live-cards-feed { max-height: 300px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+        .live-scan-card { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #fdfefe; border: 1px solid #dfe6e9; border-left: 5px solid var(--success); 
+            padding: 10px 14px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); 
+            animation: slideInDown 0.3s ease-out; 
+        }
+        @keyframes slideInDown {
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .live-scan-index { background: #edf2f7; color: var(--primary); font-weight: bold; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+        .sacrament-box { display: flex; gap: 6px; align-items: center; }
+
         #reader { width: 100%; max-width: 320px; min-height: 250px; margin: auto; border: 2px dashed var(--accent); border-radius: 8px; overflow: hidden; background: #000; }
 
         #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 15px; }
@@ -162,32 +169,6 @@
             padding: 8px 12px; font-size: 12px; font-weight: bold; position: sticky;
             top: 0; z-index: 9998; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
-
-        #kioskCard {
-            display: none; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); background: #ffffff;
-            border-radius: 18px; box-shadow: 0 15px 40px rgba(0,0,0,0.35);
-            padding: 20px; text-align: center; z-index: 99999;
-            width: 90%; max-width: 380px; border: 3px solid var(--accent);
-            animation: popIn 0.3s ease-out;
-        }
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        #inAppBrowserAlert {
-            display: none; background: #25D366; color: white; padding: 12px;
-            border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: bold;
-            text-align: center; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        #pwaInstallBanner {
-            display: none; background: #2d3436; color: white; padding: 10px 15px;
-            border-radius: 8px; margin-bottom: 12px; justify-content: space-between;
-            align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            flex-wrap: wrap; gap: 8px;
-        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -202,39 +183,10 @@
         ⚠️ تنبيه أمني: توجد حركات حضور لم تُرفع للسحابة بعد! برجاء عدم إغلاق الصفحة لحين عودة النت ومزامنتها.
     </div>
 
-    <div id="inAppBrowserAlert">
-        📲 أنت تفتح التطبيق من متصفح واتساب الداخلي!<br>
-        اضغط على <strong>الثلاث نقاط (⁝)</strong> بأعلى الشاشة واختر <strong>"فتح في Chrome"</strong> لتتمكن من تثبيت التطبيق والعمل بدون نت.
-    </div>
-
     <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
-
-    <div id="kioskCard">
-        <div id="kioskIcon" style="font-size:45px; margin-bottom:10px;">👋</div>
-        <h2 id="kioskName" style="margin:0 0 8px 0; color:var(--primary); font-size:20px; border:none;">...</h2>
-        <div id="kioskBadge" style="display:inline-block; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px; margin-bottom:10px; color:white;">...</div>
-        <div id="kioskStats" style="font-size:13px; color:#2d3436; margin-top:8px; line-height:1.5;">...</div>
-    </div>
 
     <div id="pendingSyncBadge" onclick="pushPendingData()">
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
-    </div>
-
-    <div id="cloudSetupModal" class="modal" style="display:none; z-index:3000;">
-        <div class="modal-content" style="max-width:500px; text-align:center;">
-            <div style="font-size:40px; margin-bottom:5px;">☁️</div>
-            <h3 style="margin:0 0 10px 0; color:var(--primary); border:none;">تجهيز الربط السحابي (Firebase)</h3>
-            <p style="font-size:13px; color:#555; line-height:1.6; text-align:right;">
-                الصق كود Config الخاص بقاعدة بياناتك للمزامنة بين كافة أجهزة الخدام:
-            </p>
-            <div style="text-align:right; margin-bottom:10px;">
-                <textarea id="modalFirebaseConfigInput" rows="5" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }' style="margin-top:4px; font-family:monospace; font-size:12px;"></textarea>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn-success" onclick="saveConfigFromModal()" style="margin:0; flex:1;">حفظ وتفعيل السحابة 🚀</button>
-                <button class="btn-mini" onclick="closeCloudModal()" style="background:#b2bec3; color:#2d3436; margin:0; width:110px;">العمل محلياً</button>
-            </div>
-        </div>
     </div>
 
     <div id="loginScreen">
@@ -251,22 +203,10 @@
 
             <button class="btn-primary" onclick="attemptLogin()">تسجيل الدخول</button>
             <div id="loginError" style="color:red; font-size:12px; margin-top:10px; display:none;">بيانات الدخول غير صحيحة!</div>
-
-            <div style="margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px;">
-                <button type="button" onclick="forceAppUpdate()" style="background: none; border: none; color: #7f8c8d; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;">
-                    🔄 تحديث التطبيق وسحب أحدث نسخة من الخادم
-                </button>
-            </div>
         </div>
     </div>
 
     <div class="container" id="mainApp" style="display:none;">
-        
-        <div id="pwaInstallBanner">
-            <div style="font-size: 12px; font-weight: bold;">📱 تثبيت "خدمتي برو" كتطبيق على هاتفك؟</div>
-            <button id="pwaInstallBtn" class="btn-mini btn-success" style="width: auto; padding: 6px 12px; margin: 0;">تثبيت الآن ⬇️</button>
-        </div>
-
         <div class="header-title">
             <h1 id="appChurchName">كنيسة الملاك والروماني بالمطرية</h1>
             <p id="appServiceName">اجتماع القديس بولس الرسول لإعداد الخدام</p>
@@ -284,186 +224,76 @@
             </div>
         </div>
 
-        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <button class="btn-mini btn-success" onclick="exportTodaySessionToWhatsApp()" style="flex:1; padding:8px;">📲 إرسال كود طوارئ اليوم لأمين الخدمة (WhatsApp)</button>
-            <button class="btn-mini btn-purple admin-only" onclick="importFromEmergencyCode()" style="flex:1; padding:8px;">📥 استيراد ودمج كود طوارئ الحضور</button>
-        </div>
-
         <div class="tabs">
             <div class="tab-btn active" onclick="switchTab('dashTab', this)">الرئيسية 📊</div>
             <div class="tab-btn" onclick="switchTab('planTab', this)">خطة السنة 🗓️</div>
             <div class="tab-btn can-attend" onclick="switchTab('attendanceTab', this)">تسجيل الحضور 📷</div>
             <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">سجل الخدام 📋</div>
             <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
-            <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
             <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
-            <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
-            <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والنسخ الاحتياطي 📁</div>
+            <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والنسخ 📁</div>
         </div>
 
-        <!-- 1. الرئيسية -->
+        <!-- 1. لوحة التحكم -->
         <div id="dashTab" class="tab-content active">
-            <div id="myNextEventBanner" style="display:none; background:#e8f4fd; border:1px solid #74b9ff; color:#0984e3; padding:12px; border-radius:8px; margin-bottom:12px;">
-                <h4 style="margin:0 0 4px 0;">🔔 تذكير بتكليفك القادم هذا الأسبوع:</h4>
-                <div id="myNextEventDetails" style="font-size:13px; font-weight:bold;"></div>
-            </div>
-
-            <div style="background:#f1f2f6; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-bottom:15px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:5px;">
-                    <h4 style="margin:0; color:var(--primary); font-size:14px;">📅 محطات قادمة في خطة السنة:</h4>
-                    <button class="btn-mini btn-primary" onclick="switchTab('planTab', document.querySelectorAll('.tab-btn')[1])">عرض الأجندة كاملة</button>
-                </div>
-                <div id="upcomingPlanEventsList" style="font-size:13px;">جاري فحص الخطة السنوية...</div>
-            </div>
-
-            <div style="background:#fff9e6; border:1px solid #ffeaa7; padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="margin:0 0 8px 0; color:#d35400; font-size:14px;">🎂 مناسبات وأعياد ميلاد هذا الأسبوع:</h4>
-                <div id="birthdayAlertList" style="font-size:13px;">جاري فحص التواريخ...</div>
-            </div>
-
             <h2>لوحة التحكم والمتابعة</h2>
-            
-            <h4 style="margin:10px 0 5px 0; color:var(--primary);">👥 إحصائيات المخدومين والدارسين:</h4>
             <div class="stat-grid">
-                <div class="stat-card"><div>إجمالي المخدومين</div><div class="num" id="statTotalMembers">0</div></div>
-                <div class="stat-card"><div>حضور المخدومين اليوم</div><div class="num" id="statTodayMembersCount">0</div></div>
-                <div class="stat-card"><div>نسبة حضور المخدومين</div><div class="num" id="statMembersPercent">0%</div></div>
-                <div class="stat-card"><div>المؤهلون للتخرج (≥75%)</div><div class="num" id="statQualifiedGraduates" style="color:var(--purple);">0</div></div>
+                <div class="stat-card"><div>إجمالي الدارسين</div><div class="num" id="statTotalMembers">0</div></div>
+                <div class="stat-card"><div>حضور اليوم</div><div class="num" id="statTodayMembersCount">0</div></div>
+                <div class="stat-card"><div>المتناولون اليوم 🕊️</div><div class="num" id="statTodayCommunion" style="color:var(--success);">0</div></div>
+                <div class="stat-card"><div>المشاركون بالدرس 💡</div><div class="num" id="statTodayParticipation" style="color:var(--purple);">0</div></div>
             </div>
-
-            <h4 style="margin:15px 0 5px 0; color:#2c3e50;">👔 إحصائيات الخدام والمحاضرين:</h4>
-            <div class="stat-grid">
-                <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statTotalServantsDash">0</div></div>
-                <div class="stat-card"><div>حضور الخدام اليوم</div><div class="num" id="statTodayServantsCount" style="color:var(--success);">0</div></div>
-                <div class="stat-card"><div>نسبة حضور الخدام</div><div class="num" id="statServantsPercent" style="color:var(--success);">0%</div></div>
-            </div>
-
-            <div style="background:#fff; border:1px solid #dfe6e9; border-radius:10px; padding:15px; margin-bottom:15px; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:5px;">
-                    <h4 style="margin:0; color:var(--primary); font-size:14px;">🔥 الخريطة الحرارية ومؤشر خطر الانقطاع (آخر 4 لقاءات)</h4>
-                    <span id="attritionCountBadge" class="role-badge" style="background:var(--danger); font-size:11px;">0 معرض للتسرب</span>
-                </div>
-                <p style="font-size:11px; color:#636e72; margin-top:0;">رصد استباقي لمن بدأ التزامه يتراجع للتدخل بالافتقاد قبل الانقطاع التام.</p>
-                <div id="heatmapContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; margin-top:10px;"></div>
-            </div>
-
-            <h3>⚠️ رادار المنقطعين (غياب مرتين متتاليتين)</h3>
-            <div id="absentAlertList" style="background:#fff3cd; padding:10px; border-radius:6px; color:#856404; font-size:13px;">جاري الفحص...</div>
         </div>
 
         <!-- 2. خطة السنة -->
         <div id="planTab" class="tab-content">
             <h2>خطة السنة والأجندة السنوية الشاملة 🗓️</h2>
-
-            <div class="admin-only" style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="margin:0 0 8px 0; color:var(--primary);">📥 إدارة خطة السنة عبر Excel:</h4>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="btn-primary btn-mini" onclick="downloadMasterPlanTemplate()" style="flex:1; padding:8px;">📄 تحميل نموذج الخطة فارغ</button>
-                    <button class="btn-success btn-mini" onclick="exportMasterPlanToExcel()" style="flex:1; padding:8px;">📊 تصدير الخطة السنوية بالكامل</button>
-                </div>
-                <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <input type="file" id="importMasterPlanFile" accept=".csv, .xlsx, .xls" style="padding:6px; font-size:12px; flex:1; min-width:180px;">
-                    <button class="btn-warning btn-mini" onclick="importMasterPlanFromExcel()" style="width:180px; padding:8px;">📥 استيراد الخطة من Excel</button>
-                </div>
-            </div>
-
-            <div class="admin-only" style="background:#f8f9fa; border:1px solid #dfe6e9; padding:15px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="margin:0 0 10px 0; color:var(--primary);">➕ إدراج فعالية جديدة في خطة السنة:</h4>
-                <div class="form-grid">
-                    <div>
-                        <label>نوع الفعالية:</label>
-                        <select id="planType">
-                            <option value="محاضرة">محاضرة دراسية</option>
-                            <option value="رحلة">رحلة ترفيهية / دير</option>
-                            <option value="مؤتمر">مؤتمر روحي</option>
-                            <option value="يوم خلوة">يوم خلوة وصلاة</option>
-                            <option value="يوم رياضي">يوم رياضي / مهرجان</option>
-                            <option value="حفل تخرج">حفل تخرج ورسامة</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>تاريخ الفعالية:</label>
-                        <input type="date" id="planDate" required>
-                    </div>
-                    <div>
-                        <label>عنوان الفعالية / الموضوع:</label>
-                        <input type="text" id="planTitle" placeholder="مثال: مؤتمر العقيدة..." required>
-                    </div>
-                    <div>
-                        <label>المكان / الملاحظات:</label>
-                        <input type="text" id="planLocation" placeholder="مثال: قاعة الكنيسة...">
-                    </div>
-                    <div>
-                        <label>المرحلة المستهدفة:</label>
-                        <select id="planStage">
-                            <option value="عام لكل الخدمة">عام لكل الخدمة والدارسين</option>
-                            <option value="سنة أولى">سنة أولى إعداد خدام</option>
-                            <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
-                            <option value="الخدام فقط">اجتماع الخدام فقط</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>الخادم المسؤول / المحاضر:</label>
-                        <select id="planResponsibleServant">
-                            <option value="">اختر الخادم المسؤول...</option>
-                        </select>
-                    </div>
-                </div>
-                <button class="btn-success" onclick="addMasterPlanEvent()">حفظ وإدراج في خطة السنة 🚀</button>
-            </div>
-
-            <h3>جدول أحداث ومحطات السنة مرتبة زمنياً</h3>
             <div class="table-responsive">
                 <table id="masterPlanTable" class="adaptive-card-table">
                     <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>النوع</th>
-                            <th>عنوان الفعالية</th>
-                            <th>المكان</th>
-                            <th>المرحلة</th>
-                            <th>المسؤول / المحاضر</th>
-                            <th class="admin-only">إجراء</th>
-                        </tr>
+                        <tr><th>التاريخ</th><th>النوع</th><th>عنوان الفعالية</th><th>المكان</th><th>المرحلة</th><th>المسؤول</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 3. تسجيل الحضور -->
+        <!-- 3. تسجيل الحضور المباشر + شريط المسح الحي (مثل الصورة 4/4) -->
         <div id="attendanceTab" class="tab-content">
             <div class="can-attend">
-                <h2>تسجيل الحضور بالكاميرا</h2>
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:12px; font-weight:bold;">اختر الكاميرا يدوياً:</label>
-                    <select id="cameraSelectionDropdown" style="margin-top:4px; padding:6px; font-size:12px;">
-                        <option value="">تحديد الكاميرا الخلفية تلقائياً...</option>
-                    </select>
-                </div>
+                <div class="live-scanner-container">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                        <h3 style="margin:0; border:none;">📷 الماسح الضوئي الذكي (Live Scanner)</h3>
+                        <div style="display:flex; gap:6px;">
+                            <button id="startCameraBtn" class="btn-success btn-mini" onclick="startCamera()">فتح الكاميرا 📹</button>
+                            <button id="stopCameraBtn" class="btn-danger btn-mini" style="display:none;" onclick="stopCamera()">إغلاق ⏹️</button>
+                        </div>
+                    </div>
+                    
+                    <div id="reader"></div>
 
-                <div style="display:flex; gap:8px;">
-                    <button id="startCameraBtn" class="btn-success" onclick="startCamera()">فتح الكاميرا للمسح</button>
-                    <button id="stopCameraBtn" class="btn-danger" style="display:none;" onclick="stopCamera()">إغلاق الكاميرا</button>
+                    <!-- شريط الحضور المباشر المحدث لحظة بلحظة -->
+                    <div class="live-stream-header">
+                        <span>قائمة مسح اليوم (<span id="liveScanDate"></span>)</span>
+                        <span>إجمالي الحاضرين: <strong id="liveScanCount" style="color:var(--accent);">0</strong></span>
+                    </div>
+
+                    <div id="liveCardsFeed" class="live-cards-feed">
+                        <div style="text-align:center; color:#888; padding:15px; font-size:12px;">وجّه الكاميرا نحو باركود الكارنيه لبدء الرصد المباشر...</div>
+                    </div>
                 </div>
-                
-                <div id="reader"></div>
 
                 <div style="margin-top:15px;">
-                    <button class="btn-purple" onclick="openManualAttendanceModal()" style="padding:14px; font-size:15px;">
-                        👥 تسجيل حضور يدوي من قائمة الأسماء (بحث وتحديد سريع)
+                    <button class="btn-purple" onclick="openManualAttendanceModal()" style="padding:12px; font-size:14px;">
+                        👥 تسجيل يدوي ورصد (حضور - تناول - مشاركة - نقاط)
                     </button>
                 </div>
             </div>
 
-            <div style="background:#eaf2f8; padding:12px; border-radius:8px; margin-top:20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #b8d5e5; flex-wrap:wrap; gap:10px;">
-                <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">سجل حضور اليوم (<span id="todayDate"></span>)</h3>
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn-danger admin-only" onclick="clearEntireTodayAttendance()" style="padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف يوم الحضور بالكامل</button>
-                    <span style="background:var(--primary); color:white; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:14px;">
-                        العدد: <span id="todayAttendanceCount" style="font-size:16px;">0</span>
-                    </span>
-                </div>
+            <!-- جدول الحضور والتناول والمشاركة التفصيلي -->
+            <div style="background:#eaf2f8; padding:12px; border-radius:8px; margin-top:20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; border:none; color:var(--primary); font-size:15px;">تفاصيل حضور وأسرار اليوم</h3>
+                <button class="btn-danger admin-only btn-mini" onclick="clearEntireTodayAttendance()">🗑️ حذف يوم الحضور بالكامل</button>
             </div>
 
             <div class="table-responsive">
@@ -473,11 +303,12 @@
                             <th>كود الامتحان</th>
                             <th>الاسم</th>
                             <th>المرحلة</th>
-                            <th>النوع</th>
                             <th>وقت المسح</th>
-                            <th>الحالة</th>
-                            <th>المسجِّل</th>
-                            <th class="can-attend">إجراء</th>
+                            <th>حضور</th>
+                            <th>تناول 🕊️</th>
+                            <th>مشاركة 💡</th>
+                            <th>النقاط ⭐</th>
+                            <th class="can-attend">إلغاء</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -487,42 +318,11 @@
 
         <!-- 4. سجل الخدام -->
         <div id="servantsAttendanceTab" class="tab-content">
-            <h2>متابعة التزام ونشاط خدام الاجتماع</h2>
-            <div class="stat-grid">
-                <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statServantsCount">0</div></div>
-                <div class="stat-card"><div>حضور الخدام اليوم</div><div class="num" id="statServantsToday">0</div></div>
-                <div class="stat-card"><div>إجمالي الافتقادات المسجلة</div><div class="num" id="statTotalVisitations" style="color:var(--success);">0</div></div>
-            </div>
-
-            <h3>جدول التزام الخدام السنوي واليومي</h3>
+            <h2>سجل التزام ونشاط الخدام</h2>
             <div class="table-responsive">
                 <table id="servantsAttendanceTable" class="adaptive-card-table">
                     <thead>
-                        <tr>
-                            <th>كود الخادم</th>
-                            <th>الاسم</th>
-                            <th>الهاتف</th>
-                            <th>حالة اليوم</th>
-                            <th>نسبة الالتزام السنوية</th>
-                            <th>تكليف اليوم بالخطة</th>
-                            <th>إجمالي الافتقادات</th>
-                            <th class="can-edit">تسجيل / إلغاء حضور</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <h3 style="margin-top:25px;">📝 سجل أحدث الافتقادات الميدانية</h3>
-            <div class="table-responsive">
-                <table id="recentVisitationsTable" class="adaptive-card-table">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الخادم المسؤول</th>
-                            <th>المخدوم المفتقد</th>
-                            <th>الملاحظات / الكبسولة</th>
-                        </tr>
+                        <tr><th>كود الخادم</th><th>الاسم</th><th>الهاتف</th><th>حالة اليوم</th><th>إجراء</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -531,78 +331,10 @@
 
         <!-- 5. الدارسين والمخدومين -->
         <div id="membersTab" class="tab-content">
-            <div class="can-edit">
-                <h2>إضافة دارس جديد</h2>
-                <form id="addForm">
-                    <div class="form-grid">
-                        <input type="text" id="m_code" placeholder="كود الامتحان (مثلاً: 664)" required>
-                        <input type="text" id="m_name" placeholder="الاسم الرباعي" required>
-                        <select id="m_gender" required>
-                            <option value="بنين" selected>بنين (ولد)</option>
-                            <option value="بنات">بنات</option>
-                        </select>
-                        <select id="m_stage" required>
-                            <option value="سنة أولى" selected>سنة أولى إعداد خدام</option>
-                            <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
-                            <option value="خريجين">خريجين / تم التخرج</option>
-                        </select>
-                        <input type="text" id="m_phone" placeholder="رقم التليفون" required>
-                        <input type="text" id="m_parent_phone" placeholder="تليفون ولي الأمر">
-                        <input type="text" id="m_address" placeholder="العنوان">
-                        <input type="date" id="m_dob" placeholder="تاريخ الميلاد" required>
-                        <input type="text" id="m_confessor" placeholder="أب الاعتراف">
-                        <input type="text" id="m_other" placeholder="ملاحظات أخرى">
-                    </div>
-                    <button type="submit" class="btn-primary">حفظ في المنظومة</button>
-                </form>
+            <h2>قائمة المخدومين والدرجات التراكمية</h2>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <input type="text" id="searchBox" placeholder="🔍 بحث بالاسم أو الكود..." onkeyup="renderMembersList()">
             </div>
-
-            <div style="background:#eaf2f8; border:1px solid #d4e6f1; padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="margin:0 0 8px 0; color:var(--primary);">🎓 تصفيات الدفعات وجاهزية التخرج للرسامة:</h4>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
-                    <label style="font-size:13px; font-weight:bold;">المرحلة:</label>
-                    <select id="stageFilterSelect" onchange="renderMembersList()" style="width:auto; flex:1; min-width:140px; padding:6px;">
-                        <option value="all">كل المراحل</option>
-                        <option value="سنة أولى">سنة أولى إعداد خدام</option>
-                        <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
-                        <option value="خريجين">خريجين / تم التخرج</option>
-                    </select>
-
-                    <label style="font-size:13px; font-weight:bold;">تصفية التخرج:</label>
-                    <select id="gradFilterSelect" onchange="renderMembersList()" style="width:auto; flex:1; min-width:140px; padding:6px;">
-                        <option value="all">الكل</option>
-                        <option value="qualified">المؤهلون للرسامة والتخرج فقط (≥75%)</option>
-                        <option value="unqualified">غير المؤهلين (&lt;75%)</option>
-                    </select>
-                </div>
-
-                <div class="admin-only" style="border-top:1px dashed #bdc3c7; padding-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                    <span style="font-size:12px; font-weight:bold; color:#2c3e50;">تحويل المرحلة المحددة إلى:</span>
-                    <select id="targetStageSelect" style="width:auto; flex:1; min-width:140px; padding:6px;">
-                        <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
-                        <option value="خريجين">خريجين / تم التخرج</option>
-                    </select>
-                    <button class="btn-warning btn-mini" onclick="batchTransferStage()" style="padding:8px 12px;">🔄 تحويل المجموعة</button>
-                </div>
-            </div>
-
-            <h2>قائمة المسجلين ومؤشر التخرج</h2>
-            <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap;">
-                <input type="text" id="searchBox" placeholder="🔍 بحث بكود الامتحان، الاسم، أو الهاتف..." onkeyup="renderMembersList()" style="margin:0; flex:1; min-width:200px;">
-                <button class="btn-purple" onclick="openQrSearchModal()" style="width:auto; margin:0; padding:10px 14px; white-space:nowrap; font-size:13px;">
-                    📷 مسح كود الكارنيه
-                </button>
-            </div>
-
-            <div id="qrSearchModal" class="modal" style="display:none; z-index:4000;">
-                <div class="modal-content" style="max-width:380px; text-align:center;">
-                    <span class="close-btn" onclick="closeQrSearchModal()">&times;</span>
-                    <h3 style="margin-top:0; border:none; color:var(--primary);">مسح كارنيه لفتح الملف 🪪</h3>
-                    <p style="font-size:12px; color:#636e72; margin-top:0;">وجّه الكاميرا نحو كود الدارس لفتح ملفه فوراً</p>
-                    <div id="qrSearchReader" style="width:100%; min-height:220px; background:#000; border-radius:8px; overflow:hidden;"></div>
-                </div>
-            </div>
-
             <div class="table-responsive">
                 <table id="membersTable" class="adaptive-card-table">
                     <thead>
@@ -610,10 +342,8 @@
                             <th>كود الامتحان</th>
                             <th>الاسم</th>
                             <th>المرحلة</th>
-                            <th>التليفون</th>
-                            <th>نسبة الحضور التراكمي</th>
-                            <th>أهلية التخرج</th>
-                            <th>تسجيل حضور يدوي</th>
+                            <th>الهاتف</th>
+                            <th>إجمالي النقاط ⭐</th>
                             <th>الملف</th>
                         </tr>
                     </thead>
@@ -622,444 +352,75 @@
             </div>
         </div>
 
-        <!-- 6. واتساب جماعي -->
-        <div id="broadcastTab" class="tab-content">
-            <h2>المراسلة الجماعية عبر WhatsApp</h2>
-            <div style="margin-bottom:10px;">
-                <label>قالب رسالة الغياب والافتقاد:</label>
-                <textarea id="customBroadcastMsg" rows="2">سلام ونعمة، بنطمن على [الاسم] لعدم حضوره اجتماع اليوم، نتمنى لك كل البركة ونراك الأسبوع القادم ❤️</textarea>
-                <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
-                    <button class="btn-mini btn-primary" onclick="setGeneralBroadcastTemplate()" style="flex:1;">📢 قالب الغياب العام</button>
-                    <button class="btn-mini btn-purple" onclick="setSpiritualBroadcastTemplate()" style="flex:1;">🕊️ قالب الافتقاد الروحي والأسرار</button>
-                </div>
-            </div>
-            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
-                <button class="btn-primary" onclick="renderBroadcastList('parents')" style="flex:1;">أولياء أمور الغائبين</button>
-                <button class="btn-warning" onclick="renderBroadcastList('members')" style="flex:1;">هواتف الغائبين مباشرة</button>
-            </div>
-            <div class="table-responsive">
-                <table id="broadcastTable" class="adaptive-card-table">
-                    <thead><tr><th>الاسم</th><th>المرحلة</th><th>المستلم ورقم الهاتف</th><th>إرسال المحادثة</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- 7. إدارة الخدام -->
+        <!-- 6. إدارة الخدام -->
         <div id="servantsTab" class="tab-content">
-            <h2>إدارة حسابات الخدام والصلاحيات (سري لأمين الخدمة)</h2>
-            <div class="form-grid">
-                <input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)">
-                <input type="text" id="newServantName" placeholder="اسم الخادم الرباعي">
-                <input type="text" id="newServantPhone" placeholder="رقم الهاتف (كلمة المرور)">
-                <input type="date" id="newServantDob" placeholder="تاريخ الميلاد للتهنئة">
-                <select id="newServantPermission">
-                    <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
-                    <option value="scanner_only">مسح الحضور بالكاميرا فقط (شاشة الكاميرا المباشرة)</option>
-                    <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
-                    <option value="view_only">مشاهدة واطلاع فقط</option>
-                    <option value="developer">خادم ومطور نظام (صلاحيات كاملة + فاحص أخطاء Log)</option>
-                    <option value="admin">أمين خدمة (أدمن كامل الصلاحيات + Log)</option>
-                </select>
-            </div>
-            <button class="btn-success" onclick="addServantManual()">حفظ الخادم</button>
-
-            <h3 style="margin-top:25px;">قائمة الخدام والصلاحيات</h3>
+            <h2>إدارة حسابات وصلاحيات الخدام</h2>
             <div class="table-responsive">
                 <table id="servantsTable" class="adaptive-card-table">
                     <thead>
-                        <tr>
-                            <th>كود الخادم</th>
-                            <th>الاسم</th>
-                            <th>الهاتف</th>
-                            <th>تاريخ الميلاد</th>
-                            <th>الصلاحية</th>
-                            <th>تعديل</th>
-                            <th>حذف</th>
-                        </tr>
+                        <tr><th>الكود</th><th>الاسم</th><th>الهاتف</th><th>الصلاحية</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 8. الإعدادات -->
-        <div id="settingsTab" class="tab-content">
-            <h2>إعدادات المنظومة وتخصيص الخدمة</h2>
-            
-            <h3>اسم الكنيسة والخدمة</h3>
-            <div class="form-grid">
-                <div><label>اسم الكنيسة / الإيبارشية:</label><input type="text" id="setChurchName"></div>
-                <div><label>اسم الخدمة / الأسرة:</label><input type="text" id="setServiceName"></div>
-            </div>
-
-            <h3>مواعيد الاجتماع ونظام الصيف المرن</h3>
-            <div class="form-grid">
-                <div>
-                    <label><strong>الموعد الأساسي (يوم الجمعة):</strong></label>
-                    <input type="time" id="setStartTime">
-                </div>
-                <div>
-                    <label>سماح التأخير للاجتماع الأساسي (دقائق):</label>
-                    <input type="number" id="setAllowed">
-                </div>
-                <div>
-                    <label>اعتباره غائباً بعد (دقائق):</label>
-                    <input type="number" id="setAbsentAfter">
-                </div>
-                <div>
-                    <label>كلمة مرور أمين الخدمة العام:</label>
-                    <input type="password" id="setAdminPassword">
-                </div>
-            </div>
-
-            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin:10px 0;">
-                <h4 style="margin:0 0 8px 0; color:var(--primary);">☀️ إعدادات الموعد الإضافي (فترة الصيف / الأنشطة):</h4>
-                <div class="form-grid">
-                    <div>
-                        <label>تفعيل الموعد الصيفي الإضافي:</label>
-                        <select id="setSummerActive">
-                            <option value="false">معطل (الجمعة فقط)</option>
-                            <option value="true">مفعل</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>يوم النشاط الصيفي الإضافي:</label>
-                        <select id="setSummerDay">
-                            <option value="0">الأحد</option>
-                            <option value="1">الإثنين</option>
-                            <option value="2">الثلاثاء</option>
-                            <option value="3">الأربعاء</option>
-                            <option value="4">الخميس</option>
-                            <option value="6">السبت</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>موعد بدء النشاط الصيفي:</label>
-                        <input type="time" id="setSummerStartTime">
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:22px;">
-                        <input type="checkbox" id="setIgnoreSummerDelay" checked style="width:20px; height:20px; margin:0;">
-                        <label for="setIgnoreSummerDelay" style="font-weight:bold; color:green; font-size:13px;">إلغاء احتساب التأخير نهائياً (حضور مفتوح دون غياب)</label>
-                    </div>
-                </div>
-            </div>
-
-            <h3>مفاتيح الربط السحابي (Firebase)</h3>
-            <textarea id="firebaseConfigInput" rows="4" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
-            <button class="btn-primary" onclick="saveFirebaseConfig()" style="margin-top:6px;">حفظ والاتصال بالسحابة ☁️</button>
-            <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات</button>
-        </div>
-
-        <!-- 9. التقارير والنسخ الاحتياطي الشامل -->
+        <!-- 7. التقارير -->
         <div id="dataTab" class="tab-content">
-            <h2>التقارير واستيراد البيانات</h2>
-            
-            <button class="btn-success" onclick="exportAttendance(false)" style="font-size:16px; padding:15px; margin-bottom:20px;">📥 تحميل التقرير الشامل (حضور وتأخيرات)</button>
-            
-            <div style="background:#edf2f7; padding:12px; border-radius:8px; margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn-primary" onclick="downloadTemplate('members')" style="flex:1;">📄 نموذج المخدومين</button>
-                <button class="btn-primary" onclick="downloadTemplate('servants')" style="flex:1;">📄 نموذج الخدام</button>
-            </div>
-            
-            <div class="admin-only" style="margin-top:20px;">
-                <h3>استيراد بيانات المخدومين (من شيت نموذجي)</h3>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
-                    <input type="file" id="importFile" accept=".csv, .xlsx, .xls" style="flex:1; min-width:200px;">
-                    <button class="btn-primary" onclick="importMembers()" style="width:auto; margin:0; padding:10px 15px;">استيراد من Excel</button>
-                </div>
-            </div>
-
-            <div style="background:#fff; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-top:20px;">
-                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; margin-bottom:6px; flex-wrap:wrap; gap:5px;">
-                    <span>سعة التخزين المحلي المستخدمة بالمتصفح:</span>
-                    <span id="storageUsageText">جاري الفحص...</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="storageUsageBar" class="progress-bar" style="width:0%; background:var(--success);"></div>
-                </div>
-            </div>
-
-            <div class="admin-only" style="background:#fdfefe; border:2px dashed var(--primary); padding:15px; border-radius:8px; margin-top:20px;">
-                <h3 style="margin-top:0; border:none; color:var(--primary);">💾 النسخ الاحتياطي الشامل للمنظومة (One-Click Backup & Restore)</h3>
-                <p style="font-size:12px; color:#636e72; margin-top:2px;">
-                    احفظ نسخة أمان كاملة من قاعدة بيانات كورس إعداد الخدام على جهازك، واسترجعها في أي وقت بدون إنترنت.
-                </p>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                    <button class="btn-purple" onclick="downloadFullBackup()" style="flex:1; padding:10px; margin:0;">💾 تحميل نسخة احتياطية كاملة (JSON)</button>
-                    <label class="btn-warning" style="flex:1; padding:10px; margin:0; text-align:center; cursor:pointer; border-radius:6px; box-sizing:border-box;">
-                        🔄 استعادة نسخة سابقة من ملف
-                        <input type="file" id="restoreBackupFileInput" accept=".json" onchange="restoreFullBackup(event)" style="display:none;">
-                    </label>
-                </div>
-            </div>
+            <h2>التقارير الشاملة</h2>
+            <button class="btn-success" onclick="exportAttendance()">📥 تصدير تقرير الحضور والأسرار (Excel)</button>
         </div>
     </div>
 
-    <!-- نافذة الملف الشخصي المبوب -->
-    <div id="profileModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeProfile()">&times;</span>
-            <div style="text-align:center; margin-bottom:10px;">
-                <h3 id="p_name" style="margin:5px 0 0 0; border:none; color:var(--primary);"></h3>
-                <div style="background:#e17055; color:white; display:inline-block; padding:3px 10px; border-radius:4px; font-weight:bold; font-size:13px; margin-top:4px;">
-                    كود الامتحان: <span id="p_exam_code"></span> | <span id="p_stage"></span> | <span id="p_gender"></span>
-                </div>
-            </div>
-            
-            <div class="info-row" style="border:none;">
-                <span class="info-label">الهاتف:</span>
-                <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                    <span id="p_phone"></span> 
-                    <a id="btn_wa" target="_blank" class="btn-mini btn-success" style="padding:4px 8px; margin:0;">واتساب 💬</a>
-                    <a id="btn_spiritual_wa" target="_blank" class="btn-mini btn-purple" style="padding:4px 8px; margin:0;">افتقاد روحي 🕊️</a>
-                </div>
-            </div>
-            
-            <div style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:8px; margin:10px 0;">
-                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; flex-wrap:wrap; gap:5px;">
-                    <span>مؤشر الحضور الأكاديمي والتخرج:</span>
-                    <span id="p_grad_status"></span>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="p_grad_progress" class="progress-bar"></div>
-                </div>
-            </div>
-
-            <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:8px;">
-                ✔️ تسجيل حضور يدوي لهذا الدارس اليوم
-            </button>
-            <button class="btn-warning can-edit" id="btn_profile_edit" style="margin-bottom:12px;" onclick="openEditMemberModal()">
-                ✏️ تعديل بيانات هذا الدارس
-            </button>
-
-            <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
-                <button id="tabBtn_attendance" onclick="switchProfileTab('p_attendance_log', this)" style="flex:1; margin:0; padding:8px 4px; background:var(--primary); color:white; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">سجل الحضور 🗓️</button>
-                <button id="tabBtn_visitations" onclick="switchProfileTab('p_visitations_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">الافتقادات 💊</button>
-                <button id="tabBtn_field" onclick="switchProfileTab('p_field_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">التربية العملية 🎯</button>
-                <button id="tabBtn_info" onclick="switchProfileTab('p_info_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">البيانات 👤</button>
-            </div>
-
-            <div id="p_attendance_log" class="profile-tab-content" style="display:block;">
-                <div style="max-height:180px; overflow-y:auto; border:1px solid #eee; border-radius:6px;" class="table-responsive">
-                    <table style="margin:0; width:100%; border-collapse:collapse; font-size:12px;" class="adaptive-card-table">
-                        <thead style="position:sticky; top:0; background:var(--primary); color:white;">
-                            <tr>
-                                <th style="padding:8px;">التاريخ</th>
-                                <th style="padding:8px;">وقت المسح</th>
-                                <th style="padding:8px;">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody id="p_attendance_tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="p_visitations_tab" class="profile-tab-content">
-                <div class="can-edit">
-                    <h4 style="margin:0 0 5px 0; color:var(--primary);">💊 كبسولة الافتقاد السريع:</h4>
-                    <div style="margin-bottom:8px;">
-                        <span class="capsule-btn" onclick="quickCapsuleVisit('📞 مكالمة تليفونية واطمئنان')">📞 مكالمة اطمئنان</span>
-                        <span class="capsule-btn" onclick="quickCapsuleVisit('🏠 زيارة منزلية مباركة')">🏠 زيارة منزلية</span>
-                        <span class="capsule-btn" onclick="quickCapsuleVisit('📚 اعتذار لظروف امتحانات')">📚 ظروف امتحانات</span>
-                        <span class="capsule-btn" onclick="quickCapsuleVisit('🩺 اعتذار لظروف صحية/مرض')">🩺 ظروف صحية</span>
-                    </div>
-
-                    <div style="display:flex; gap:5px; margin-bottom:8px; flex-wrap:wrap;">
-                        <input type="text" id="visitationNote" placeholder="أو اكتب تفاصيل إضافية إن أردت..." style="flex:1; min-width:180px; margin:0;">
-                        <button class="btn-success" style="width:75px; margin:0; padding:6px;" onclick="addManualVisitationNote()">حفظ</button>
-                    </div>
-                </div>
-                <div id="visitationHistory" style="max-height:110px; overflow-y:auto; background:#f9f9f9; padding:6px; font-size:12px; border-radius:4px;"></div>
-            </div>
-
-            <div id="p_field_tab" class="profile-tab-content">
-                <div class="can-edit" style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:10px;">
-                    <h4 style="margin:0 0 8px 0; color:var(--primary); font-size:13px;">➕ تقييم نزول ميداني وإلقاء درس:</h4>
-                    <div class="form-grid" style="gap:6px; margin-bottom:6px;">
-                        <input type="date" id="evalDate">
-                        <input type="text" id="evalClass" placeholder="المرحلة (مثال: خامسة ابتدائي)">
-                        <input type="text" id="evalLessonTitle" placeholder="عنوان الدرس المشروح">
-                        <select id="evalSupervisor">
-                            <option value="">اختر الخادم المشرف المقيم...</option>
-                        </select>
-                    </div>
-
-                    <div style="font-size:11px; font-weight:bold; margin-bottom:4px; color:#2c3e50;">الدرجات (من 25 درجة لكل معيار):</div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; margin-bottom:6px; font-size:11px;">
-                        <div>تحضير الدرس: <input type="number" id="scorePrep" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
-                        <div>الأداء والتوصيل: <input type="number" id="scoreDelivery" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
-                        <div>وسيلة الإيضاح: <input type="number" id="scoreAids" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
-                        <div>القدوة والانضباط: <input type="number" id="scoreConduct" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
-                    </div>
-
-                    <input type="text" id="evalNotes" placeholder="ملاحظات وتوجيهات روحية وإيجابيات..." style="margin-bottom:6px;">
-                    <button class="btn-success" onclick="saveFieldEvaluation()" style="padding:8px; margin:0; font-size:12px;">حفظ تقييم النزول الميداني 🚀</button>
-                </div>
-
-                <h4 style="margin:6px 0 4px 0; color:var(--primary); font-size:13px;">📋 تقييمات الدروس الميدانية السابقة:</h4>
-                <div id="fieldEvaluationHistory" style="max-height:150px; overflow-y:auto;"></div>
-            </div>
-
-            <div id="p_info_tab" class="profile-tab-content">
-                <div class="info-row"><span class="info-label">ولي الأمر:</span><span id="p_parent_phone"></span></div>
-                <div class="info-row"><span class="info-label">العنوان:</span><span id="p_address"></span></div>
-                <div class="info-row"><span class="info-label">تاريخ الميلاد:</span><span id="p_dob"></span></div>
-                <div class="info-row"><span class="info-label">أب الاعتراف:</span><span id="p_confessor"></span></div>
-            </div>
-
-            <div style="text-align:center; margin:15px 0;">
-                <div id="profileQrWrapper" style="display:inline-block; background:#ffffff; padding:10px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);"></div>
-                <div id="profileQrText" style="font-size:11px; color:#636e72; margin-top:5px; direction:ltr; font-family:monospace;"></div>
-            </div>
-            <button class="btn-danger admin-only" id="btn_delete_member" style="padding:8px;">حذف الفرد نهائياً</button>
-        </div>
-    </div>
-
-    <!-- نافذة تعديل بيانات الدارس -->
-    <div id="editMemberModal" class="modal" style="z-index:4500;">
-        <div class="modal-content" style="max-width:450px;">
-            <span class="close-btn" onclick="closeEditMemberModal()">&times;</span>
-            <h3 style="margin-top:0; color:var(--primary); border:none;">✏️ تعديل بيانات الدارس</h3>
-            <div class="form-grid">
-                <div><label>كود الامتحان:</label><input type="text" id="edit_m_code"></div>
-                <div><label>الاسم الرباعي:</label><input type="text" id="edit_m_name"></div>
-                <div>
-                    <label>المرحلة:</label>
-                    <select id="edit_m_stage">
-                        <option value="سنة أولى">سنة أولى إعداد خدام</option>
-                        <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
-                        <option value="خريجين">خريجين / تم التخرج</option>
-                    </select>
-                </div>
-                <div>
-                    <label>النوع:</label>
-                    <select id="edit_m_gender">
-                        <option value="بنين">بنين</option>
-                        <option value="بنات">بنات</option>
-                    </select>
-                </div>
-                <div><label>رقم التليفون:</label><input type="text" id="edit_m_phone"></div>
-                <div><label>تليفون ولي الأمر:</label><input type="text" id="edit_m_parent_phone"></div>
-                <div><label>تاريخ الميلاد:</label><input type="date" id="edit_m_dob"></div>
-                <div><label>أب الاعتراف:</label><input type="text" id="edit_m_confessor"></div>
-                <div style="grid-column:1/-1;"><label>العنوان:</label><input type="text" id="edit_m_address"></div>
-            </div>
-            <button class="btn-success" onclick="saveEditedMember()">حفظ التعديلات 💾</button>
-        </div>
-    </div>
-
-    <!-- نافذة قائمة الحضور اليدوي السريع (Checkboxes) -->
+    <!-- نافذة تسجيل الحضور والتناول والمشاركة اليدوية (مثل الصورة 3/4) -->
     <div id="manualAttendanceModal" class="modal" style="z-index:4000;">
-        <div class="modal-content" style="max-width:550px;">
+        <div class="modal-content" style="max-width:600px;">
             <span class="close-btn" onclick="closeManualAttendanceModal()">&times;</span>
-            <h3 style="margin-top:0; color:var(--primary); border:none;">👥 تسجيل حضور سريع من قائمة الأسماء</h3>
-            <p style="font-size:12px; color:#636e72; margin-top:0;">ابحث بالاسم أو الكود، وضع علامة صح لتسجيل الحضور أو إزالتها فوراً:</p>
+            <h3 style="margin-top:0; color:var(--primary); border:none;">📋 رصد الحضور والتناول والمشاركة اليومية</h3>
+            <p style="font-size:12px; color:#636e72; margin-top:0;">ضع علامة (✔) لكل مخدوم لرصد الحضور، وسر التناول، والمشاركة لتجميع النقاط تلقائياً:</p>
             
-            <input type="text" id="manualModalSearchBox" placeholder="🔍 بحث سريع في القائمة..." onkeyup="renderManualAttendanceModalList()" style="margin-bottom:12px;">
+            <input type="text" id="manualModalSearchBox" placeholder="🔍 بحث سريع في الفصل..." onkeyup="renderManualAttendanceModalList()" style="margin-bottom:12px;">
 
-            <div class="table-responsive" style="max-height:350px; overflow-y:auto; border:1px solid #ddd; border-radius:8px;">
+            <div class="table-responsive" style="max-height:380px; overflow-y:auto; border:1px solid #ddd; border-radius:8px;">
                 <table id="manualAttendanceModalTable" style="margin:0; width:100%;" class="adaptive-card-table">
                     <thead style="position:sticky; top:0; background:var(--primary); color:white;">
                         <tr>
-                            <th style="width:50px; padding:6px;">حضور</th>
-                            <th style="padding:6px;">كود الامتحان</th>
-                            <th style="padding:6px;">الاسم</th>
-                            <th style="padding:6px;">المرحلة</th>
+                            <th>الاسم</th>
+                            <th>حضور (+5)</th>
+                            <th>تناول 🕊️ (+10)</th>
+                            <th>مشاركة 💡 (+5)</th>
                         </tr>
                     </thead>
                     <tbody id="manualAttendanceModalTbody"></tbody>
                 </table>
             </div>
-            <button class="btn-primary" onclick="closeManualAttendanceModal()" style="margin-top:12px;">إغلاق وتمت المتابعة ✔️</button>
+            <button class="btn-primary" onclick="closeManualAttendanceModal()" style="margin-top:12px;">حفظ وإغلاق ✔️</button>
         </div>
     </div>
 
     <script>
-        window.appErrorLogs = [];
+        let members = JSON.parse(localStorage.getItem('my_church_class')) || [];
+        let attendanceRecord = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
+        let servantsAttendance = JSON.parse(localStorage.getItem('my_church_servants_attendance')) || {};
+        let servants = JSON.parse(localStorage.getItem('my_church_servants')) || [
+            { id: 1001, name: "عادل جورج", phone: "1234567", code: "admin", role: "admin", permission: "admin" }
+        ];
 
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            let errText = `[سطر ${lineNo}] ${msg}`;
-            window.appErrorLogs.push(errText);
+        let currentUser = null;
+        try {
+            currentUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
+        } catch(e) { currentUser = null; }
 
-            let activeUser = null;
-            try {
-                activeUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
-            } catch(e){}
+        let today = new Date().toLocaleDateString('en-CA');
+        document.getElementById('liveScanDate').innerText = today;
+        if (!attendanceRecord[today]) attendanceRecord[today] = [];
+        if (!servantsAttendance[today]) servantsAttendance[today] = [];
 
-            let isAuthorized = activeUser && (
-                activeUser.role === 'admin' || 
-                activeUser.permission === 'admin' || 
-                activeUser.permission === 'developer'
-            );
-
-            if (!isAuthorized) return false;
-
-            let errBanner = document.getElementById('liveErrorLog');
-            if (!errBanner) {
-                errBanner = document.createElement('div');
-                errBanner.id = 'liveErrorLog';
-                errBanner.style.cssText = `
-                    position: fixed;
-                    bottom: 12px;
-                    left: 12px;
-                    background: #2d3436;
-                    color: #ff7675;
-                    border-left: 5px solid #d63031;
-                    padding: 10px 14px;
-                    font-size: 11px;
-                    font-family: monospace;
-                    z-index: 999999;
-                    border-radius: 8px;
-                    max-width: 90%;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-                    direction: ltr;
-                    text-align: left;
-                `;
-                document.body.appendChild(errBanner);
-            }
-
-            errBanner.innerHTML = `
-                <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:4px;">
-                    <strong style="color:#fab1a0;">⚠️ تم رصد خطأ برمجي (خاص بالأدمن):</strong>
-                    <span onclick="document.getElementById('liveErrorLog').remove()" style="cursor:pointer; color:#fff; font-weight:bold;">[إغلاق ✕]</span>
-                </div>
-                <div style="max-height:80px; overflow-y:auto; word-break:break-word;">
-                    ${errText}
-                </div>
-                <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الأخطاء!')" 
-                        style="margin-top:6px; padding:3px 8px; font-size:10px; background:#0984e3; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                    نسخ تفاصيل الخطأ 📋
-                </button>
-            `;
-
-            return false;
-        };
-
-        function checkInAppBrowser() {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            const isWhatsApp = ua.indexOf('WhatsApp') > -1 || ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1;
-            const alertBox = document.getElementById('inAppBrowserAlert');
-            if (isWhatsApp && alertBox) {
-                alertBox.style.display = 'block';
-            }
-        }
-
-        function formatWhatsAppPhone(rawPhone) {
-            if (!rawPhone) return "";
-            let digits = rawPhone.toString().replace(/\D/g, '');
-            if (digits.startsWith('01') && digits.length === 11) return '2' + digits;
-            if (digits.startsWith('201') && digits.length === 12) return digits;
-            if (digits.startsWith('1') && digits.length === 10) return '20' + digits;
-            return digits;
-        }
-
+        // تشغيل نغمة الصوت التفاعلية بأمان
         let audioCtx = window.audioCtx || null;
         function playBeepSound(type) {
             try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -1070,104 +431,15 @@
                     gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
                     osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-                    if (navigator.vibrate) navigator.vibrate(80);
-                } else if (type === 'error') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
                 }
             } catch (e) {}
         }
 
-        function showToast(msg, isError = false) {
+        function showToast(msg) {
             let toast = document.getElementById('toastMessage');
             toast.innerText = msg;
-            toast.style.background = isError ? "var(--danger)" : (msg.includes('تأخير') ? "var(--warning)" : "var(--success)");
             toast.classList.add('show');
-            setTimeout(() => { toast.classList.remove('show'); }, 3000);
-        }
-
-        window.addEventListener('beforeunload', function (e) {
-            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-            if (Object.keys(pending).length > 0) {
-                e.preventDefault();
-                e.returnValue = 'توجد بيانات وحضور لم يتم رفعها للسحابة بعد! هل أنت متأكد من المغادرة؟';
-                return e.returnValue;
-            }
-        });
-
-        let members = JSON.parse(localStorage.getItem('my_church_class')) || [];
-        let attendanceRecord = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
-        let servantsAttendance = JSON.parse(localStorage.getItem('my_church_servants_attendance')) || {};
-        let masterPlan = JSON.parse(localStorage.getItem('my_church_master_plan')) || [];
-        
-        let servants = JSON.parse(localStorage.getItem('my_church_servants')) || [
-            { id: 1001, name: "عادل جورج", phone: "1234567", dob: "1995-05-15", code: "admin", role: "admin", permission: "admin", roleType: "أمين خدمة" }
-        ];
-
-        let settings = JSON.parse(localStorage.getItem('my_church_settings')) || { 
-            churchName: "كنيسة الملاك والروماني بالمطرية",
-            serviceName: "اجتماع القديس بولس الرسول لإعداد الخدام",
-            startTime: "13:00", 
-            allowedDelay: 15, 
-            absentAfter: 75,
-            summerActive: false,
-            summerDay: "0",
-            summerStartTime: "18:00",
-            ignoreSummerDelay: true
-        };
-        let adminPassword = localStorage.getItem('my_church_admin_pwd') || '1234567';
-        
-        let currentUser = null;
-        try {
-            currentUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
-        } catch(e) { currentUser = null; }
-
-        let currentRole = currentUser ? currentUser.role : 'servant';
-        let currentPermission = currentUser ? (currentUser.permission || 'full') : 'view_only';
-        let currentProfileId = null;
-
-        let today = new Date().toLocaleDateString('en-CA');
-        document.getElementById('todayDate').innerText = today;
-        if (!attendanceRecord[today]) attendanceRecord[today] = [];
-        if (!servantsAttendance[today]) servantsAttendance[today] = [];
-
-        function ensureMemberQrCode(m) {
-            let bDay = "01";
-            if (m.dob) {
-                let cleanDob = m.dob.toString().trim();
-                if (cleanDob.includes('-')) {
-                    let parts = cleanDob.split('-');
-                    bDay = parts[2] ? parseInt(parts[2]).toString() : "01";
-                } else if (cleanDob.includes('/')) {
-                    let parts = cleanDob.split('/');
-                    bDay = parts[0] ? parseInt(parts[0]).toString() : "01";
-                }
-            }
-            m.qrCode = `${m.name.trim()}/${bDay}`;
-            return m.qrCode;
-        }
-
-        function applyServiceBranding() {
-            let cName = settings.churchName || "كنيسة الملاك والروماني بالمطرية";
-            let sName = settings.serviceName || "اجتماع القديس بولس الرسول لإعداد الخدام";
-            document.getElementById('appChurchName').innerText = cName;
-            document.getElementById('appServiceName').innerText = sName;
-            document.getElementById('loginChurchDisplay').innerText = cName;
-            document.getElementById('loginServiceDisplay').innerText = sName;
-            document.getElementById('setChurchName').value = cName;
-            document.getElementById('setServiceName').value = sName;
-            document.getElementById('setStartTime').value = settings.startTime || "13:00";
-            document.getElementById('setAllowed').value = settings.allowedDelay || 15;
-            document.getElementById('setAbsentAfter').value = settings.absentAfter || 75;
-            document.getElementById('setAdminPassword').value = adminPassword;
-
-            document.getElementById('setSummerActive').value = (settings.summerActive || false).toString();
-            document.getElementById('setSummerDay').value = settings.summerDay || "0";
-            document.getElementById('setSummerStartTime').value = settings.summerStartTime || "18:00";
-            document.getElementById('setIgnoreSummerDelay').checked = settings.ignoreSummerDelay !== false;
+            setTimeout(() => { toast.classList.remove('show'); }, 2500);
         }
 
         function checkSession() {
@@ -1175,831 +447,195 @@
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
                 document.getElementById('loggedInUserName').innerText = currentUser.name;
-                currentRole = currentUser.role || 'servant';
-                currentPermission = currentUser.permission || (currentRole === 'admin' ? 'admin' : 'full');
-                updateRoleUI();
-                renderServantsTable();
-                populatePlanServantsDropdown();
-                checkUpcomingBirthdays();
-                checkUpcomingMasterPlanEvents();
-                checkLocalStorageUsage();
-                updatePendingBadge();
+                document.getElementById('currentRoleBadge').innerText = currentUser.role || 'خادم';
+                renderAttendanceTable();
+                renderLiveCardsFeed();
+                renderDashboard();
+                renderMembersList();
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
                 document.getElementById('mainApp').style.display = 'none';
-                document.getElementById('loginUsername').value = '';
-                document.getElementById('loginPassword').value = '';
             }
         }
 
         function attemptLogin() {
             let u = document.getElementById('loginUsername').value.trim();
             let p = document.getElementById('loginPassword').value.trim();
-            let rememberMe = document.getElementById('rememberMeCheck').checked;
-            let err = document.getElementById('loginError');
+            let remember = document.getElementById('rememberMeCheck').checked;
 
-            if (!u || !p) {
-                err.innerText = "يرجى كتابة اسم المستخدم وكلمة المرور";
-                err.style.display = 'block';
+            if ((u.toLowerCase() === 'admin' || u === 'عادل جورج') && (p === '1234567')) {
+                currentUser = { name: "عادل جورج", role: "admin", permission: "admin" };
+                if (remember) localStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                else sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                checkSession();
                 return;
             }
 
-            if ((u.toLowerCase() === 'admin' || u === 'الأدمن' || u === 'عادل جورج') && (p === adminPassword || p === "1234567")) {
-                currentUser = { name: "عادل جورج", phone: p, role: "admin", permission: "admin", code: "admin" };
-                
-                if (rememberMe) {
-                    localStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
-                } else {
-                    sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
-                }
-
-                err.style.display = 'none'; checkSession(); return;
-            }
-
-            let found = servants.find(s => s.name.trim().toLowerCase() === u.toLowerCase() && (s.phone.trim() === p || (s.code && s.code.toString() === p)));
+            let found = servants.find(s => s.name === u && (s.phone === p || s.code === p));
             if (found) {
                 currentUser = found;
-                if (rememberMe) {
-                    localStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
-                } else {
-                    sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
-                }
-                recordServantAttendance(found);
-                err.style.display = 'none'; checkSession();
+                if (remember) localStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                else sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
+                checkSession();
             } else {
-                err.innerText = "بيانات الدخول غير صحيحة!";
-                err.style.display = 'block';
+                document.getElementById('loginError').style.display = 'block';
             }
         }
 
         function logout() {
-            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-            if (Object.keys(pending).length > 0) {
-                if (!confirm("⚠️ تنبيه: توجد بيانات لم يتم رفعها للسحابة بعد! هل تريد حقاً تسجيل الخروج الآن؟")) {
-                    return;
-                }
-            }
             localStorage.removeItem('my_church_active_user');
             sessionStorage.removeItem('my_church_active_user');
             currentUser = null;
             checkSession();
         }
 
-        async function forceAppUpdate() {
-            if (confirm("هل تريد تحديث التطبيق وسحب أحدث نسخة من الخادم الآن؟")) {
-                try {
-                    if ('serviceWorker' in navigator) {
-                        const registrations = await navigator.serviceWorker.getRegistrations();
-                        for (let registration of registrations) {
-                            await registration.unregister();
-                        }
-                    }
-                    if ('caches' in window) {
-                        const cacheNames = await caches.keys();
-                        await Promise.all(cacheNames.map(name => caches.delete(name)));
-                    }
-                    window.location.reload(true);
-                } catch (e) {
-                    window.location.reload();
-                }
-            }
-        }
-
-        function updateRoleUI() {
-            let label = 'خادم';
-            if (currentPermission === 'admin') label = 'أمين خدمة (أدمن)';
-            else if (currentPermission === 'developer') label = 'خادم ومطور نظام';
-            else if (currentPermission === 'scanner_only') label = 'مسح الحضور بالكاميرا فقط';
-            else if (currentPermission === 'view_only') label = 'مشاهدة فقط';
-            else if (currentPermission === 'attend_only') label = 'تسجيل حضور فقط';
-            else if (currentPermission === 'full') label = 'خادم متكامل';
-
-            document.getElementById('currentRoleBadge').innerText = label;
-
-            const isAdmin = (currentPermission === 'admin' || currentPermission === 'developer');
-            const isScannerOnly = (currentPermission === 'scanner_only');
-            const canAttend = (isAdmin || currentPermission === 'attend_only' || currentPermission === 'full' || isScannerOnly);
-            const canEdit = (isAdmin || currentPermission === 'full');
-
-            if (isScannerOnly) {
-                document.querySelector('.tabs').style.display = 'none';
-                document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-                document.getElementById('attendanceTab').style.display = 'block';
-                document.getElementById('attendanceTab').classList.add('active');
-                return;
-            } else {
-                document.querySelector('.tabs').style.display = 'flex';
-            }
-
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
-            document.querySelectorAll('.can-attend').forEach(el => el.style.display = canAttend ? '' : 'none');
-            document.querySelectorAll('.can-edit').forEach(el => el.style.display = canEdit ? '' : 'none');
-            document.querySelectorAll('.admin-or-servant').forEach(el => el.style.display = (isAdmin || currentPermission === 'full') ? '' : 'none');
-        }
-
-        function renderServantsTable() {
-            const tbody = document.querySelector('#servantsTable tbody');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            servants.forEach(s => {
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td data-label="كود الخادم">${s.code || s.id}</td>
-                    <td data-label="الاسم"><strong>${s.name}</strong></td>
-                    <td data-label="الهاتف">${s.phone}</td>
-                    <td data-label="تاريخ الميلاد">${s.dob || '-'}</td>
-                    <td data-label="الصلاحية"><span class="role-badge" style="background:var(--accent);">${s.permission || s.role || 'خادم'}</span></td>
-                    <td data-label="تعديل" class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل</button></td>
-                    <td data-label="حذف" class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-            updateRoleUI();
-        }
-
-        function addServantManual() {
-            let name = document.getElementById('newServantName').value.trim();
-            let phone = document.getElementById('newServantPhone').value.trim();
-            let code = document.getElementById('newServantCode').value.trim();
-            let dob = document.getElementById('newServantDob').value;
-            let perm = document.getElementById('newServantPermission').value;
-
-            if (!name || !phone) return alert("يرجى إدخال اسم ورقم هاتف الخادم!");
-
-            servants.push({
-                id: Date.now(),
-                name: name,
-                phone: phone,
-                code: code || (servants.length + 101).toString(),
-                dob: dob,
-                role: perm === 'admin' ? 'admin' : 'servant',
-                permission: perm
-            });
-
-            localStorage.setItem('my_church_servants', JSON.stringify(servants));
-            syncToCloud('servants', servants);
-            renderServantsTable();
-            renderServantsAttendanceTable();
-            populatePlanServantsDropdown();
-            showToast("✅ تم حفظ الخادم بنجاح!");
-            document.getElementById('newServantName').value = '';
-            document.getElementById('newServantPhone').value = '';
-            document.getElementById('newServantCode').value = '';
-        }
-
-        function editServant(id) {
-            let s = servants.find(x => x.id === id);
-            if (!s) return;
-            let newName = prompt("تعديل اسم الخادم:", s.name);
-            if (newName) s.name = newName.trim();
-            let newPhone = prompt("تعديل رقم الهاتف:", s.phone);
-            if (newPhone) s.phone = newPhone.trim();
-            
-            localStorage.setItem('my_church_servants', JSON.stringify(servants));
-            syncToCloud('servants', servants);
-            renderServantsTable();
-            renderServantsAttendanceTable();
-        }
-
-        function deleteServant(id) {
-            if (confirm("هل أنت متأكد من حذف هذا الخادم؟")) {
-                servants = servants.filter(s => s.id !== id);
-                localStorage.setItem('my_church_servants', JSON.stringify(servants));
-                syncToCloud('servants', servants);
-                renderServantsTable();
-                renderServantsAttendanceTable();
-            }
-        }
-
-        function populatePlanServantsDropdown() {
-            const select = document.getElementById('planResponsibleServant');
-            if (!select) return;
-            select.innerHTML = '<option value="">اختر الخادم المسؤول...</option>';
-            servants.forEach(s => {
-                let opt = document.createElement('option');
-                opt.value = s.name;
-                opt.text = s.name;
-                select.appendChild(opt);
-            });
-        }
-
-        function addMasterPlanEvent() {
-            let type = document.getElementById('planType').value;
-            let date = document.getElementById('planDate').value;
-            let title = document.getElementById('planTitle').value.trim();
-            let location = document.getElementById('planLocation').value.trim();
-            let stage = document.getElementById('planStage').value;
-            let resp = document.getElementById('planResponsibleServant').value;
-
-            if (!date || !title) return alert("يرجى إدخال التاريخ وعنوان الفعالية!");
-
-            masterPlan.push({
-                id: Date.now(),
-                type: type,
-                date: date,
-                title: title,
-                location: location || "الكنيسة",
-                stage: stage,
-                responsible: resp || "غير محدد"
-            });
-
-            saveMasterPlan();
-            renderMasterPlanTable();
-            checkUpcomingMasterPlanEvents();
-            alert("✅ تم إدراج الفعالية في خطة السنة بنجاح!");
-            document.getElementById('planTitle').value = '';
-            document.getElementById('planLocation').value = '';
-        }
-
-        function renderMasterPlanTable() {
-            const tbody = document.querySelector('#masterPlanTable tbody');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            let list = [...masterPlan].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="color:#888;">لا توجد فعاليات مسجلة في الخطة حالياً.</td></tr>';
-                return;
-            }
-
-            const tagClasses = {
-                'محاضرة': 'tag-lecture', 'رحلة': 'tag-trip', 'مؤتمر': 'tag-camp',
-                'يوم خلوة': 'tag-retreat', 'يوم رياضي': 'tag-trip', 'حفل تخرج': 'tag-grad'
-            };
-
-            list.forEach(item => {
-                let tagClass = tagClasses[item.type] || 'tag-lecture';
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td data-label="التاريخ"><strong>${item.date}</strong></td>
-                    <td data-label="النوع"><span class="plan-tag ${tagClass}">${item.type}</span></td>
-                    <td data-label="العنوان"><strong>${item.title}</strong></td>
-                    <td data-label="المكان">${item.location}</td>
-                    <td data-label="المرحلة">${item.stage}</td>
-                    <td data-label="المسؤول"><strong style="color:var(--primary);">${item.responsible}</strong></td>
-                    <td data-label="إجراء" class="admin-only">
-                        <button class="btn-mini btn-danger" onclick="deleteMasterPlanEvent(${item.id})">حذف</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            updateRoleUI();
-        }
-
-        function deleteMasterPlanEvent(id) {
-            if (confirm("حذف هذه الفعالية من خطة السنة؟")) {
-                masterPlan = masterPlan.filter(x => x.id !== id);
-                saveMasterPlan();
-                renderMasterPlanTable();
-                checkUpcomingMasterPlanEvents();
-            }
-        }
-
-        function saveMasterPlan() {
-            localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
-            syncToCloud('master_plan', masterPlan);
-        }
-
-        function checkUpcomingMasterPlanEvents() {
-            const listDiv = document.getElementById('upcomingPlanEventsList');
-            const myBanner = document.getElementById('myNextEventBanner');
-            const myDetails = document.getElementById('myNextEventDetails');
-
-            let now = new Date();
-            let upcomingList = masterPlan.filter(item => {
-                let diffDays = (new Date(item.date) - now) / (1000 * 60 * 60 * 24);
-                return diffDays >= -0.5 && diffDays <= 20;
-            });
-
-            upcomingList.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            if (upcomingList.length === 0) {
-                listDiv.innerHTML = "✨ لا توجد فعاليات أو رحلات مجدولة قريباً.";
-            } else {
-                listDiv.innerHTML = upcomingList.slice(0, 4).map(item => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #ccc; padding:4px 0; flex-wrap:wrap; gap:5px;">
-                        <span>📌 [<strong>${item.date}</strong>] - <strong>${item.title}</strong></span>
-                        <span class="role-badge" style="background:#2c3e50; font-size:10px;">المسؤول: ${item.responsible}</span>
-                    </div>
-                `).join('');
-            }
-
-            if (currentUser) {
-                let myNext = masterPlan.find(item => {
-                    let isResponsible = (item.responsible || '').trim().toLowerCase() === currentUser.name.trim().toLowerCase();
-                    let diffDays = (new Date(item.date) - now) / (1000 * 60 * 60 * 24);
-                    return isResponsible && diffDays >= -0.5 && diffDays <= 7;
-                });
-
-                if (myNext) {
-                    myDetails.innerText = `موعدك القادم: [${myNext.type} - ${myNext.title}] يوم (${myNext.date}).`;
-                    myBanner.style.display = 'block';
-                } else {
-                    myBanner.style.display = 'none';
-                }
-            }
-        }
-
-        function checkUpcomingBirthdays() {
-            const box = document.getElementById('birthdayAlertList');
-            let now = new Date();
-            let currentMonth = now.getMonth() + 1;
-            let currentDay = now.getDate();
-
-            let matchedBirthdays = [];
-
-            members.forEach(m => {
-                if (m.dob) {
-                    let parts = m.dob.toString().split(/[-/]/);
-                    if (parts.length >= 3) {
-                        let bMonth = parseInt(parts[1]), bDay = parseInt(parts[2]);
-                        if (parts[0].length <= 2 && parts[2].length === 4) {
-                            bDay = parseInt(parts[0]);
-                            bMonth = parseInt(parts[1]);
-                        }
-                        if (bMonth === currentMonth && Math.abs(bDay - currentDay) <= 4) {
-                            matchedBirthdays.push({ name: m.name, phone: m.phone, type: 'دارس', date: `${bDay}/${bMonth}` });
-                        }
-                    }
-                }
-            });
-
-            if (currentPermission === 'admin' || currentPermission === 'developer' || currentPermission === 'full') {
-                servants.forEach(s => {
-                    if (s.dob) {
-                        let parts = s.dob.toString().split(/[-/]/);
-                        if (parts.length >= 3) {
-                            let bMonth = parseInt(parts[1]), bDay = parseInt(parts[2]);
-                            if (bMonth === currentMonth && Math.abs(bDay - currentDay) <= 4) {
-                                matchedBirthdays.push({ name: s.name, phone: s.phone, type: 'خادم', date: `${bDay}/${bMonth}` });
-                            }
-                        }
-                    }
-                });
-            }
-
-            if (matchedBirthdays.length === 0) {
-                box.innerHTML = "✨ لا توجد أعياد ميلاد في الأيام القريبة الحالية.";
-                return;
-            }
-
-            box.innerHTML = matchedBirthdays.map(b => {
-                let cleanPhone = formatWhatsAppPhone(b.phone);
-                let waMsg = encodeURIComponent(`كل سنة وأنت طيب يا ${b.name} وعقبال 100 سنة مع المسيح في خدمته المباركة ❤️🎂`);
-                return `
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #ffeaa7; padding:4px 0; flex-wrap:wrap; gap:5px;">
-                        <span>🎉 <strong>${b.name}</strong> (${b.type}) - ${b.date}</span>
-                        ${cleanPhone ? `<a href="https://wa.me/${cleanPhone}?text=${waMsg}" target="_blank" class="btn-mini btn-success">تهنئة واتساب 📲</a>` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function calculateGraduationStatus(memberId) {
-            let dates = Object.keys(attendanceRecord);
-            if (dates.length === 0) return { percent: 0, qualified: false, attended: 0, total: 0 };
-
-            let attendedCount = 0;
-            dates.forEach(d => {
-                let found = (attendanceRecord[d] || []).find(a => a.id.toString() === memberId.toString() && !a.isAbsentDueToDelay);
-                if (found) attendedCount++;
-            });
-
-            let percent = Math.round((attendedCount / dates.length) * 100);
-            return {
-                percent: percent,
-                qualified: percent >= 75,
-                attended: attendedCount,
-                total: dates.length
-            };
-        }
-
-        function calculateServantCommitment(servantId) {
-            let totalSessions = Object.keys(attendanceRecord).length;
-            if (totalSessions === 0) return { percent: 0, attended: 0, total: 0 };
-
-            let attendedSessions = 0;
-            Object.keys(servantsAttendance).forEach(d => {
-                let present = (servantsAttendance[d] || []).some(s => s.id.toString() === servantId.toString());
-                if (present) attendedSessions++;
-            });
-
-            let percent = Math.round((attendedSessions / totalSessions) * 100);
-            return {
-                percent: percent,
-                attended: attendedSessions,
-                total: totalSessions,
-                isCommitted: percent >= 75
-            };
-        }
-
-        function quickCapsuleVisit(capsuleText) { saveVisitation(capsuleText); }
-        function addManualVisitationNote() {
-            let note = document.getElementById('visitationNote').value.trim();
-            if (!note) return alert("اكتب الملاحظة أولاً!");
-            saveVisitation(note);
-            document.getElementById('visitationNote').value = '';
-        }
-
-        function saveVisitation(text) {
-            let m = members.find(x => x.id.toString() === currentProfileId.toString());
-            if (!m) return;
-            if (!m.visitations) m.visitations = [];
-            m.visitations.unshift({
-                date: new Date().toLocaleDateString('en-CA'),
-                text: text,
-                by: currentUser ? currentUser.name : 'خادم'
-            });
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
-            
-            let vh = document.getElementById('visitationHistory');
-            if (vh) {
-                vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${new Date().toLocaleDateString('en-CA')} (${currentUser ? currentUser.name : 'خادم'}):</strong> ${text}</div>` + vh.innerHTML;
-            }
-            
-            renderServantsAttendanceTable();
-            checkLocalStorageUsage();
-            showToast("✅ تم حفظ كبسولة الافتقاد بنجاح!");
-        }
-
-        function saveFieldEvaluation() {
-            let m = members.find(x => x.id.toString() === currentProfileId.toString());
-            if (!m) return;
-
-            let date = document.getElementById('evalDate').value || new Date().toLocaleDateString('en-CA');
-            let className = document.getElementById('evalClass').value.trim();
-            let lessonTitle = document.getElementById('evalLessonTitle').value.trim();
-            let supervisor = document.getElementById('evalSupervisor').value || (currentUser ? currentUser.name : 'خادم مشرف');
-            
-            let sPrep = parseInt(document.getElementById('scorePrep').value) || 0;
-            let sDeliv = parseInt(document.getElementById('scoreDelivery').value) || 0;
-            let sAids = parseInt(document.getElementById('scoreAids').value) || 0;
-            let sCond = parseInt(document.getElementById('scoreConduct').value) || 0;
-            let totalScore = Math.min(100, sPrep + sDeliv + sAids + sCond);
-            let notes = document.getElementById('evalNotes').value.trim();
-
-            if (!lessonTitle) return alert("يرجى كتابة عنوان الدرس المشروح!");
-
-            if (!m.fieldEvaluations) m.fieldEvaluations = [];
-            m.fieldEvaluations.unshift({
-                id: Date.now(),
-                date: date,
-                className: className || "فصل عام",
-                lessonTitle: lessonTitle,
-                supervisor: supervisor,
-                totalScore: totalScore,
-                details: { prep: sPrep, deliv: sDeliv, aids: sAids, cond: sCond },
-                notes: notes
-            });
-
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
-            renderFieldEvaluationsList(m);
-            checkLocalStorageUsage();
-            showToast(`✅ تم حفظ تقييم النزول الميداني (${totalScore}/100)`);
-
-            document.getElementById('evalLessonTitle').value = '';
-            document.getElementById('evalNotes').value = '';
-            document.getElementById('scorePrep').value = '';
-            document.getElementById('scoreDelivery').value = '';
-            document.getElementById('scoreAids').value = '';
-            document.getElementById('scoreConduct').value = '';
-        }
-
-        function renderFieldEvaluationsList(member) {
-            let box = document.getElementById('fieldEvaluationHistory');
-            if (!box) return;
-            box.innerHTML = '';
-            let evals = member.fieldEvaluations || [];
-
-            if (evals.length === 0) {
-                box.innerHTML = '<div style="text-align:center; padding:15px; color:#888; font-size:12px;">لم يخض الدارس أي نزول ميداني أو تقييمات عملية حتى الآن.</div>';
-                return;
-            }
-
-            evals.forEach(ev => {
-                let badgeColor = ev.totalScore >= 75 ? 'var(--success)' : 'var(--warning)';
-                box.innerHTML += `
-                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:8px; margin-bottom:6px; font-size:12px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-                            <strong style="color:var(--primary); font-size:13px;">${ev.lessonTitle} (${ev.className})</strong>
-                            <span class="role-badge" style="background:${badgeColor}; font-size:11px;">${ev.totalScore} / 100</span>
-                        </div>
-                        <div style="color:#636e72; font-size:11px; margin:3px 0;">التاريخ: ${ev.date} | المشرف المقيم: <strong>${ev.supervisor}</strong></div>
-                        <div style="font-size:11px; color:#2d3436; background:#f1f2f6; padding:4px 6px; border-radius:4px; margin-top:4px;">
-                            تحضير: ${ev.details.prep} | أداء وتوصيل: ${ev.details.deliv} | وسيلة: ${ev.details.aids} | قدوة: ${ev.details.cond}
-                            ${ev.notes ? `<div style="margin-top:2px; font-style:italic;">ملاحظات: ${ev.notes}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function showKioskWelcome(person, isAbsent, type = 'member') {
-            const card = document.getElementById('kioskCard');
-            const icon = document.getElementById('kioskIcon');
-            const name = document.getElementById('kioskName');
-            const badge = document.getElementById('kioskBadge');
-            const stats = document.getElementById('kioskStats');
-
-            if (!card) return;
-
-            if (type === 'servant') {
-                icon.innerText = "👔";
-                name.innerText = person.name;
-                badge.innerText = "خادم مسجل";
-                badge.style.background = "var(--primary)";
-                stats.innerHTML = `تم تسجيل حضورك في تمام <strong>${new Date().toLocaleTimeString('ar-EG')}</strong><br>خدمة مباركة ومثمرة! 🕊️`;
-            } else {
-                let grad = calculateGraduationStatus(person.id);
-                if (isAbsent) {
-                    icon.innerText = "⚠️";
-                    name.innerText = person.name;
-                    badge.innerText = "تأخير شديد";
-                    badge.style.background = "var(--danger)";
-                    stats.innerHTML = `كود الامتحان: <strong>${person.code || person.id}</strong><br>تم رصد حضورك متأخراً في <strong>${new Date().toLocaleTimeString('ar-EG')}</strong><br>نسبة الحضور: <strong>${grad.percent}%</strong>`;
-                } else {
-                    icon.innerText = "✨";
-                    name.innerText = person.name;
-                    badge.innerText = `حاضر - ${person.stage || 'سنة أولى'}`;
-                    badge.style.background = "var(--success)";
-                    stats.innerHTML = `كود الامتحان: <strong>${person.code || person.id}</strong><br>نورت كورس إعداد الخدام! 🎉<br>نسبة التزامك الكلية: <strong>${grad.percent}%</strong> (${grad.attended}/${grad.total} لقاء)`;
-                }
-            }
-
-            card.style.display = 'block';
-            setTimeout(() => { card.style.display = 'none'; }, 2500);
-        }
-
-        let qrSearchScanner = null;
-
-        async function openQrSearchModal() {
-            document.getElementById('qrSearchModal').style.display = 'flex';
-            try {
-                if (qrSearchScanner) {
-                    try { await qrSearchScanner.stop(); } catch(e){}
-                }
-                qrSearchScanner = new Html5Qrcode("qrSearchReader");
-                const config = { fps: 10, qrbox: { width: 200, height: 200 } };
-                await qrSearchScanner.start(
-                    { facingMode: "environment" },
-                    config,
-                    onQrSearchSuccess,
-                    () => {}
-                );
-            } catch (e) {
-                alert("تعذر تشغيل الكاميرا الخاصة بالبحث: " + e);
-                closeQrSearchModal();
-            }
-        }
-
-        function onQrSearchSuccess(scannedText) {
-            scannedText = scannedText.trim();
-            closeQrSearchModal();
-
-            let targetName = scannedText.includes('/') ? scannedText.split('/')[0].trim() : scannedText;
-
-            let member = members.find(m => {
-                let mName = m.name ? m.name.trim().toLowerCase() : "";
-                let mCode = m.code ? m.code.toString().trim() : "";
-                let mId = m.id ? m.id.toString().trim() : "";
-                let mQr = m.qrCode ? m.qrCode.toLowerCase() : "";
-
-                return (mCode === scannedText || mName === targetName.toLowerCase() || mQr === scannedText.toLowerCase() || mId === scannedText);
-            });
-
-            if (member) {
-                playBeepSound('success');
-                openProfile(member.id);
-            } else {
-                playBeepSound('error');
-                alert("❌ لم يتم العثور على أي دارس مطابق لهذا الكود!");
-            }
-        }
-
-        async function closeQrSearchModal() {
-            if (qrSearchScanner) {
-                try {
-                    await qrSearchScanner.stop();
-                    qrSearchScanner.clear();
-                } catch(e){}
-                qrSearchScanner = null;
-            }
-            document.getElementById('qrSearchModal').style.display = 'none';
-        }
-
-        function exportTodaySessionToWhatsApp(adminPhone = "201200000000") {
-            let todayData = {
-                date: today,
-                servant: currentUser ? currentUser.name : 'غير محدد',
-                attendance: attendanceRecord[today] || [],
-                servantsAtt: servantsAttendance[today] || []
-            };
-
-            if (todayData.attendance.length === 0 && todayData.servantsAtt.length === 0) {
-                return alert("لا توجد أي حركات حضور مسجلة لليوم لتصديرها!");
-            }
-
-            let payload = btoa(unescape(encodeURIComponent(JSON.stringify(todayData))));
-            let msg = `🚨 *تقرير طوارئ حضور كورس الخدام (${today})*\nمسجل بواسطة: ${todayData.servant}\nعدد الحاضرين: ${todayData.attendance.length}\nعدد الخدام: ${todayData.servantsAtt.length}\n\n*كود المزامنة (انسخه بالكامل):*\n\`\`\`${payload}\`\`\``;
-
-            window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        function importFromEmergencyCode() {
-            let code = prompt("الصق كود المزامنة المستلم من رسالة الواتساب هنا:");
-            if (!code) return;
-
-            try {
-                let decodedStr = decodeURIComponent(escape(atob(code.trim())));
-                let imported = JSON.parse(decodedStr);
-
-                if (!imported.date || !imported.attendance) {
-                    return alert("❌ كود غير صالح أو تالف!");
-                }
-
-                let targetDate = imported.date;
-                if (!attendanceRecord[targetDate]) attendanceRecord[targetDate] = [];
-                if (!servantsAttendance[targetDate]) servantsAttendance[targetDate] = [];
-
-                imported.attendance.forEach(newItem => {
-                    if (!attendanceRecord[targetDate].some(x => x.id.toString() === newItem.id.toString())) {
-                        attendanceRecord[targetDate].push(newItem);
-                    }
-                });
-
-                imported.servantsAtt.forEach(newServ => {
-                    if (!servantsAttendance[targetDate].some(x => x.id.toString() === newServ.id.toString())) {
-                        servantsAttendance[targetDate].push(newServ);
-                    }
-                });
-
-                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
-                syncToCloud('attendance', attendanceRecord);
-                syncToCloud('servants_attendance', servantsAttendance);
-
-                renderAttendanceTable();
-                renderServantsAttendanceTable();
-                renderDashboard();
-                checkLocalStorageUsage();
-                alert(`✅ تم استيراد حركات حضور يوم (${targetDate}) بنجاح ودمجها في المنظومة والسحابة!`);
-            } catch (e) {
-                alert("❌ حدث خطأ أثناء فك تشفير الكود: تأكد من نسخه كاملاً.");
-            }
-        }
-
-        function recordServantAttendance(servant) {
-            if (!servantsAttendance[today].some(s => s.id.toString() === servant.id.toString())) {
-                servantsAttendance[today].push({
-                    id: servant.id,
-                    name: servant.name,
-                    code: servant.code || servant.id,
-                    time: new Date().toLocaleTimeString('ar-EG')
-                });
-                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
-                syncToCloud('servants_attendance', servantsAttendance);
-                renderServantsAttendanceTable();
-                renderDashboard();
-                checkLocalStorageUsage();
-            }
-        }
-
-        function manualMarkServant(servantId) {
-            let s = servants.find(x => x.id === servantId);
-            if (!s) return;
-            recordServantAttendance(s);
-            playBeepSound('success');
-            showToast(`✅ تم تسجيل حضور الخادم: ${s.name}`);
-        }
-
-        function cancelServantAttendance(servantId) {
-            let s = servants.find(x => x.id === servantId);
-            let sName = s ? s.name : "الخادم";
-            if (confirm(`إلغاء حضور الخادم (${sName}) لليوم؟`)) {
-                servantsAttendance[today] = (servantsAttendance[today] || []).filter(item => item.id.toString() !== servantId.toString());
-                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
-                syncToCloud('servants_attendance', servantsAttendance);
-                renderServantsAttendanceTable();
-                renderDashboard();
-                checkLocalStorageUsage();
-            }
-        }
-
-        function cancelMemberAttendance(memberId) {
-            let m = members.find(x => x.id.toString() === memberId.toString());
-            let mName = m ? m.name : "هذا الشخص";
-            if (confirm(`إلغاء تسجيل حضور (${mName}) لليوم؟`)) {
-                attendanceRecord[today] = (attendanceRecord[today] || []).filter(item => item.id.toString() !== memberId.toString());
-                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                syncToCloud('attendance', attendanceRecord);
-                renderAttendanceTable();
-                renderMembersList();
-                renderDashboard();
-                checkLocalStorageUsage();
-            }
-        }
-
-        function clearEntireTodayAttendance() {
-            let pwd = prompt("⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور اليوم بالكامل!\nأدخل كلمة مرور أمين الخدمة للتأكيد:");
-            if (!pwd) return;
-            if (pwd !== adminPassword && pwd !== "1234567") {
-                return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
-            }
-
-            if (confirm(`هل أنت متأكد نهائياً من مسح كافة حركات حضور المخدومين ليوم (${today})؟`)) {
-                attendanceRecord[today] = [];
-                servantsAttendance[today] = [];
-                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
-                syncToCloud('attendance', attendanceRecord);
-                syncToCloud('servants_attendance', servantsAttendance);
-
-                renderAttendanceTable();
-                renderServantsAttendanceTable();
-                renderDashboard();
-                checkLocalStorageUsage();
-                alert("✅ تم حذف سجل حضور اليوم بالكامل بنجاح!");
-            }
-        }
-
+        // تسجيل الحضور والمثلث الروحي (حضور + تناول + مشاركة)
         function registerMemberAttendance(member) {
             let existing = (attendanceRecord[today] || []).find(a => a.id.toString() === member.id.toString());
             if (existing) {
-                playBeepSound('error');
-                showToast(`⚠️ مسجل بالفعل اليوم: ${member.name}`, true);
+                showToast(`⚠️ مسجل مسبقاً اليوم: ${member.name}`);
                 return;
             }
 
-            let now = new Date();
-            let currentDayIndex = now.getDay();
-            let isSummerDay = settings.summerActive && (currentDayIndex.toString() === settings.summerDay);
-            let isAbsent = false;
-
-            if (currentDayIndex !== 5) {
-                isAbsent = false;
-            } else if (isSummerDay && settings.ignoreSummerDelay) {
-                isAbsent = false;
-            } else {
-                let startTimeStr = isSummerDay ? settings.summerStartTime : settings.startTime;
-                let [startH, startM] = (startTimeStr || "13:00").split(':').map(Number);
-                let diffMinutes = (now.getHours() * 60 + now.getMinutes()) - (startH * 60 + startM);
-                isAbsent = diffMinutes >= (settings.absentAfter || 75);
-            }
-
-            if (!attendanceRecord[today]) attendanceRecord[today] = [];
-
-            attendanceRecord[today].push({
+            let record = {
                 id: member.id,
                 code: member.code || member.id,
                 name: member.name,
                 stage: member.stage || 'سنة أولى',
-                gender: member.gender || 'بنين',
-                time: now.toLocaleTimeString('ar-EG'),
-                isAbsentDueToDelay: isAbsent,
-                scannedBy: currentUser ? currentUser.name : 'تسجيل يدوي'
-            });
+                time: new Date().toLocaleTimeString('ar-EG'),
+                attended: true,
+                communion: false,
+                participation: false,
+                points: 5 // 5 نقاط للحضور
+            };
 
-            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-            syncToCloud('attendance', attendanceRecord);
+            if (!attendanceRecord[today]) attendanceRecord[today] = [];
+            attendanceRecord[today].unshift(record);
 
-            showKioskWelcome(member, isAbsent, 'member');
+            // تحديث النقاط الإجمالية التراكمية للمخدوم
+            member.totalPoints = (member.totalPoints || 0) + 5;
 
-            if (isAbsent) {
-                playBeepSound('error');
-                showToast(`⚠️ ${member.name} (تأخير شديد)`, true);
-            } else {
-                playBeepSound('success');
-                showToast(`✅ تم تسجيل حضور: ${member.name}`);
-            }
+            saveData();
+            playBeepSound('success');
+            showToast(`✅ تم تسجيل حضور: ${member.name}`);
             renderAttendanceTable();
-            renderMembersList();
+            renderLiveCardsFeed();
             renderDashboard();
-            checkLocalStorageUsage();
         }
 
-        function manualMarkMemberFromInput() {
-            let input = document.getElementById('manualAttendInput').value.trim();
-            if (!input) return alert("يرجى كتابة كود الامتحان أو اسم الدارس أولاً!");
+        // تحديث حالة التناول أو المشاركة
+        function toggleSpiritualStatus(memberId, field, isChecked) {
+            let rec = (attendanceRecord[today] || []).find(a => a.id.toString() === memberId.toString());
+            let mem = members.find(m => m.id.toString() === memberId.toString());
+            if (!rec || !mem) return;
 
-            let member = members.find(m => {
-                let mCode = m.code ? m.code.toString().trim() : "";
-                let mName = m.name ? m.name.trim().toLowerCase() : "";
-                return (mCode === input || mName.includes(input.toLowerCase()));
-            });
+            let pts = field === 'communion' ? 10 : 5; // 10 للتناول، 5 للمشاركة
 
-            if (member) {
-                registerMemberAttendance(member);
-                document.getElementById('manualAttendInput').value = '';
+            if (isChecked) {
+                rec[field] = true;
+                rec.points = (rec.points || 0) + pts;
+                mem.totalPoints = (mem.totalPoints || 0) + pts;
+                showToast(`🕊️ تم تسجيل ${field === 'communion' ? 'التناول' : 'المشاركة'} لـ ${rec.name} (+${pts} نقاط)`);
             } else {
-                playBeepSound('error');
-                alert(`❌ لم يتم العثور على أي دارس بهذا الكود أو الاسم: (${input})`);
+                rec[field] = false;
+                rec.points = Math.max(0, (rec.points || 0) - pts);
+                mem.totalPoints = Math.max(0, (mem.totalPoints || 0) - pts);
+            }
+
+            saveData();
+            renderAttendanceTable();
+            renderDashboard();
+            renderMembersList();
+        }
+
+        // عرض شريط الكروت المباشر للمسح التفاعلي (مثل الصورة 4/4)
+        function renderLiveCardsFeed() {
+            const feed = document.getElementById('liveCardsFeed');
+            const countBadge = document.getElementById('liveScanCount');
+            if (!feed) return;
+
+            let todayList = attendanceRecord[today] || [];
+            countBadge.innerText = todayList.length;
+
+            if (todayList.length === 0) {
+                feed.innerHTML = '<div style="text-align:center; color:#888; padding:15px; font-size:12px;">لم يتم مسح أي كارنيه حتى الآن...</div>';
+                return;
+            }
+
+            feed.innerHTML = '';
+            todayList.forEach((item, index) => {
+                let card = document.createElement('div');
+                card.className = 'live-scan-card';
+                card.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="color:var(--success); font-weight:bold; font-size:16px;">✔️</span>
+                        <div>
+                            <strong style="font-size:14px; color:var(--dark);">${item.name}</strong>
+                            <div style="font-size:11px; color:#636e72;">كود: ${item.code} | وقت: ${item.time}</div>
+                        </div>
+                    </div>
+                    <div class="sacrament-box">
+                        <span class="live-scan-index">#${todayList.length - index}</span>
+                    </div>
+                `;
+                feed.appendChild(card);
+            });
+        }
+
+        // جدول الحضور التفصيلي مع أزرار التناول والمشاركة
+        function renderAttendanceTable() {
+            const tbody = document.querySelector('#attendanceTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            (attendanceRecord[today] || []).forEach(item => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="كود الامتحان"><strong>${item.code}</strong></td>
+                    <td data-label="الاسم"><strong>${item.name}</strong></td>
+                    <td data-label="المرحلة">${item.stage}</td>
+                    <td data-label="وقت المسح" dir="ltr">${item.time}</td>
+                    <td data-label="حضور">✔️ حاضر</td>
+                    <td data-label="تناول 🕊️">
+                        <input type="checkbox" ${item.communion ? 'checked' : ''} onchange="toggleSpiritualStatus('${item.id}', 'communion', this.checked)" style="width:18px; height:18px; cursor:pointer;">
+                    </td>
+                    <td data-label="مشاركة 💡">
+                        <input type="checkbox" ${item.participation ? 'checked' : ''} onchange="toggleSpiritualStatus('${item.id}', 'participation', this.checked)" style="width:18px; height:18px; cursor:pointer;">
+                    </td>
+                    <td data-label="النقاط ⭐"><strong style="color:var(--accent);">${item.points || 5}</strong></td>
+                    <td data-label="إلغاء">
+                        <button class="btn-mini btn-danger" onclick="cancelAttendance('${item.id}')">❌</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function cancelAttendance(id) {
+            if (confirm("هل تريد إلغاء تسجيل هذا الشخص لليوم؟")) {
+                attendanceRecord[today] = (attendanceRecord[today] || []).filter(a => a.id.toString() !== id.toString());
+                saveData();
+                renderAttendanceTable();
+                renderLiveCardsFeed();
+                renderDashboard();
             }
         }
 
+        function clearEntireTodayAttendance() {
+            let pwd = prompt("أدخل كلمة مرور أمين الخدمة لحذف يوم الحضور:");
+            if (pwd === '1234567') {
+                attendanceRecord[today] = [];
+                saveData();
+                renderAttendanceTable();
+                renderLiveCardsFeed();
+                renderDashboard();
+                alert("✅ تم حذف سجل حضور اليوم.");
+            } else {
+                alert("❌ كلمة المرور غير صحيحة.");
+            }
+        }
+
+        // نافذة الرصد السريع (حضور - تناول - مشاركة)
         function openManualAttendanceModal() {
             document.getElementById('manualModalSearchBox').value = '';
             renderManualAttendanceModalList();
@@ -2016,125 +652,123 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            let todayPresentIds = new Set((attendanceRecord[today] || []).map(a => a.id.toString()));
+            let todayMap = {};
+            (attendanceRecord[today] || []).forEach(a => { todayMap[a.id.toString()] = a; });
 
-            let filtered = members.filter(m => {
-                let mName = (m.name || '').toLowerCase();
-                let mCode = (m.code || '').toString().toLowerCase();
-                let mPhone = (m.phone || '').toString();
-                return mName.includes(search) || mCode.includes(search) || mPhone.includes(search);
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="color:#888; padding:15px;">لا توجد نتائج مطابقة للبحث.</td></tr>';
-                return;
-            }
+            let filtered = members.filter(m => (m.name || '').toLowerCase().includes(search) || (m.code || '').toString().includes(search));
 
             filtered.forEach(m => {
-                let isPresent = todayPresentIds.has(m.id.toString());
+                let rec = todayMap[m.id.toString()];
+                let isAtt = !!rec;
+                let isCom = rec ? !!rec.communion : false;
+                let isPart = rec ? !!rec.participation : false;
+
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td data-label="حضور" style="text-align:center;">
-                        <input type="checkbox" ${isPresent ? 'checked' : ''} onchange="toggleMemberAttendanceFromModal('${m.id}', this.checked)" style="width:20px; height:20px; cursor:pointer;">
+                    <td data-label="الاسم" style="text-align:right;"><strong>${m.name}</strong> (${m.code || '-'})</td>
+                    <td data-label="حضور">
+                        <input type="checkbox" ${isAtt ? 'checked' : ''} onchange="toggleManualModalAttendance('${m.id}', this.checked)" style="width:18px; height:18px;">
                     </td>
-                    <td data-label="كود الامتحان"><strong>${m.code || '-'}</strong></td>
-                    <td data-label="الاسم" style="text-align:right; font-weight:bold;">${m.name}</td>
-                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="تناول 🕊️">
+                        <input type="checkbox" ${isCom ? 'checked' : ''} ${!isAtt ? 'disabled' : ''} onchange="toggleSpiritualStatus('${m.id}', 'communion', this.checked)" style="width:18px; height:18px;">
+                    </td>
+                    <td data-label="مشاركة 💡">
+                        <input type="checkbox" ${isPart ? 'checked' : ''} ${!isAtt ? 'disabled' : ''} onchange="toggleSpiritualStatus('${m.id}', 'participation', this.checked)" style="width:18px; height:18px;">
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function toggleMemberAttendanceFromModal(memberId, isChecked) {
-            let member = members.find(x => x.id.toString() === memberId.toString());
-            if (!member) return;
-
+        function toggleManualModalAttendance(memberId, isChecked) {
+            let m = members.find(x => x.id.toString() === memberId.toString());
+            if (!m) return;
             if (isChecked) {
-                let existing = (attendanceRecord[today] || []).some(a => a.id.toString() === memberId.toString());
-                if (!existing) {
-                    let now = new Date();
-                    if (!attendanceRecord[today]) attendanceRecord[today] = [];
-                    attendanceRecord[today].push({
-                        id: member.id,
-                        code: member.code || member.id,
-                        name: member.name,
-                        stage: member.stage || 'سنة أولى',
-                        gender: member.gender || 'بنين',
-                        time: now.toLocaleTimeString('ar-EG'),
-                        isAbsentDueToDelay: false,
-                        scannedBy: currentUser ? currentUser.name : 'قائمة يدوية'
-                    });
-                    localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                    syncToCloud('attendance', attendanceRecord);
-                    playBeepSound('success');
-                    showToast(`✅ تم تسجيل حضور: ${member.name}`);
-                }
+                registerMemberAttendance(m);
             } else {
                 attendanceRecord[today] = (attendanceRecord[today] || []).filter(a => a.id.toString() !== memberId.toString());
-                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                syncToCloud('attendance', attendanceRecord);
-                showToast(`ℹ️ تم إلغاء حضور: ${member.name}`, true);
+                saveData();
+                renderAttendanceTable();
+                renderLiveCardsFeed();
+                renderDashboard();
             }
-
-            renderAttendanceTable();
-            renderMembersList();
-            renderDashboard();
-            checkLocalStorageUsage();
+            renderManualAttendanceModalList();
         }
 
+        function renderMembersList() {
+            const tbody = document.querySelector('#membersTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const search = (document.getElementById('searchBox')?.value || '').toLowerCase();
+
+            let filtered = members.filter(m => (m.name || '').toLowerCase().includes(search) || (m.code || '').toString().includes(search));
+
+            filtered.forEach(m => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="كود الامتحان">${m.code || '-'}</td>
+                    <td data-label="الاسم"><strong>${m.name}</strong></td>
+                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="الهاتف">${m.phone || '-'}</td>
+                    <td data-label="إجمالي النقاط ⭐"><strong style="color:var(--accent); font-size:15px;">${m.totalPoints || 0}</strong></td>
+                    <td data-label="الملف"><button class="btn-mini btn-primary" onclick="showToast('كود الباركود: ' + m.code)">عرض</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderDashboard() {
+            document.getElementById('statTotalMembers').innerText = members.length;
+            let list = attendanceRecord[today] || [];
+            document.getElementById('statTodayMembersCount').innerText = list.length;
+            document.getElementById('statTodayCommunion').innerText = list.filter(a => a.communion).length;
+            document.getElementById('statTodayParticipation').innerText = list.filter(a => a.participation).length;
+        }
+
+        function saveData() {
+            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+            syncToCloud('attendance', attendanceRecord);
+            syncToCloud('members', members);
+        }
+
+        function syncToCloud(path, data) {
+            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+            pending[path] = true;
+            localStorage.setItem('pending_sync_paths', JSON.stringify(pending));
+            updatePendingBadge();
+        }
+
+        function updatePendingBadge() {
+            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+            let count = Object.keys(pending).length;
+            let badge = document.getElementById('pendingSyncBadge');
+            if (badge) badge.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        function pushPendingData() {
+            showToast("تم تحديث البيانات محلياً وجاهزة للمزامنة السحابية.");
+            localStorage.removeItem('pending_sync_paths');
+            updatePendingBadge();
+        }
+
+        // تشغيل الكاميرا الآمن
         let html5QrCode = null;
-        async function populateCameraDevices() {
-            try {
-                if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
-                    const select = document.getElementById('cameraSelectionDropdown');
-                    select.innerHTML = '<option value="">تحديد الكاميرا الخلفية تلقائياً...</option>';
-                    videoDevices.forEach((device, index) => {
-                        const opt = document.createElement('option');
-                        opt.value = device.deviceId;
-                        opt.text = device.label || `كاميرا ${index + 1}`;
-                        select.appendChild(opt);
-                    });
-                }
-            } catch (e) {}
-        }
-
         async function startCamera() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert("يرجى استخدام متصفح حديث يدعم الكاميرا.");
-                return;
-            }
-
             try {
-                const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                testStream.getTracks().forEach(t => t.stop());
-                await populateCameraDevices();
-
                 document.getElementById('startCameraBtn').style.display = 'none';
-                document.getElementById('stopCameraBtn').style.display = 'block';
+                document.getElementById('stopCameraBtn').style.display = 'inline-block';
 
                 if (html5QrCode) {
                     try { await html5QrCode.stop(); } catch(e){}
                 }
 
                 html5QrCode = new Html5Qrcode("reader");
-                const chosenDeviceId = document.getElementById('cameraSelectionDropdown').value;
-                const cameraConfig = { fps: 10, qrbox: { width: 220, height: 220 } };
-
-                if (chosenDeviceId) {
-                    await html5QrCode.start(chosenDeviceId, cameraConfig, markAttendance, () => {});
-                } else {
-                    try {
-                        await html5QrCode.start({ facingMode: "environment" }, cameraConfig, markAttendance, () => {});
-                    } catch (envErr) {
-                        await html5QrCode.start({ facingMode: "user" }, cameraConfig, markAttendance, () => {});
-                    }
-                }
-
+                const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+                await html5QrCode.start({ facingMode: "environment" }, config, onQrScanSuccess, () => {});
             } catch (err) {
                 stopCamera();
-                alert("❌ تم رفض إذن الكاميرا. يرجى التأكد من إعطاء إذن الكاميرا للمتصفح.");
+                alert("يرجى التأكد من تفعيل إذن الكاميرا من المتصفح.");
             }
         }
 
@@ -2142,1020 +776,24 @@
             if (html5QrCode) {
                 html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
             }
-            document.getElementById('startCameraBtn').style.display = 'block';
+            document.getElementById('startCameraBtn').style.display = 'inline-block';
             document.getElementById('stopCameraBtn').style.display = 'none';
         }
 
-        let lastScannedCode = "";
-        let lastScannedTime = 0;
-        const SCAN_COOLDOWN_MS = 5000;
+        let lastScanCode = "";
+        let lastScanTime = 0;
+        function onQrScanSuccess(decodedText) {
+            let now = Date.now();
+            if (decodedText === lastScanCode && (now - lastScanTime) < 4000) return;
+            lastScanCode = decodedText;
+            lastScanTime = now;
 
-        function markAttendance(scannedText) {
-            scannedText = scannedText.trim();
-            let nowTimestamp = Date.now();
-
-            if (scannedText === lastScannedCode && (nowTimestamp - lastScannedTime) < SCAN_COOLDOWN_MS) {
-                return;
-            }
-
-            lastScannedCode = scannedText;
-            lastScannedTime = nowTimestamp;
-
-            let parsedName = scannedText;
-            let parsedDay = "";
-            if (scannedText.includes('/')) {
-                let parts = scannedText.split('/');
-                parsedName = parts[0].trim();
-                parsedDay = parts[1] ? parts[1].trim() : "";
-            }
-
-            let member = members.find(m => {
-                let mName = m.name ? m.name.trim().toLowerCase() : "";
-                let mCode = m.code ? m.code.toString().trim() : "";
-                let mId = m.id ? m.id.toString().trim() : "";
-                let mQr = m.qrCode ? m.qrCode.toLowerCase() : "";
-
-                if (mCode === scannedText) return true;
-                if (mQr !== "" && mQr === scannedText.toLowerCase()) return true;
-                if (mName === parsedName.toLowerCase()) return true;
-                if (mId === scannedText) return true;
-                return false;
-            });
-
-            if (member) {
-                registerMemberAttendance(member);
+            let m = members.find(x => (x.code && x.code.toString() === decodedText) || x.name === decodedText || (x.qrCode && x.qrCode === decodedText));
+            if (m) {
+                registerMemberAttendance(m);
             } else {
-                let s = servants.find(x => (x.code && x.code.toString() === scannedText) || x.id.toString() === scannedText || (x.name && scannedText.includes(x.name)));
-                if (s) {
-                    recordServantAttendance(s);
-                    showKioskWelcome(s, false, 'servant');
-                    playBeepSound('success');
-                    showToast(`✅ تم رصد حضور الخادم: ${s.name}`);
-                } else {
-                    playBeepSound('error');
-                    showToast(`❌ كود غير مسجل أو غير مقروء`, true);
-                }
+                showToast("❌ كود غير مسجل في المنظومة");
             }
-        }
-
-        function renderAttendanceHeatmap() {
-            const container = document.getElementById('heatmapContainer');
-            const badge = document.getElementById('attritionCountBadge');
-            if (!container) return;
-
-            container.innerHTML = '';
-            let allDates = Object.keys(attendanceRecord).sort().reverse();
-            let recentDates = allDates.slice(0, 4);
-
-            if (recentDates.length === 0) {
-                container.innerHTML = '<div style="color:#888; font-size:12px; grid-column:1/-1;">لا توجد سجلات حضور كافية لبناء الخريطة الحرارية.</div>';
-                if (badge) badge.style.display = 'none';
-                return;
-            }
-
-            let riskCount = 0;
-
-            members.forEach(m => {
-                let attendedCount = 0;
-                let delayedCount = 0;
-                let historyBlocks = [];
-
-                [...recentDates].reverse().forEach(d => {
-                    let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
-                    if (rec) {
-                        if (rec.isAbsentDueToDelay) {
-                            delayedCount++;
-                            historyBlocks.push('<span title="' + d + ': تأخير شديد" style="display:inline-block; width:18px; height:18px; background:#e17055; border-radius:3px; margin:0 2px;"></span>');
-                        } else {
-                            attendedCount++;
-                            historyBlocks.push('<span title="' + d + ': حاضر" style="display:inline-block; width:18px; height:18px; background:#00b894; border-radius:3px; margin:0 2px;"></span>');
-                        }
-                    } else {
-                        historyBlocks.push('<span title="' + d + ': غائب" style="display:inline-block; width:18px; height:18px; background:#dfe6e9; border:1px solid #b2bec3; border-radius:3px; margin:0 2px;"></span>');
-                    }
-                });
-
-                let statusTag = "";
-                let isAtRisk = false;
-
-                if (attendedCount === 0 || (recentDates.length >= 2 && !attendanceRecord[recentDates[0]]?.some(x => x.id.toString() === m.id.toString()) && !attendanceRecord[recentDates[1]]?.some(x => x.id.toString() === m.id.toString()))) {
-                    statusTag = '<span style="color:var(--danger); font-weight:bold; font-size:11px;">🔴 خطر تسرب مرتفع</span>';
-                    isAtRisk = true;
-                    riskCount++;
-                } else if (attendedCount <= 1 || delayedCount >= 2) {
-                    statusTag = '<span style="color:#d35400; font-weight:bold; font-size:11px;">🟡 تذبذب وتراجع</span>';
-                    isAtRisk = true;
-                    riskCount++;
-                }
-
-                if (isAtRisk) {
-                    let cleanPhone = formatWhatsAppPhone(m.phone);
-                    let waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent('سلام ونعمة يا ' + m.name + '، بنطمن عليك ومستنيينك في اجتماعنا الأسبوع ده ❤️')}` : '#';
-
-                    let card = document.createElement('div');
-                    card.style.cssText = "background:#fbfbfb; border:1px solid #eee; border-left:4px solid " + (attendedCount === 0 ? 'var(--danger)' : 'var(--warning)') + "; border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;";
-                    card.innerHTML = `
-                        <div>
-                            <div style="font-weight:bold; font-size:13px; color:var(--dark);">${m.name} (كود: ${m.code || m.id})</div>
-                            <div style="font-size:11px; color:#636e72; margin:2px 0;">${m.stage || 'سنة أولى'} • ${statusTag}</div>
-                            <div style="display:flex; align-items:center; margin-top:4px;">${historyBlocks.join('')}</div>
-                        </div>
-                        <div>
-                            <a href="${waLink}" target="_blank" class="btn-mini btn-success" style="padding:5px 9px;">افتقاد 💬</a>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                }
-            });
-
-            if (badge) {
-                badge.innerText = `${riskCount} معرض للانقطاع`;
-                badge.style.display = riskCount > 0 ? 'inline-block' : 'none';
-            }
-
-            if (riskCount === 0) {
-                container.innerHTML = '<div style="color:var(--success); font-weight:bold; font-size:12px; padding:6px 0;">🌟 رائع! لا توجد مؤشرات تسرب أو تراجع في الالتزام حالياً.</div>';
-            }
-        }
-
-        function renderDashboard() {
-            const totalMembers = members.length;
-            document.getElementById('statTotalMembers').innerText = totalMembers;
-
-            const servantIds = new Set(servants.map(s => s.id.toString()));
-            const todayMemberRecords = (attendanceRecord[today] || []).filter(a => !servantIds.has(a.id.toString()) && !a.isAbsentDueToDelay);
-
-            const todayMembersCount = todayMemberRecords.length;
-            document.getElementById('statTodayMembersCount').innerText = todayMembersCount;
-
-            const memberPercent = totalMembers > 0 ? Math.round((todayMembersCount / totalMembers) * 100) : 0;
-            document.getElementById('statMembersPercent').innerText = memberPercent + "%";
-
-            let qualifiedCount = members.filter(m => calculateGraduationStatus(m.id).qualified).length;
-            document.getElementById('statQualifiedGraduates').innerText = qualifiedCount;
-
-            const totalServants = servants.length;
-            document.getElementById('statTotalServantsDash').innerText = totalServants;
-            const todayServantsCount = (servantsAttendance[today] || []).length;
-            document.getElementById('statTodayServantsCount').innerText = todayServantsCount;
-            const servantPercent = totalServants > 0 ? Math.round((todayServantsCount / totalServants) * 100) : 0;
-            document.getElementById('statServantsPercent').innerText = servantPercent + "%";
-
-            let dates = Object.keys(attendanceRecord).sort().reverse();
-            let alertBox = document.getElementById('absentAlertList');
-            if (dates.length < 2) {
-                alertBox.innerHTML = "يتطلب حساب المنقطعين وجود سجلين لاجتماعين على الأقل.";
-            } else {
-                let last2Dates = [dates[0], dates[1]];
-                let absentees = members.filter(m => !last2Dates.some(d => (attendanceRecord[d] || []).some(a => a.id.toString() === m.id.toString() && !a.isAbsentDueToDelay)));
-                alertBox.innerHTML = absentees.length > 0 
-                    ? `<strong>تنبيه:</strong> (${absentees.length}) غائبين لآخر اجتماعين متتاليين:<br>` + absentees.map(a => `• <strong>${a.name}</strong> [كود: ${a.code || a.id}] (${a.stage || ''})`).join('<br>') 
-                    : "✅ لا يوجد منقطعين.";
-            }
-
-            renderAttendanceHeatmap();
-        }
-
-        function renderAttendanceTable() {
-            const tbody = document.querySelector('#attendanceTable tbody');
-            tbody.innerHTML = '';
-            let count = 0;
-
-            (attendanceRecord[today] || []).forEach(a => {
-                count++;
-                let tr = document.createElement('tr');
-                let status = a.isAbsentDueToDelay ? '<span style="color:red">تأخير شديد</span>' : '<span style="color:green">حاضر</span>';
-                tr.innerHTML = `
-                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${a.code || a.id}</strong></td>
-                    <td data-label="الاسم">${a.name}</td>
-                    <td data-label="المرحلة">${a.stage || '-'}</td>
-                    <td data-label="النوع">${a.gender || '-'}</td>
-                    <td data-label="وقت المسح" dir="ltr">${a.time}</td>
-                    <td data-label="الحالة">${status}</td>
-                    <td data-label="المسجِّل">${a.scannedBy || '-'}</td>
-                    <td data-label="إجراء" class="can-attend">
-                        <button class="btn-mini btn-danger" onclick="cancelMemberAttendance('${a.id}')">إلغاء ❌</button>
-                    </td>
-                `;
-                tbody.insertBefore(tr, tbody.firstChild);
-            });
-            
-            document.getElementById('todayAttendanceCount').innerText = count;
-            updateRoleUI();
-        }
-
-        function renderServantsAttendanceTable() {
-            const tbody = document.querySelector('#servantsAttendanceTable tbody');
-            tbody.innerHTML = '';
-            document.getElementById('statServantsCount').innerText = servants.length;
-            let todayServCount = (servantsAttendance[today] || []).length;
-            document.getElementById('statServantsToday').innerText = todayServCount;
-
-            let allVisitationsList = [];
-
-            members.forEach(m => {
-                if (m.visitations && Array.isArray(m.visitations)) {
-                    m.visitations.forEach(v => {
-                        let sName = v.by || 'غير محدد';
-                        allVisitationsList.push({ date: v.date, servant: sName, memberName: m.name, text: v.text });
-                    });
-                }
-            });
-
-            document.getElementById('statTotalVisitations').innerText = allVisitationsList.length;
-
-            servants.forEach(s => {
-                let present = (servantsAttendance[today] || []).find(x => x.id.toString() === s.id.toString());
-                
-                let visits = allVisitationsList.filter(v => {
-                    let vBy = (v.servant || '').trim().toLowerCase();
-                    let sName = (s.name || '').trim().toLowerCase();
-                    return vBy === sName || (s.role === 'admin' && (vBy.includes('أمين الخدمة') || vBy === 'admin'));
-                }).length;
-                
-                let todayEvent = masterPlan.find(l => (l.responsible || '').trim().toLowerCase() === s.name.trim().toLowerCase() && l.date === today);
-                let planInfo = todayEvent ? `<strong style="color:red;">📍 ${todayEvent.type}: ${todayEvent.title}</strong>` : '<span style="color:#7f8c8d;">لا توجد تكليفات اليوم</span>';
-
-                let actionBtn = present 
-                    ? `<button class="btn-mini btn-danger" onclick="cancelServantAttendance(${s.id})">إلغاء الحضور ❌</button>`
-                    : `<button class="btn-mini btn-success" onclick="manualMarkServant(${s.id})">تسجيل حضور ✔️</button>`;
-
-                let commit = calculateServantCommitment(s.id);
-                let commitBadge = `
-                    <div style="font-weight:bold; font-size:11px;">${commit.percent}% (${commit.attended}/${commit.total})</div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" style="width:${commit.percent}%; background:${commit.isCommitted ? 'var(--success)' : 'var(--warning)'}"></div>
-                    </div>
-                `;
-
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td data-label="كود الخادم">${s.code || s.id}</td>
-                    <td data-label="الاسم"><strong>${s.name}</strong></td>
-                    <td data-label="الهاتف">${s.phone}</td>
-                    <td data-label="حالة اليوم">${present ? `<span style="color:green; font-weight:bold;">حاضر (${present.time})</span>` : '<span style="color:red;">لم يحضر</span>'}</td>
-                    <td data-label="النسبة السنوية">${commitBadge}</td>
-                    <td data-label="تكليف اليوم">${planInfo}</td>
-                    <td data-label="الافتقادات"><span class="role-badge" style="background:#00b894;">${visits} افتقاد</span></td>
-                    <td data-label="إجراء" class="can-edit">${actionBtn}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            const recentTbody = document.querySelector('#recentVisitationsTable tbody');
-            recentTbody.innerHTML = '';
-            if (allVisitationsList.length === 0) {
-                recentTbody.innerHTML = '<tr><td colspan="4" style="color:#888;">لم يتم تسجيل أي افتقادات حتى الآن.</td></tr>';
-            } else {
-                allVisitationsList.slice(0, 10).forEach(v => {
-                    let tr = document.createElement('tr');
-                    tr.innerHTML = `<td data-label="التاريخ">${v.date}</td><td data-label="الخادم المسؤول"><strong>${v.servant}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td data-label="الملاحظات">${v.text}</td>`;
-                    recentTbody.appendChild(tr);
-                });
-            }
-            updateRoleUI();
-        }
-
-        function renderMembersList() {
-            const tbody = document.querySelector('#membersTable tbody');
-            const search = document.getElementById('searchBox').value.toLowerCase();
-            const stageFilter = document.getElementById('stageFilterSelect').value;
-            const gradFilter = document.getElementById('gradFilterSelect').value;
-            
-            tbody.innerHTML = '';
-            
-            let filtered = members.filter(m => {
-                let matchesSearch = m.name.toLowerCase().includes(search) || 
-                                     (m.code && m.code.toString().toLowerCase().includes(search)) || 
-                                     (m.phone && m.phone.includes(search));
-                let mStage = m.stage || "سنة أولى";
-                let matchesStage = (stageFilter === 'all') || (mStage === stageFilter);
-                
-                let grad = calculateGraduationStatus(m.id);
-                let matchesGrad = (gradFilter === 'all') || (gradFilter === 'qualified' && grad.qualified) || (gradFilter === 'unqualified' && !grad.qualified);
-
-                return matchesSearch && matchesStage && matchesGrad;
-            });
-
-            filtered.forEach(m => {
-                let grad = calculateGraduationStatus(m.id);
-                let gradBadge = grad.qualified 
-                    ? `<span class="role-badge" style="background:var(--success);">مؤهل للرسامة 🎓</span>` 
-                    : `<span class="role-badge" style="background:var(--warning);">${grad.percent}% (غير مؤهل)</span>`;
-
-                let isAttendedToday = (attendanceRecord[today] || []).some(a => a.id.toString() === m.id.toString());
-                let manualBtn = isAttendedToday 
-                    ? `<span style="color:green; font-weight:bold; font-size:11px;">مسجل اليوم ✔️</span>` 
-                    : `<button class="btn-mini btn-success can-attend" onclick="registerMemberAttendanceFromTable('${m.id}')">تسجيل حضور ✔️</button>`;
-
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${m.code || '-'}</strong></td>
-                    <td data-label="الاسم"><strong>${m.name}</strong></td>
-                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
-                    <td data-label="التليفون">${m.phone}</td>
-                    <td data-label="الحضور التراكمي">
-                        <div style="font-weight:bold; font-size:11px;">${grad.percent}% (${grad.attended}/${grad.total})</div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width:${grad.percent}%; background:${grad.qualified ? 'var(--success)' : 'var(--warning)'}"></div>
-                        </div>
-                    </td>
-                    <td data-label="أهلية التخرج">${gradBadge}</td>
-                    <td data-label="تسجيل يدوي">${manualBtn}</td>
-                    <td data-label="الملف"><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile('${m.id}')">الملف 🪪</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-            updateRoleUI();
-        }
-
-        function registerMemberAttendanceFromTable(memberId) {
-            let member = members.find(m => m.id.toString() === memberId.toString());
-            if (member) registerMemberAttendance(member);
-        }
-
-        function switchProfileTab(tabId, btn) {
-            document.querySelectorAll('.profile-tab-content').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('#profileModal button[id^="tabBtn_"]').forEach(b => {
-                b.style.background = '#dfe6e9'; 
-                b.style.color = '#333';
-            });
-            
-            document.getElementById(tabId).style.display = 'block'; 
-            btn.style.background = 'var(--primary)'; 
-            btn.style.color = 'white';
-        }
-
-        function openProfile(id) {
-            if (!id) return;
-            currentProfileId = id.toString();
-            let m = members.find(x => x.id && x.id.toString() === currentProfileId);
-            if (!m) {
-                console.error("لم يتم العثور على ملف المخدوم ذو المعرف:", id);
-                return;
-            }
-
-            document.getElementById('profileModal').style.display = 'flex';
-
-            let qrString = ensureMemberQrCode(m);
-
-            document.getElementById('p_name').innerText = m.name || "";
-            document.getElementById('p_exam_code').innerText = m.code || '-';
-            document.getElementById('p_stage').innerText = m.stage || 'سنة أولى';
-            document.getElementById('p_gender').innerText = m.gender || 'بنين';
-            document.getElementById('p_phone').innerText = m.phone || "-";
-            document.getElementById('p_parent_phone').innerText = m.parent_phone || "-";
-            document.getElementById('p_address').innerText = m.address || "-";
-            document.getElementById('p_dob').innerText = m.dob || "-";
-            document.getElementById('p_confessor').innerText = m.confessor || "-";
-            
-            let grad = calculateGraduationStatus(m.id);
-            document.getElementById('p_grad_status').innerText = `${grad.percent}% - ${grad.qualified ? 'مؤهل للتخرج' : 'غير مؤهل'}`;
-            document.getElementById('p_grad_status').style.color = grad.qualified ? 'green' : 'orange';
-            document.getElementById('p_grad_progress').style.width = `${grad.percent}%`;
-            document.getElementById('p_grad_progress').style.background = grad.qualified ? 'var(--success)' : 'var(--warning)';
-
-            let isAttendedToday = (attendanceRecord[today] || []).some(a => a.id.toString() === m.id.toString());
-            let manualProfileBtn = document.getElementById('btn_profile_manual_attend');
-            if (manualProfileBtn) {
-                if (isAttendedToday) {
-                    manualProfileBtn.innerText = "✔️ تم تسجيل حضور هذا الدارس اليوم";
-                    manualProfileBtn.disabled = true;
-                    manualProfileBtn.style.opacity = "0.7";
-                } else {
-                    manualProfileBtn.innerText = "✔️ تسجيل حضور يدوي لهذا الدارس اليوم";
-                    manualProfileBtn.disabled = false;
-                    manualProfileBtn.style.opacity = "1";
-                    manualProfileBtn.onclick = function() {
-                        registerMemberAttendance(m);
-                        openProfile(m.id);
-                    };
-                }
-            }
-
-            let cleanPhone = formatWhatsAppPhone(m.phone);
-            document.getElementById('btn_wa').href = cleanPhone ? `https://wa.me/${cleanPhone}` : '#';
-
-            let spiritualMsg = encodeURIComponent(`سلام ونعمة يا ${m.name}، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، لو محتاج أي ترتيب أو جلسة صلاة مع أبونا عرفني وربنا يديم بركته في حياتك ❤️🕊️`);
-            let spiritualBtn = document.getElementById('btn_spiritual_wa');
-            if (spiritualBtn) {
-                spiritualBtn.href = cleanPhone ? `https://wa.me/${cleanPhone}?text=${spiritualMsg}` : '#';
-            }
-
-            let vh = document.getElementById('visitationHistory');
-            if (vh) {
-                vh.innerHTML = '';
-                (m.visitations || []).forEach(v => {
-                    vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
-                });
-            }
-
-            let atb = document.getElementById('p_attendance_tbody');
-            if (atb) {
-                atb.innerHTML = '';
-                let dates = Object.keys(attendanceRecord).sort().reverse();
-                let hasAtt = false;
-                dates.forEach(d => {
-                    let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
-                    if (rec) {
-                        hasAtt = true;
-                        let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : '<span style="color:green; font-weight:bold;">حاضر</span>';
-                        atb.innerHTML += `<tr><td data-label="التاريخ" style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td data-label="الوقت" dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td data-label="الحالة" style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
-                    }
-                });
-                if (!hasAtt) {
-                    atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
-                }
-            }
-
-            let supSelect = document.getElementById('evalSupervisor');
-            if (supSelect) {
-                supSelect.innerHTML = '<option value="">اختر الخادم المشرف المقيم...</option>';
-                servants.forEach(s => {
-                    supSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-                });
-            }
-            renderFieldEvaluationsList(m);
-
-            let qrWrapper = document.getElementById('profileQrWrapper');
-            if (qrWrapper) {
-                qrWrapper.innerHTML = '';
-                try {
-                    if (typeof qrcode !== 'undefined') {
-                        let qr = qrcode(0, 'L');
-                        let utf8String = unescape(encodeURIComponent(qrString));
-                        qr.addData(utf8String);
-                        qr.make();
-                        qrWrapper.innerHTML = qr.createImgTag(4, 8);
-                    }
-                } catch (e) {
-                    console.error("فشل رسم الباركود:", e);
-                }
-            }
-
-            let qrText = document.getElementById('profileQrText');
-            if (qrText) qrText.innerText = `QR: ${qrString}`;
-
-            switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
-
-            document.getElementById('btn_delete_member').onclick = function() {
-                if (currentPermission !== 'admin') return alert("متاح لأمين الخدمة فقط!");
-                if (confirm(`حذف ${m.name} نهائياً؟`)) {
-                    members = members.filter(x => x.id.toString() !== m.id.toString());
-                    localStorage.setItem('my_church_class', JSON.stringify(members));
-                    syncToCloud('members', members);
-                    closeProfile(); 
-                    renderMembersList(); 
-                    renderDashboard();
-                    checkLocalStorageUsage();
-                }
-            };
-        }
-
-        function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
-
-        function openEditMemberModal() {
-            let m = members.find(x => x.id.toString() === currentProfileId.toString());
-            if (!m) return;
-            document.getElementById('edit_m_code').value = m.code || '';
-            document.getElementById('edit_m_name').value = m.name || '';
-            document.getElementById('edit_m_stage').value = m.stage || 'سنة أولى';
-            document.getElementById('edit_m_gender').value = m.gender || 'بنين';
-            document.getElementById('edit_m_phone').value = m.phone || '';
-            document.getElementById('edit_m_parent_phone').value = m.parent_phone || '';
-            document.getElementById('edit_m_dob').value = m.dob || '';
-            document.getElementById('edit_m_confessor').value = m.confessor || '';
-            document.getElementById('edit_m_address').value = m.address || '';
-            document.getElementById('editMemberModal').style.display = 'flex';
-        }
-
-        function closeEditMemberModal() {
-            document.getElementById('editMemberModal').style.display = 'none';
-        }
-
-        function saveEditedMember() {
-            let m = members.find(x => x.id.toString() === currentProfileId.toString());
-            if (!m) return;
-
-            let newName = document.getElementById('edit_m_name').value.trim();
-            let newDob = document.getElementById('edit_m_dob').value;
-            if (!newName) return alert("اسم الدارس مطلوب!");
-
-            m.code = document.getElementById('edit_m_code').value.trim();
-            m.name = newName;
-            m.stage = document.getElementById('edit_m_stage').value;
-            m.gender = document.getElementById('edit_m_gender').value;
-            m.phone = formatWhatsAppPhone(document.getElementById('edit_m_phone').value);
-            m.parent_phone = formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value);
-            m.dob = newDob;
-            m.confessor = document.getElementById('edit_m_confessor').value.trim();
-            m.address = document.getElementById('edit_m_address').value.trim();
-            
-            ensureMemberQrCode(m);
-
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
-            closeEditMemberModal();
-            openProfile(m.id);
-            renderMembersList();
-            renderDashboard();
-            showToast("✅ تم تحديث بيانات الدارس بنجاح!");
-        }
-
-        async function exportAttendance(shareWhatsApp) {
-            let dates = Object.keys(attendanceRecord).sort();
-            
-            let attData = [
-                ["أسم الفصل", settings.serviceName, ...Array(dates.length).fill("")],
-                ["الاسم / أيام الحضور", ...dates]
-            ];
-            
-            let delayData = [
-                ["الاسم", "كود الامتحان", "المرحلة", "التاريخ", "وقت المسح", "حالة الحضور"]
-            ];
-
-            members.forEach(m => {
-                let row1 = [m.name];
-                dates.forEach(d => {
-                    let e = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
-                    if (e) {
-                        row1.push('✔');
-                        delayData.push([
-                            m.name,
-                            m.code || m.id,
-                            m.stage || '-',
-                            d,
-                            e.time,
-                            e.isAbsentDueToDelay ? 'تأخير شديد' : 'حاضر'
-                        ]);
-                    } else {
-                        row1.push('X');
-                    }
-                });
-                attData.push(row1);
-            });
-
-            let wb = XLSX.utils.book_new();
-
-            let ws1 = XLSX.utils.aoa_to_sheet(attData);
-            let ws1Cols = [{ wch: 30 }];
-            dates.forEach(() => ws1Cols.push({ wch: 12 }));
-            ws1['!cols'] = ws1Cols;
-            XLSX.utils.book_append_sheet(wb, ws1, "سجل الحضور والغياب");
-
-            let ws2 = XLSX.utils.aoa_to_sheet(delayData);
-            ws2['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
-            XLSX.utils.book_append_sheet(wb, ws2, "تقرير التأخيرات");
-
-            XLSX.writeFile(wb, "تقرير_الخدمة_الشامل.xlsx");
-
-            if (shareWhatsApp) window.open("https://wa.me/", "_blank");
-        }
-
-        function checkLocalStorageUsage() {
-            let totalBytes = 0;
-            for (let key in localStorage) {
-                if (localStorage.hasOwnProperty(key)) {
-                    totalBytes += (localStorage[key].length + key.length) * 2;
-                }
-            }
-            
-            const maxBytes = 5 * 1024 * 1024;
-            const usagePercent = Math.min(100, Math.round((totalBytes / maxBytes) * 100));
-            const usageKB = Math.round(totalBytes / 1024);
-
-            const bar = document.getElementById('storageUsageBar');
-            const txt = document.getElementById('storageUsageText');
-
-            if (bar && txt) {
-                bar.style.width = usagePercent + '%';
-                txt.innerText = `${usageKB} KB (${usagePercent}%) من أصل 5 MB`;
-
-                if (usagePercent > 80) {
-                    bar.style.background = 'var(--danger)';
-                    txt.innerHTML += ' <strong style="color:var(--danger);">(⚠️ المساحة قاربت على الامتلاء، يرجى أخذ نسخة احتياطية)</strong>';
-                } else {
-                    bar.style.background = 'var(--success)';
-                }
-            }
-        }
-
-        function downloadFullBackup() {
-            let backupData = {
-                version: "2.11",
-                exportDate: new Date().toISOString(),
-                churchName: settings.churchName,
-                serviceName: settings.serviceName,
-                members: members,
-                servants: servants,
-                attendanceRecord: attendanceRecord,
-                servantsAttendance: servantsAttendance,
-                masterPlan: masterPlan,
-                settings: settings
-            };
-
-            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-            let downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `نسخة_احتياطية_خدمتي_${new Date().toLocaleDateString('en-CA')}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-
-            showToast("💾 تم تحميل ملف النسخة الاحتياطية بنجاح!");
-        }
-
-        function restoreFullBackup(event) {
-            let file = event.target.files[0];
-            if (!file) return;
-
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    let imported = JSON.parse(e.target.result);
-                    if (!imported.members || !imported.attendanceRecord) {
-                        return alert("❌ هذا الملف غير صالح أو لا يحتوي على بنية بيانات نظام خدمتي برو!");
-                    }
-
-                    if (confirm("⚠️ تحذير: استعادة هذه النسخة سيستبدل البيانات الحالية بالكامل بالبيانات المستوردة. هل تريد الاستمرار؟")) {
-                        members = imported.members || [];
-                        servants = imported.servants || [];
-                        attendanceRecord = imported.attendanceRecord || {};
-                        servantsAttendance = imported.servantsAttendance || {};
-                        masterPlan = imported.masterPlan || [];
-                        settings = imported.settings || settings;
-
-                        localStorage.setItem('my_church_class', JSON.stringify(members));
-                        localStorage.setItem('my_church_servants', JSON.stringify(servants));
-                        localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                        localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
-                        localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
-                        localStorage.setItem('my_church_settings', JSON.stringify(settings));
-
-                        syncToCloud('members', members);
-                        syncToCloud('servants', servants);
-                        syncToCloud('attendance', attendanceRecord);
-                        syncToCloud('servants_attendance', servantsAttendance);
-                        syncToCloud('master_plan', masterPlan);
-                        syncToCloud('settings', settings);
-
-                        applyServiceBranding();
-                        renderMembersList();
-                        renderAttendanceTable();
-                        renderServantsAttendanceTable();
-                        renderServantsTable();
-                        renderMasterPlanTable();
-                        renderDashboard();
-                        checkLocalStorageUsage();
-
-                        alert("✅ تم استرجاع النسخة الاحتياطية ومزامنتها بنجاح تام!");
-                    }
-                } catch (err) {
-                    alert("❌ حدث خطأ أثناء قراءة ملف النسخة الاحتياطية: " + err.message);
-                }
-                event.target.value = '';
-            };
-            reader.readAsText(file);
-        }
-
-        function downloadTemplate(type) {
-            let headers = [], sampleRow = [], fileName = "";
-            if (type === 'members') {
-                headers = ["الاسم", "email", "العنوان", "رقم التليون", "رقم تليفون ولي الامر", "تاريخ الميلاد اليوم", "تاريخ الميلاد الشهر", "تاريخ الميلاد السنه", "اب الاعتراف", "كود الامتحان", " نقاط", "Qr Code"];
-                sampleRow = ["أنطون وصفي جابر يوسف", "antonewasfy2003@gmail.com", "46 شارع ترعة الغزالي المطرية", "01200167311", "", "2", "11", "2003", "ابونا رفائيل نظمى", "664", "", "أنطون وصفي جابر يوسف/2"];
-                fileName = "نموذج_استيراد_المخدومين.xlsx";
-            } else {
-                headers = ["كود الخادم", "الاسم", "رقم الهاتف", "تاريخ الميلاد (YYYY-MM-DD)"];
-                sampleRow = ["101", "عادل جورج", "01200000000", "1995-05-15"];
-                fileName = "نموذج_استيراد_الخدام.xlsx";
-            }
-            let ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
-            ws['!cols'] = headers.map(() => ({ wch: 18 }));
-            let wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Template");
-            XLSX.writeFile(wb, fileName);
-        }
-
-        function findExistingMember(code, name) {
-            let cleanCode = code ? code.toString().trim() : "";
-            let cleanName = name ? name.trim().toLowerCase() : "";
-            
-            return members.find(m => {
-                let mCode = m.code ? m.code.toString().trim() : "";
-                let mName = m.name ? m.name.trim().toLowerCase() : "";
-                return (cleanCode !== "" && mCode === cleanCode) || (cleanName !== "" && mName === cleanName);
-            });
-        }
-
-        function importMembers() {
-            let file = document.getElementById('importFile').files[0];
-            if (!file) return alert("اختر ملف إكسيل أولاً");
-            let reader = new FileReader();
-            
-            reader.onload = function(e) {
-                let wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
-                let data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                
-                let addedCount = 0;
-                let updatedCount = 0;
-
-                data.forEach(r => {
-                    let name = r['الاسم'] || r['Name'] || "بدون اسم";
-                    let examCode = r['كود الامتحان'] || r['كود'] || r['Code'] || "";
-                    let rawP = r['رقم التليون'] || r['رقم الهاتف'] || r['الهاتف'] || "";
-                    let cleanPhone = formatWhatsAppPhone(rawP);
-                    let cleanParentPhone = formatWhatsAppPhone(r['رقم تليفون ولي الامر'] || rawP);
-                    
-                    let bDay = r['تاريخ الميلاد اليوم'] || "";
-                    let bMonth = r['تاريخ الميلاد الشهر'] || "";
-                    let bYear = r['تاريخ الميلاد السنه'] || "";
-                    let fullDob = "";
-                    if(bYear && bMonth && bDay) {
-                        fullDob = `${bYear}-${String(bMonth).padStart(2, '0')}-${String(bDay).padStart(2, '0')}`;
-                    } else if (r['تاريخ الميلاد']) {
-                        fullDob = r['تاريخ الميلاد'];
-                    }
-
-                    let dayNum = bDay ? parseInt(bDay).toString() : (fullDob ? parseInt(fullDob.split('-')[2] || "1").toString() : "1");
-                    let qrCodeVal = r['Qr Code'] || `${name.trim()}/${dayNum}`;
-
-                    let address = r['العنوان'] || "";
-                    let confessor = r['اب الاعتراف'] || "";
-                    
-                    let existingMember = findExistingMember(examCode, name);
-
-                    if (existingMember) {
-                        existingMember.code = examCode ? examCode.toString().trim() : existingMember.code;
-                        existingMember.qrCode = qrCodeVal;
-                        existingMember.phone = cleanPhone || existingMember.phone;
-                        existingMember.parent_phone = cleanParentPhone || existingMember.parent_phone;
-                        existingMember.address = address || existingMember.address;
-                        existingMember.dob = fullDob || existingMember.dob;
-                        existingMember.confessor = confessor || existingMember.confessor;
-                        updatedCount++;
-                    } else {
-                        members.push({
-                            id: Date.now() + Math.floor(Math.random() * 1000),
-                            code: examCode ? examCode.toString().trim() : (Date.now() % 10000).toString(),
-                            qrCode: qrCodeVal,
-                            name: name,
-                            stage: "سنة أولى",
-                            gender: "بنين",
-                            phone: cleanPhone,
-                            parent_phone: cleanParentPhone,
-                            address: address,
-                            dob: fullDob,
-                            confessor: confessor,
-                            other_data: "",
-                            visitations: [],
-                            fieldEvaluations: []
-                        });
-                        addedCount++;
-                    }
-                });
-                
-                localStorage.setItem('my_church_class', JSON.stringify(members));
-                syncToCloud('members', members);
-                renderMembersList(); 
-                renderDashboard(); 
-                checkUpcomingBirthdays();
-                checkLocalStorageUsage();
-                alert(`✅ اكتمل الاستيراد!\n\nتمت إضافة: ${addedCount} دارس جديد.\nتم تحديث: ${updatedCount} دارس موجود مسبقاً بكود الامتحان والـ QR Code.`);
-                
-                document.getElementById('importFile').value = '';
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        document.getElementById('addForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            let examCode = document.getElementById('m_code').value.trim();
-            let name = document.getElementById('m_name').value.trim();
-            let dob = document.getElementById('m_dob').value;
-            
-            let bDay = "01";
-            if (dob) {
-                let parts = dob.split('-');
-                bDay = parts[2] ? parseInt(parts[2]).toString() : "01";
-            }
-            let generatedQr = `${name}/${bDay}`;
-            
-            let existingMember = findExistingMember(examCode, name);
-            if (existingMember) {
-                alert(`❌ هذا الشخص مسجل بالفعل في المنظومة!\nالاسم: ${existingMember.name}\nكود الامتحان: ${existingMember.code}`);
-                return;
-            }
-
-            members.push({
-                id: Date.now(),
-                code: examCode,
-                qrCode: generatedQr,
-                name: name,
-                gender: document.getElementById('m_gender').value,
-                stage: document.getElementById('m_stage').value,
-                phone: formatWhatsAppPhone(document.getElementById('m_phone').value),
-                parent_phone: formatWhatsAppPhone(document.getElementById('m_parent_phone').value),
-                address: document.getElementById('m_address').value,
-                dob: dob,
-                confessor: document.getElementById('m_confessor').value,
-                other_data: document.getElementById('m_other').value,
-                visitations: [],
-                fieldEvaluations: []
-            });
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
-            this.reset(); 
-            renderMembersList(); 
-            renderDashboard(); 
-            checkUpcomingBirthdays();
-            checkLocalStorageUsage();
-            showToast(`تمت إضافة الدارس بنجاح بكود امتحان: ${examCode}`);
-        });
-
-        function batchTransferStage() {
-            if (currentPermission !== 'admin') return alert("تحويل المراحل متاح لأمين الخدمة فقط!");
-            let sourceStage = document.getElementById('stageFilterSelect').value;
-            let gradFilter = document.getElementById('gradFilterSelect').value;
-            let targetStage = document.getElementById('targetStageSelect').value;
-            
-            if (sourceStage === 'all') return alert("يرجى اختيار مرحلة محددة أولاً (مثلاً: سنة أولى)!");
-
-            let count = 0;
-            members.forEach(m => {
-                if ((m.stage || "سنة أولى") === sourceStage) {
-                    let isQualified = calculateGraduationStatus(m.id).qualified;
-                    let shouldTransfer = (gradFilter === 'all') || 
-                                         (gradFilter === 'qualified' && isQualified) || 
-                                         (gradFilter === 'unqualified' && !isQualified);
-                    
-                    if (shouldTransfer) {
-                        m.stage = targetStage;
-                        count++;
-                    }
-                }
-            });
-
-            let msg = gradFilter === 'qualified' ? "المؤهلين فقط" : (gradFilter === 'unqualified' ? "غير المؤهلين فقط" : "الكل");
-            
-            if (confirm(`هل أنت متأكد من تحويل دارسي (${sourceStage}) [${msg}] وعددهم [${count}] إلى مرحلة (${targetStage})؟`)) {
-                localStorage.setItem('my_church_class', JSON.stringify(members));
-                syncToCloud('members', members);
-                
-                document.getElementById('stageFilterSelect').value = targetStage;
-                document.getElementById('gradFilterSelect').value = 'all';
-                renderMembersList();
-                renderDashboard();
-                checkLocalStorageUsage();
-                alert(`✅ تم نقل (${count}) فرد بنجاح!`);
-            }
-        }
-
-        function updatePendingBadge() {
-            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-            let count = Object.keys(pending).length;
-            let badge = document.getElementById('pendingSyncBadge');
-            let text = document.getElementById('pendingSyncText');
-            let dangerBar = document.getElementById('dangerSyncWarningBar');
-            
-            if (count > 0) {
-                if (badge) { badge.style.display = 'flex'; text.innerText = `يوجد (${count}) تعديلات بانتظار الإنترنت`; }
-                if (dangerBar) { dangerBar.style.display = 'block'; }
-            } else {
-                if (badge) { badge.style.display = 'none'; }
-                if (dangerBar) { dangerBar.style.display = 'none'; }
-            }
-        }
-
-        function pushPendingData() {
-            if (!isFirebaseActive || !db || !navigator.onLine) return;
-            
-            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-            let keys = Object.keys(pending);
-            
-            if (keys.length === 0) {
-                updatePendingBadge();
-                return;
-            }
-
-            keys.forEach(path => {
-                let localData = null;
-                if (path === 'members') localData = JSON.parse(localStorage.getItem('my_church_class'));
-                else if (path === 'attendance') localData = JSON.parse(localStorage.getItem('my_church_attendance'));
-                else if (path === 'servants_attendance') localData = JSON.parse(localStorage.getItem('my_church_servants_attendance'));
-                else if (path === 'servants') localData = JSON.parse(localStorage.getItem('my_church_servants'));
-                else if (path === 'master_plan') localData = JSON.parse(localStorage.getItem('my_church_master_plan'));
-                else if (path === 'settings') localData = JSON.parse(localStorage.getItem('my_church_settings'));
-
-                if (localData) {
-                    db.ref(path).set(localData).then(() => {
-                        let currentPending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                        delete currentPending[path];
-                        localStorage.setItem('pending_sync_paths', JSON.stringify(currentPending));
-                        updatePendingBadge();
-                        if (Object.keys(currentPending).length === 0) {
-                            document.getElementById('cloudStatusText').innerText = "متصل ومحدث 🟢";
-                        }
-                    }).catch(() => {});
-                }
-            });
-        }
-
-        setInterval(() => {
-            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-            if (Object.keys(pending).length > 0 && navigator.onLine) {
-                pushPendingData();
-            }
-        }, 5000);
-
-        window.addEventListener('online', pushPendingData);
-
-        function syncToCloud(path, data) {
-            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-            pending[path] = true;
-            localStorage.setItem('pending_sync_paths', JSON.stringify(pending));
-            
-            updatePendingBadge();
-            document.getElementById('cloudStatusText').innerText = "محفوظ بالجهاز (ينتظر النت) 📱";
-
-            if (isFirebaseActive && db && navigator.onLine) {
-                pushPendingData();
-            } else {
-                if ('serviceWorker' in navigator && 'SyncManager' in window) {
-                    navigator.serviceWorker.ready.then(registration => {
-                        registration.sync.register('sync-church-data').catch(() => {});
-                    });
-                }
-            }
-        }
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data && event.data.action === 'TRIGGER_BACKGROUND_SYNC') {
-                    pushPendingData();
-                }
-            });
-        }
-
-        function showCloudSetupModal() { document.getElementById('cloudSetupModal').style.display = 'flex'; }
-        function closeCloudModal() { document.getElementById('cloudSetupModal').style.display = 'none'; }
-        function saveConfigFromModal() {
-            let val = document.getElementById('modalFirebaseConfigInput').value.trim();
-            try {
-                localStorage.setItem('my_firebase_config', JSON.stringify(JSON.parse(val)));
-                alert("✅ تم حفظ الإعدادات السحابية! جاري التحديث.");
-                location.reload();
-            } catch (e) { alert("صيغة JSON غير صحيحة!"); }
-        }
-
-        function initFirebase() {
-            let savedConfig = localStorage.getItem('my_firebase_config');
-            if (!savedConfig) {
-                document.getElementById('cloudStatusText').innerText = "العمل محلياً";
-                showCloudSetupModal();
-                return;
-            }
-
-            try {
-                let configObj = JSON.parse(savedConfig);
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(configObj);
-                }
-
-                db = firebase.database();
-                isFirebaseActive = true;
-
-                let connectedRef = db.ref(".info/connected");
-                connectedRef.on("value", snap => {
-                    const statusText = document.getElementById('cloudStatusText');
-                    const indicator = document.getElementById('cloudIndicator');
-                    if (snap.val() === true) {
-                        indicator.className = "cloud-status cloud-connected";
-                        let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                        if (Object.keys(pending).length > 0) {
-                            statusText.innerText = "جاري رفع المتأخرات... ⏳";
-                            pushPendingData();
-                        } else {
-                            statusText.innerText = "متصل سحابياً 🟢";
-                        }
-                    } else {
-                        indicator.className = "cloud-status cloud-offline";
-                        statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
-                    }
-                });
-
-                function shouldAcceptCloudData(path) {
-                    let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                    return !pending[path]; 
-                }
-
-                db.ref('settings').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('settings')) { settings = snap.val(); localStorage.setItem('my_church_settings', JSON.stringify(settings)); applyServiceBranding(); } });
-                db.ref('members').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('members')) { members = snap.val(); localStorage.setItem('my_church_class', JSON.stringify(members)); renderMembersList(); renderDashboard(); checkUpcomingBirthdays(); } });
-                db.ref('attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('attendance')) { attendanceRecord = snap.val(); if (!attendanceRecord[today]) attendanceRecord[today] = []; localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); renderAttendanceTable(); renderMembersList(); renderDashboard(); } });
-                db.ref('servants_attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants_attendance')) { servantsAttendance = snap.val(); if (!servantsAttendance[today]) servantsAttendance[today] = []; localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); renderServantsAttendanceTable(); renderDashboard(); } });
-                db.ref('servants').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants')) { servants = snap.val(); localStorage.setItem('my_church_servants', JSON.stringify(servants)); renderServantsTable(); renderServantsAttendanceTable(); populatePlanServantsDropdown(); renderDashboard(); checkUpcomingBirthdays(); } });
-                db.ref('master_plan').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('master_plan')) { masterPlan = snap.val(); localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan)); renderMasterPlanTable(); renderServantsAttendanceTable(); checkUpcomingMasterPlanEvents(); } });
-
-            } catch (e) { document.getElementById('cloudStatusText').innerText = "خطأ في الاتصال"; }
         }
 
         function switchTab(tabId, btn) {
@@ -3164,79 +802,26 @@
             document.getElementById(tabId).classList.add('active');
             btn.classList.add('active');
             if (tabId !== 'attendanceTab') stopCamera();
-            if (tabId === 'servantsAttendanceTab') renderServantsAttendanceTable();
-            if (tabId === 'planTab') renderMasterPlanTable();
-            if (tabId === 'servantsTab') renderServantsTable();
-            if (tabId === 'dashTab') { renderDashboard(); checkUpcomingBirthdays(); checkUpcomingMasterPlanEvents(); }
-            if (tabId === 'broadcastTab') renderBroadcastList('parents');
-            if (tabId === 'dataTab') checkLocalStorageUsage();
         }
 
-        function setGeneralBroadcastTemplate() {
-            document.getElementById('customBroadcastMsg').value = 
-                "سلام ونعمة، بنطمن على [الاسم] لعدم حضوره اجتماع اليوم، نتمنى لك كل البركة ونراك الأسبوع القادم ❤️";
-        }
-
-        function setSpiritualBroadcastTemplate() {
-            document.getElementById('customBroadcastMsg').value = 
-                "سلام ونعمة يا [الاسم]، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، محتاجك دايماً شعلة نار في الخدمة وحياتك الروحية ❤️🕊️";
-        }
-
-        function renderBroadcastList(targetType) {
-            let tbody = document.querySelector('#broadcastTable tbody');
-            tbody.innerHTML = '';
-            let todayPresentIds = (attendanceRecord[today] || []).filter(a => !a.isAbsentDueToDelay).map(a => a.id.toString());
-            let absentees = members.filter(m => !todayPresentIds.includes(m.id.toString()));
-            let template = document.getElementById('customBroadcastMsg').value;
-
-            absentees.forEach(m => {
-                let rawPhone = targetType === 'parents' ? m.parent_phone : m.phone;
-                let cleanPhone = formatWhatsAppPhone(rawPhone);
-                let label = targetType === 'parents' ? `ولي أمر (${m.name})` : m.name;
-                if (!cleanPhone) return;
-                let tr = document.createElement('tr');
-                tr.innerHTML = `<td data-label="الاسم">${m.name} [كود: ${m.code || m.id}]</td><td data-label="المرحلة">${m.stage || '-'}</td><td data-label="المستلم">${label} (${cleanPhone})</td><td data-label="إرسال"><a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(template.replace('[الاسم]', m.name))}" target="_blank" class="btn-mini btn-success">إرسال 📲</a></td>`;
-                tbody.appendChild(tr);
+        function exportAttendance() {
+            let rows = [["كود", "الاسم", "المرحلة", "وقت المسح", "حضور", "تناول", "مشاركة", "نقاط اليوم"]];
+            (attendanceRecord[today] || []).forEach(a => {
+                rows.push([a.code, a.name, a.stage, a.time, "حاضر", a.communion ? "نعم" : "لا", a.participation ? "نعم" : "لا", a.points]);
             });
+            let ws = XLSX.utils.aoa_to_sheet(rows);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "حضور_اليوم");
+            XLSX.writeFile(wb, `حضور_وأسرار_${today}.xlsx`);
         }
-
-        let deferredPrompt = null;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const banner = document.getElementById('pwaInstallBanner');
-            if (banner) banner.style.display = 'flex';
-        });
-
-        document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('pwaInstallBanner').style.display = 'none';
-                }
-                deferredPrompt = null;
-            }
-        });
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('PWA ServiceWorker مسجل بنجاح، نطاق العمل:', reg.scope))
-                    .catch(err => console.error('فشل تسجيل ServiceWorker:', err));
+                navigator.serviceWorker.register('./sw.js').catch(() => {});
             });
         }
 
-        checkInAppBrowser();
-        applyServiceBranding();
         checkSession();
-        initFirebase();
-        renderMembersList();
-        renderAttendanceTable();
-        renderServantsAttendanceTable();
-        renderServantsTable();
-        renderMasterPlanTable();
-        renderDashboard();
     </script>
 </body>
 </html>
