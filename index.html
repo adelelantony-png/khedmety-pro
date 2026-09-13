@@ -89,7 +89,6 @@
         .stat-card { background: #f8f9fa; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
         .stat-card .num { font-size: clamp(18px, 4vw, 24px); font-weight: bold; color: var(--accent); }
 
-        /* تعديل شبكة النماذج لمنع التداخل وضبط المساحات */
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 13px; font-weight: bold; color: var(--dark); min-height: 38px; display: flex; align-items: center; }
@@ -1952,6 +1951,7 @@
                     id: servant.id,
                     name: servant.name,
                     code: servant.code || servant.id,
+                    phone: servant.phone || "",
                     time: new Date().toLocaleTimeString('ar-EG')
                 });
                 localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
@@ -2046,10 +2046,12 @@
 
             if (!attendanceRecord[today]) attendanceRecord[today] = [];
 
+            // تم إدراج حقل رقم الهاتف للتكامل اللحظي مع السيرفر والواتساب
             attendanceRecord[today].push({
                 id: member.id,
                 code: member.code || member.id,
                 name: member.name,
+                phone: member.phone || "",
                 stage: member.stage || 'سنة أولى',
                 gender: member.gender || 'بنين',
                 time: now.toLocaleTimeString('ar-EG'),
@@ -2148,10 +2150,12 @@
                 if (!existing) {
                     let now = new Date();
                     if (!attendanceRecord[today]) attendanceRecord[today] = [];
+                    // تم إدراج حقل رقم الهاتف للتكامل اللحظي مع السيرفر والواتساب
                     attendanceRecord[today].push({
                         id: member.id,
                         code: member.code || member.id,
                         name: member.name,
+                        phone: member.phone || "",
                         stage: member.stage || 'سنة أولى',
                         gender: member.gender || 'بنين',
                         time: now.toLocaleTimeString('ar-EG'),
