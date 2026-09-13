@@ -3085,6 +3085,43 @@
             }
         }
 
+        function saveGeneralSettings() {
+            settings.churchName = document.getElementById('setChurchName').value.trim();
+            settings.serviceName = document.getElementById('setServiceName').value.trim();
+            settings.adminWhatsApp = formatWhatsAppPhone(document.getElementById('setAdminWhatsApp').value.trim());
+            settings.startTime = document.getElementById('setStartTime').value;
+            settings.allowedDelay = parseInt(document.getElementById('setAllowed').value) || 15;
+            settings.absentAfter = parseInt(document.getElementById('setAbsentAfter').value) || 75;
+            
+            let newPwd = document.getElementById('setAdminPassword').value.trim();
+            if (newPwd) {
+                adminPassword = newPwd;
+                localStorage.setItem('my_church_admin_pwd', adminPassword);
+            }
+
+            settings.summerActive = document.getElementById('setSummerActive').value === "true";
+            settings.summerDay = document.getElementById('setSummerDay').value;
+            settings.summerStartTime = document.getElementById('setSummerStartTime').value;
+            settings.ignoreSummerDelay = document.getElementById('setIgnoreSummerDelay').checked;
+
+            localStorage.setItem('my_church_settings', JSON.stringify(settings));
+            syncToCloud('settings', settings);
+            applyServiceBranding();
+            showToast("✅ تم حفظ كافة الإعدادات بنجاح!");
+        }
+
+        function saveFirebaseConfig() {
+            let val = document.getElementById('firebaseConfigInput').value.trim();
+            if (!val) return alert("يرجى إدخال إعدادات الـ Config!");
+            try {
+                localStorage.setItem('my_firebase_config', JSON.stringify(JSON.parse(val)));
+                showToast("✅ تم حفظ إعدادات السحابة! سيتم إعادة التحميل الآن");
+                setTimeout(() => location.reload(), 1000);
+            } catch (e) {
+                alert("❌ صيغة JSON غير صحيحة! تأكد من نسخ الكائن بشكل سليم.");
+            }
+        }
+
         function updatePendingBadge() {
             let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
             let count = Object.keys(pending).length;
