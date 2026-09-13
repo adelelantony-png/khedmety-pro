@@ -112,13 +112,11 @@
         .tag-retreat { background: #e17055; }
         .tag-grad { background: #d63031; }
 
-        /* الجداول الافتراضية مع دعم الدوران بالعرض */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: clamp(11px, 2.5vw, 13px); white-space: nowrap; }
         th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
         th { background: var(--primary); color: white; }
 
-        /* عند وضع الموبايل بالطول (Portrait) يتحول الجدول الذكي لبطاقات رأسية منعاً للتمرير الخفي */
         @media screen and (max-width: 768px) and (orientation: portrait) {
             .adaptive-card-table thead { display: none; }
             .adaptive-card-table, .adaptive-card-table tbody, .adaptive-card-table tr, .adaptive-card-table td { display: block; width: 100%; white-space: normal !important; }
@@ -239,7 +237,6 @@
         </div>
     </div>
 
-    <!-- شاشة تسجيل الدخول مع خيار "تذكرني والبقاء مسجل الدخول" -->
     <div id="loginScreen">
         <div class="login-card">
             <h2 id="loginChurchDisplay" style="margin-top:0; border:none; color:var(--primary);">كنيسة الملاك والروماني بالمطرية</h2>
@@ -452,7 +449,6 @@
                 
                 <div id="reader"></div>
 
-                <!-- زر فتح قائمة الأسماء لتسجيل الحضور السريع -->
                 <div style="margin-top:15px;">
                     <button class="btn-purple" onclick="openManualAttendanceModal()" style="padding:14px; font-size:15px;">
                         👥 تسجيل حضور يدوي من قائمة الأسماء (بحث وتحديد سريع)
@@ -460,7 +456,6 @@
                 </div>
             </div>
 
-            <!-- أزرار التحكم في الحضور (حذف يوم كامل بكلمة مرور الأدمن) -->
             <div style="background:#eaf2f8; padding:12px; border-radius:8px; margin-top:20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #b8d5e5; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">سجل حضور اليوم (<span id="todayDate"></span>)</h3>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -831,7 +826,6 @@
                 </div>
             </div>
 
-            <!-- زر تسجيل حضور يدوي فوري من داخل ملف الشخص -->
             <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:8px;">
                 ✔️ تسجيل حضور يدوي لهذا الدارس اليوم
             </button>
@@ -3227,9 +3221,9 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('PWA ServiceWorker مسجل بنجاح'))
-                    .catch(err => console.error('خطأ في تفعيل الأوفلاين', err));
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('PWA ServiceWorker مسجل بنجاح، نطاق العمل:', reg.scope))
+                    .catch(err => console.error('فشل تسجيل ServiceWorker:', err));
             });
         }
 
