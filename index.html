@@ -89,7 +89,7 @@
         .stat-card { background: #f8f9fa; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
         .stat-card .num { font-size: clamp(18px, 4vw, 24px); font-weight: bold; color: var(--accent); }
 
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 13px; font-weight: bold; color: var(--dark); min-height: 22px; display: flex; align-items: center; }
 
@@ -787,7 +787,7 @@
                 </div>
             </div>
 
-            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin:10px 0;">
+            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin-no: 10px 0;">
                 <h4 style="margin:0 0 8px 0; color:var(--primary);">☀️ إعدادات الموعد الإضافي (فترة الصيف / الأنشطة - تحسب بونص ⭐):</h4>
                 <div class="form-grid">
                     <div class="form-group">
@@ -1104,7 +1104,7 @@
                 <div style="max-height:80px; overflow-y:auto; word-break:break-word;">
                     ${errText}
                 </div>
-                <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\n')); alert('تم نسخ سجل الأخطاء!')" 
+                <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الأخطاء!')" 
                         style="margin-top:6px; padding:3px 8px; font-size:10px; background:#0984e3; color:#fff; border:none; border-radius:4px; cursor:pointer;">
                     نسخ تفاصيل الخطأ 📋
                 </button>
@@ -1506,8 +1506,7 @@
         }
 
         function clearAllServants() {
-            let pwd = prompt("⚠️ تحذير: سيتم حذف جميع الخدام ما عدا الأدمن الرئيسي!
-أدخل كلمة مرور الأدمن:");
+            let pwd = prompt("⚠️ تحذير: سيتم حذف جميع الخدام ما عدا الأدمن الرئيسي!\nأدخل كلمة مرور الأدمن:");
             if (pwd === adminPassword || pwd === '1234567') {
                 if (confirm("هل أنت متأكد؟")) {
                     servants = servants.filter(s => s.role === 'admin' || s.permission === 'admin');
@@ -2011,13 +2010,7 @@
             targetPhone = formatWhatsAppPhone(targetPhone);
 
             let payload = btoa(unescape(encodeURIComponent(JSON.stringify(todayData))));
-            let msg = `🚨 *تقرير طوارئ حضور كورس الخدام (${today})*
-مسجل بواسطة: ${todayData.servant}
-عدد الحاضرين: ${todayData.attendance.length}
-عدد الخدام: ${todayData.servantsAtt.length}
-
-*كود المزامنة (انسخه بالكامل):*
-\`\`\`${payload}\`\`\``;
+            let msg = `🚨 *تقرير طوارئ حضور كورس الخدام (${today})*\nمسجل بواسطة: ${todayData.servant}\nعدد الحاضرين: ${todayData.attendance.length}\nعدد الخدام: ${todayData.servantsAtt.length}\n\n*كود المزامنة (انسخه بالكامل):*\n\`\`\`${payload}\`\`\``;
 
             window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         }
@@ -2105,8 +2098,7 @@
         }
 
         function clearAllMembers() {
-            let pwd = prompt("⚠️ تحذير خطير: سيتم حذف جميع المخدومين والدارسين نهائياً!
-أدخل كلمة مرور الأدمن للتأكيد:");
+            let pwd = prompt("⚠️ تحذير خطير: سيتم حذف جميع المخدومين والدارسين نهائياً!\nأدخل كلمة مرور الأدمن للتأكيد:");
             if (pwd === adminPassword || pwd === '1234567') {
                 if (confirm("هل أنت متأكد تماماً من حذف جميع المخدومين؟")) {
                     members = [];
@@ -2138,8 +2130,7 @@
         }
 
         function clearEntireTodayAttendance() {
-            let pwd = prompt("⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور اليوم بالكامل!
-أدخل كلمة مرور أمين الخدمة للتأكيد:");
+            let pwd = prompt("⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور اليوم بالكامل!\nأدخل كلمة مرور أمين الخدمة للتأكيد:");
             if (!pwd) return;
             if (pwd !== adminPassword && pwd !== "1234567") {
                 return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
@@ -3215,10 +3206,7 @@
                 renderDashboard(); 
                 checkUpcomingBirthdays();
                 checkLocalStorageUsage();
-                alert(`✅ اكتمل الاستيراد!
-
-تمت إضافة: ${addedCount} دارس جديد.
-تم تحديث: ${updatedCount} دارس موجود مسبقاً بكود الامتحان والـ QR Code.`);
+                alert(`✅ اكتمل الاستيراد!\n\nتمت إضافة: ${addedCount} دارس جديد.\nتم تحديث: ${updatedCount} دارس موجود مسبقاً بكود الامتحان والـ QR Code.`);
                 
                 document.getElementById('importFile').value = '';
             };
@@ -3240,9 +3228,7 @@
             
             let existingMember = findExistingMember(examCode, name);
             if (existingMember) {
-                alert(`❌ هذا الشخص مسجل بالفعل في المنظومة!
-الاسم: ${existingMember.name}
-كود الامتحان: ${existingMember.code}`);
+                alert(`❌ هذا الشخص مسجل بالفعل في المنظومة!\nالاسم: ${existingMember.name}\nكود الامتحان: ${existingMember.code}`);
                 return;
             }
 
