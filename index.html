@@ -9,6 +9,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="خدمتي برو">
+    
+    <!-- ربط الأيقونات لجميع الأجهزة والمتصفحات -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+    <link rel="shortcut icon" href="icon.png" type="image/x-icon">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     
@@ -89,7 +93,7 @@
         .stat-card { background: #f8f9fa; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
         .stat-card .num { font-size: clamp(18px, 4vw, 24px); font-weight: bold; color: var(--accent); }
 
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 13px; font-weight: bold; color: var(--dark); min-height: 22px; display: flex; align-items: center; }
 
@@ -344,6 +348,7 @@
             <div class="stat-grid">
                 <div class="stat-card"><div>إجمالي المخدومين</div><div class="num" id="statTotalMembers">0</div></div>
                 <div class="stat-card"><div>حضور المخدومين اليوم</div><div class="num" id="statTodayMembersCount">0</div></div>
+                <div class="stat-card"><div>نسبة حضور المخدومين</div><div class="num" id="statMembersPercent">0%</div></div>
                 <div class="stat-card"><div>المتناولون اليوم 🕊️</div><div class="num" id="statTodayCommunion" style="color:var(--success);">0</div></div>
                 <div class="stat-card"><div>المؤهلون للرسامة (≥75%)</div><div class="num" id="statQualifiedGraduates" style="color:var(--purple);">0</div></div>
             </div>
@@ -701,7 +706,10 @@
 
         <!-- 7. إدارة الخدام -->
         <div id="servantsTab" class="tab-content">
-            <h2>إدارة حسابات الخدام والصلاحيات (سري لأمين الخدمة)</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>إدارة حسابات الخدام والصلاحيات</h2>
+                <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الخدام</button>
+            </div>
             <div class="form-grid">
                 <div class="form-group"><input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)"></div>
                 <div class="form-group"><input type="text" id="newServantName" placeholder="اسم الخادم الرباعي"></div>
@@ -787,7 +795,7 @@
                 </div>
             </div>
 
-            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin-no: 10px 0;">
+            <div style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin:10px 0;">
                 <h4 style="margin:0 0 8px 0; color:var(--primary);">☀️ إعدادات الموعد الإضافي (فترة الصيف / الأنشطة - تحسب بونص ⭐):</h4>
                 <div class="form-grid">
                     <div class="form-group">
@@ -1388,7 +1396,7 @@
 
         function isFridaySession(dateStr) {
             let d = new Date(dateStr);
-            return d.getDay() === 5; // الجمعة
+            return d.getDay() === 5;
         }
 
         function getTotalFridaysInServiceRange() {
@@ -1694,9 +1702,9 @@
             upcomingList.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             if (upcomingList.length === 0) {
-                listDiv.innerHTML = "✨ لا توجد فعاليات أو رحلات مجدولة قريباً.";
+                if (listDiv) listDiv.innerHTML = "✨ لا توجد فعاليات أو رحلات مجدولة قريباً.";
             } else {
-                listDiv.innerHTML = upcomingList.slice(0, 4).map(item => `
+                if (listDiv) listDiv.innerHTML = upcomingList.slice(0, 4).map(item => `
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #ccc; padding:4px 0; flex-wrap:wrap; gap:5px;">
                         <span>📌 [<strong>${item.date}</strong>] - <strong>${item.title}</strong></span>
                         <span class="role-badge" style="background:#2c3e50; font-size:10px;">المسؤول: ${item.responsible}</span>
@@ -1704,7 +1712,7 @@
                 `).join('');
             }
 
-            if (currentUser) {
+            if (currentUser && myBanner && myDetails) {
                 let myNext = masterPlan.find(item => {
                     let isResponsible = (item.responsible || '').trim().toLowerCase() === currentUser.name.trim().toLowerCase();
                     let diffDays = (new Date(item.date) - now) / (1000 * 60 * 60 * 24);
@@ -1722,6 +1730,7 @@
 
         function checkUpcomingBirthdays() {
             const box = document.getElementById('birthdayAlertList');
+            if (!box) return;
             let now = new Date();
             let currentMonth = now.getMonth() + 1;
             let currentDay = now.getDate();
@@ -2167,7 +2176,7 @@
             let isAbsent = false;
 
             if (!isFri) {
-                isAbsent = false; // الأيام غير الجمعة لا تحسب غياباً بل بونص
+                isAbsent = false;
             } else if (isSummerDay && settings.ignoreSummerDelay) {
                 isAbsent = false;
             } else {
@@ -2359,13 +2368,15 @@
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     const videoDevices = devices.filter(d => d.kind === 'videoinput');
                     const select = document.getElementById('cameraSelectionDropdown');
-                    select.innerHTML = '<option value="">تحديد الكاميرا الخلفية تلقائياً...</option>';
-                    videoDevices.forEach((device, index) => {
-                        const opt = document.createElement('option');
-                        opt.value = device.deviceId;
-                        opt.text = device.label || `كاميرا ${index + 1}`;
-                        select.appendChild(opt);
-                    });
+                    if (select) {
+                        select.innerHTML = '<option value="">تحديد الكاميرا الخلفية تلقائياً...</option>';
+                        videoDevices.forEach((device, index) => {
+                            const opt = document.createElement('option');
+                            opt.value = device.deviceId;
+                            opt.text = device.label || `كاميرا ${index + 1}`;
+                            select.appendChild(opt);
+                        });
+                    }
                 }
             } catch (e) {}
         }
@@ -2474,7 +2485,6 @@
             if (!container) return;
 
             container.innerHTML = '';
-            // حصر خريطة الانقطاع بأيام الجمعة فقط
             let fridayDates = Object.keys(attendanceRecord).filter(d => isFridaySession(d)).sort().reverse();
             let recentDates = fridayDates.slice(0, 4);
 
@@ -2551,41 +2561,52 @@
 
         function renderDashboard() {
             const totalMembers = members.length;
-            document.getElementById('statTotalMembers').innerText = totalMembers;
+            const elTotalMembers = document.getElementById('statTotalMembers');
+            if (elTotalMembers) elTotalMembers.innerText = totalMembers;
 
             const servantIds = new Set(servants.map(s => s.id.toString()));
             const todayMemberRecords = (attendanceRecord[today] || []).filter(a => !servantIds.has(a.id.toString()) && !a.isAbsentDueToDelay);
 
             const todayMembersCount = todayMemberRecords.length;
-            document.getElementById('statTodayMembersCount').innerText = todayMembersCount;
+            const elTodayMembersCount = document.getElementById('statTodayMembersCount');
+            if (elTodayMembersCount) elTodayMembersCount.innerText = todayMembersCount;
 
             const memberPercent = totalMembers > 0 ? Math.round((todayMembersCount / totalMembers) * 100) : 0;
-            document.getElementById('statMembersPercent').innerText = memberPercent + "%";
+            const elMembersPercent = document.getElementById('statMembersPercent');
+            if (elMembersPercent) elMembersPercent.innerText = memberPercent + "%";
 
             let qualifiedCount = members.filter(m => calculateGraduationStatus(m.id).qualified).length;
-            document.getElementById('statQualifiedGraduates').innerText = qualifiedCount;
+            const elQualifiedGraduates = document.getElementById('statQualifiedGraduates');
+            if (elQualifiedGraduates) elQualifiedGraduates.innerText = qualifiedCount;
 
             let communionCount = (attendanceRecord[today] || []).filter(a => a.communion).length;
-            let commEl = document.getElementById('statTodayCommunion');
+            const commEl = document.getElementById('statTodayCommunion');
             if (commEl) commEl.innerText = communionCount;
 
             const totalServants = servants.length;
-            document.getElementById('statTotalServantsDash').innerText = totalServants;
+            const elTotalServantsDash = document.getElementById('statTotalServantsDash');
+            if (elTotalServantsDash) elTotalServantsDash.innerText = totalServants;
+
             const todayServantsCount = (servantsAttendance[today] || []).length;
-            document.getElementById('statTodayServantsCount').innerText = todayServantsCount;
+            const elTodayServantsCount = document.getElementById('statTodayServantsCount');
+            if (elTodayServantsCount) elTodayServantsCount.innerText = todayServantsCount;
+
             const servantPercent = totalServants > 0 ? Math.round((todayServantsCount / totalServants) * 100) : 0;
-            document.getElementById('statServantsPercent').innerText = servantPercent + "%";
+            const elServantsPercent = document.getElementById('statServantsPercent');
+            if (elServantsPercent) elServantsPercent.innerText = servantPercent + "%";
 
             let fridayDates = Object.keys(attendanceRecord).filter(d => isFridaySession(d)).sort().reverse();
             let alertBox = document.getElementById('absentAlertList');
-            if (fridayDates.length < 2) {
-                alertBox.innerHTML = "يتطلب رصد المنقطعين تسجيل اجتماعي جمعة على الأقل.";
-            } else {
-                let last2Fridays = [fridayDates[0], fridayDates[1]];
-                let absentees = members.filter(m => !last2Fridays.some(d => (attendanceRecord[d] || []).some(a => a.id.toString() === m.id.toString() && !a.isAbsentDueToDelay)));
-                alertBox.innerHTML = absentees.length > 0 
-                    ? `<strong>تنبيه:</strong> (${absentees.length}) غائبين لآخر اجتماعي جمعة متتاليين:<br>` + absentees.map(a => `• <strong>${a.name}</strong> [كود: ${a.code || a.id}] (${a.stage || ''})`).join('<br>') 
-                    : "✅ لا يوجد منقطعين.";
+            if (alertBox) {
+                if (fridayDates.length < 2) {
+                    alertBox.innerHTML = "يتطلب رصد المنقطعين تسجيل اجتماعي جمعة على الأقل.";
+                } else {
+                    let last2Fridays = [fridayDates[0], fridayDates[1]];
+                    let absentees = members.filter(m => !last2Fridays.some(d => (attendanceRecord[d] || []).some(a => a.id.toString() === m.id.toString() && !a.isAbsentDueToDelay)));
+                    alertBox.innerHTML = absentees.length > 0 
+                        ? `<strong>تنبيه:</strong> (${absentees.length}) غائبين لآخر اجتماعي جمعة متتاليين:<br>` + absentees.map(a => `• <strong>${a.name}</strong> [كود: ${a.code || a.id}] (${a.stage || ''})`).join('<br>') 
+                        : "✅ لا يوجد منقطعين.";
+                }
             }
 
             renderAttendanceHeatmap();
@@ -2593,6 +2614,7 @@
 
         function renderAttendanceTable() {
             const tbody = document.querySelector('#attendanceTable tbody');
+            if (!tbody) return;
             tbody.innerHTML = '';
             let count = 0;
 
@@ -2621,16 +2643,21 @@
                 tbody.insertBefore(tr, tbody.firstChild);
             });
             
-            document.getElementById('todayAttendanceCount').innerText = count;
+            const elCount = document.getElementById('todayAttendanceCount');
+            if (elCount) elCount.innerText = count;
             updateRoleUI();
         }
 
         function renderServantsAttendanceTable() {
             const tbody = document.querySelector('#servantsAttendanceTable tbody');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            document.getElementById('statServantsCount').innerText = servants.length;
-            let todayServCount = (servantsAttendance[today] || []).length;
-            document.getElementById('statServantsToday').innerText = todayServCount;
+            
+            const elStatCount = document.getElementById('statServantsCount');
+            if (elStatCount) elStatCount.innerText = servants.length;
+            
+            const elTodayCount = document.getElementById('statServantsToday');
+            if (elTodayCount) elTodayCount.innerText = (servantsAttendance[today] || []).length;
 
             let allVisitationsList = [];
 
@@ -2643,7 +2670,8 @@
                 }
             });
 
-            document.getElementById('statTotalVisitations').innerText = allVisitationsList.length;
+            const elTotalVis = document.getElementById('statTotalVisitations');
+            if (elTotalVis) elTotalVis.innerText = allVisitationsList.length;
 
             servants.forEach(s => {
                 let present = (servantsAttendance[today] || []).find(x => x.id.toString() === s.id.toString());
@@ -2684,24 +2712,30 @@
             });
 
             const recentTbody = document.querySelector('#recentVisitationsTable tbody');
-            recentTbody.innerHTML = '';
-            if (allVisitationsList.length === 0) {
-                recentTbody.innerHTML = '<tr><td colspan="4" style="color:#888;">لم يتم تسجيل أي افتقادات حتى الآن.</td></tr>';
-            } else {
-                allVisitationsList.slice(0, 10).forEach(v => {
-                    let tr = document.createElement('tr');
-                    tr.innerHTML = `<td data-label="التاريخ">${v.date}</td><td data-label="الخادم المسؤول"><strong>${v.servant}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td data-label="الملاحظات">${v.text}</td>`;
-                    recentTbody.appendChild(tr);
-                });
+            if (recentTbody) {
+                recentTbody.innerHTML = '';
+                if (allVisitationsList.length === 0) {
+                    recentTbody.innerHTML = '<tr><td colspan="4" style="color:#888;">لم يتم تسجيل أي افتقادات حتى الآن.</td></tr>';
+                } else {
+                    allVisitationsList.slice(0, 10).forEach(v => {
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `<td data-label="التاريخ">${v.date}</td><td data-label="الخادم المسؤول"><strong>${v.servant}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td data-label="الملاحظات">${v.text}</td>`;
+                        recentTbody.appendChild(tr);
+                    });
+                }
             }
             updateRoleUI();
         }
 
         function renderMembersList() {
             const tbody = document.querySelector('#membersTable tbody');
-            const search = document.getElementById('searchBox').value.toLowerCase();
-            const stageFilter = document.getElementById('stageFilterSelect').value;
-            const gradFilter = document.getElementById('gradFilterSelect').value;
+            if (!tbody) return;
+            const searchBox = document.getElementById('searchBox');
+            const search = searchBox ? searchBox.value.toLowerCase() : '';
+            const stageFilterSelect = document.getElementById('stageFilterSelect');
+            const stageFilter = stageFilterSelect ? stageFilterSelect.value : 'all';
+            const gradFilterSelect = document.getElementById('gradFilterSelect');
+            const gradFilter = gradFilterSelect ? gradFilterSelect.value : 'all';
             
             tbody.innerHTML = '';
             
@@ -2763,9 +2797,12 @@
                 b.style.color = '#333';
             });
             
-            document.getElementById(tabId).style.display = 'block'; 
-            btn.style.background = 'var(--primary)'; 
-            btn.style.color = 'white';
+            let targetTab = document.getElementById(tabId);
+            if (targetTab) targetTab.style.display = 'block'; 
+            if (btn) {
+                btn.style.background = 'var(--primary)'; 
+                btn.style.color = 'white';
+            }
         }
 
         function openProfile(id) {
@@ -3457,17 +3494,17 @@
                         const statusText = document.getElementById('cloudStatusText');
                         const indicator = document.getElementById('cloudIndicator');
                         if (snap.val() === true) {
-                            indicator.className = "cloud-status cloud-connected";
+                            if (indicator) indicator.className = "cloud-status cloud-connected";
                             let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
                             if (Object.keys(pending).length > 0) {
-                                statusText.innerText = "جاري رفع المتأخرات... ⏳";
+                                if (statusText) statusText.innerText = "جاري رفع المتأخرات... ⏳";
                                 pushPendingData();
                             } else {
-                                statusText.innerText = "متصل سحابياً 🟢";
+                                if (statusText) statusText.innerText = "متصل سحابياً 🟢";
                             }
                         } else {
-                            indicator.className = "cloud-status cloud-offline";
-                            statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
+                            if (indicator) indicator.className = "cloud-status cloud-offline";
+                            if (statusText) statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
                         }
                     });
 
@@ -3489,8 +3526,9 @@
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            btn.classList.add('active');
+            let targetTab = document.getElementById(tabId);
+            if (targetTab) targetTab.classList.add('active');
+            if (btn) btn.classList.add('active');
             if (tabId !== 'attendanceTab') stopCamera();
             if (tabId === 'servantsAttendanceTab') renderServantsAttendanceTable();
             if (tabId === 'planTab') renderMasterPlanTable();
@@ -3512,6 +3550,7 @@
 
         function renderBroadcastList(targetType) {
             let tbody = document.querySelector('#broadcastTable tbody');
+            if (!tbody) return;
             tbody.innerHTML = '';
             let todayPresentIds = (attendanceRecord[today] || []).filter(a => !a.isAbsentDueToDelay).map(a => a.id.toString());
             let absentees = members.filter(m => !todayPresentIds.includes(m.id.toString()));
