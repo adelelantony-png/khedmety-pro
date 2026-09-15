@@ -707,7 +707,7 @@
         <!-- 7. إدارة الخدام -->
         <div id="servantsTab" class="tab-content">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <h2>إدارة حسابات الخدام والصلاحيات</h2>
+                <h2>إدارة حسابات الخدام والصلاحيات (سري لأمين الخدمة)</h2>
                 <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الخدام</button>
             </div>
             <div class="form-grid">
@@ -2112,11 +2112,20 @@
                 if (confirm("هل أنت متأكد تماماً من حذف جميع المخدومين؟")) {
                     members = [];
                     localStorage.setItem('my_church_class', JSON.stringify(members));
-                    syncToCloud('members', members);
+                    
+                    // منع إعادة رفع الكاش القديم
+                    let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+                    delete pending['members'];
+                    localStorage.setItem('pending_sync_paths', JSON.stringify(pending));
+
+                    if (isFirebaseActive && db) {
+                        db.ref('members').set([]);
+                    }
+
                     renderMembersList();
                     renderDashboard();
                     checkLocalStorageUsage();
-                    alert("✅ تم حذف جميع المخدومين بنجاح.");
+                    alert("✅ تم حذف جميع المخدومين وتصفير السجل بنجاح.");
                 }
             } else {
                 alert("❌ كلمة المرور غير صحيحة.");
@@ -2313,8 +2322,7 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            let todayMap = {};
-            (attendanceRecord[today] || []).forEach(a => { todayMap[a.id.toString()] = a; });
+            let todayPresentIds = new Set((attendanceRecord[today] || []).map(a => a.id.toString()));
 
             let filtered = members.filter(m => (m.name || '').toLowerCase().includes(search) || (m.code || '').toString().includes(search));
 
@@ -3417,7 +3425,8 @@
                         localStorage.setItem('pending_sync_paths', JSON.stringify(currentPending));
                         updatePendingBadge();
                         if (Object.keys(currentPending).length === 0) {
-                            document.getElementById('cloudStatusText').innerText = "متصل ومحدث 🟢";
+                            let cloudStatus = document.getElementById('cloudStatusText');
+                            if (cloudStatus) cloudStatus.innerText = "متصل ومحدث 🟢";
                         }
                     }).catch(() => {});
                 }
@@ -3439,7 +3448,8 @@
             localStorage.setItem('pending_sync_paths', JSON.stringify(pending));
             
             updatePendingBadge();
-            document.getElementById('cloudStatusText').innerText = "محفوظ بالجهاز (ينتظر النت) 📱";
+            let cloudStatus = document.getElementById('cloudStatusText');
+            if (cloudStatus) cloudStatus.innerText = "محفوظ بالجهاز (ينتظر النت) 📱";
 
             if (isFirebaseActive && db && navigator.onLine) {
                 pushPendingData();
@@ -3474,7 +3484,8 @@
         function initFirebase() {
             let savedConfig = localStorage.getItem('my_firebase_config');
             if (!savedConfig) {
-                document.getElementById('cloudStatusText').innerText = "العمل محلياً";
+                let statusText = document.getElementById('cloudStatusText');
+                if (statusText) statusText.innerText = "العمل محلياً";
                 showCloudSetupModal();
                 return;
             }
@@ -3513,14 +3524,101 @@
                         return !pending[path]; 
                     }
 
-                    db.ref('settings').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('settings')) { settings = snap.val(); localStorage.setItem('my_church_settings', JSON.stringify(settings)); applyServiceBranding(); } });
-                    db.ref('members').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('members')) { members = snap.val(); localStorage.setItem('my_church_class', JSON.stringify(members)); renderMembersList(); renderDashboard(); checkUpcomingBirthdays(); } });
-                    db.ref('attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('attendance')) { attendanceRecord = snap.val(); if (!attendanceRecord[today]) attendanceRecord[today] = []; localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); renderAttendanceTable(); renderLiveCardsFeed(); renderMembersList(); renderDashboard(); } });
-                    db.ref('servants_attendance').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants_attendance')) { servantsAttendance = snap.val(); if (!servantsAttendance[today]) servantsAttendance[today] = []; localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); renderServantsAttendanceTable(); renderDashboard(); } });
-                    db.ref('servants').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('servants')) { servants = snap.val(); localStorage.setItem('my_church_servants', JSON.stringify(servants)); renderServantsTable(); renderServantsAttendanceTable(); populatePlanServantsDropdown(); renderDashboard(); checkUpcomingBirthdays(); } });
-                    db.ref('master_plan').on('value', snap => { if (snap.exists() && shouldAcceptCloudData('master_plan')) { masterPlan = snap.val(); localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan)); renderMasterPlanTable(); renderServantsAttendanceTable(); checkUpcomingMasterPlanEvents(); } });
+                    // 1. مزامنة الإعدادات
+                    db.ref('settings').on('value', snap => { 
+                        if (shouldAcceptCloudData('settings')) { 
+                            settings = snap.exists() ? snap.val() : {}; 
+                            localStorage.setItem('my_church_settings', JSON.stringify(settings)); 
+                            applyServiceBranding(); 
+                        } 
+                    });
+
+                    // 2. مزامنة المخدومين وتوحيد الحقول
+                    db.ref('members').on('value', snap => { 
+                        if (shouldAcceptCloudData('members')) { 
+                            let val = snap.val();
+                            if (!val || (Array.isArray(val) && val.length === 0)) {
+                                members = [];
+                                localStorage.removeItem('my_church_class');
+                            } else {
+                                let rawList = Array.isArray(val) ? val : Object.values(val);
+                                members = rawList.filter(Boolean).map(m => {
+                                    return {
+                                        id: m.id || Date.now(),
+                                        code: m.code || m.exam_code || "",
+                                        name: m.name || "",
+                                        phone: m.phone || "",
+                                        stage: m.stage || "سنة أولى",
+                                        gender: m.gender || "بنين",
+                                        dob: m.dob || m.birth_date || "",
+                                        parent_phone: m.parent_phone || "",
+                                        address: m.address || "",
+                                        confessor: m.confessor || "",
+                                        qrCode: m.qrCode || m.qr_code || `${m.name}/01`,
+                                        visitations: m.visitations || [],
+                                        fieldEvaluations: m.fieldEvaluations || []
+                                    };
+                                });
+                                localStorage.setItem('my_church_class', JSON.stringify(members));
+                            }
+                            renderMembersList(); 
+                            renderDashboard(); 
+                            checkUpcomingBirthdays(); 
+                        } 
+                    });
+
+                    // 3. مزامنة الحضور
+                    db.ref('attendance').on('value', snap => { 
+                        if (shouldAcceptCloudData('attendance')) { 
+                            attendanceRecord = snap.exists() ? snap.val() : {}; 
+                            if (!attendanceRecord[today]) attendanceRecord[today] = []; 
+                            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); 
+                            renderAttendanceTable(); 
+                            renderLiveCardsFeed(); 
+                            renderMembersList(); 
+                            renderDashboard(); 
+                        } 
+                    });
+
+                    // 4. مزامنة حضور الخدام
+                    db.ref('servants_attendance').on('value', snap => { 
+                        if (shouldAcceptCloudData('servants_attendance')) { 
+                            servantsAttendance = snap.exists() ? snap.val() : {}; 
+                            if (!servantsAttendance[today]) servantsAttendance[today] = []; 
+                            localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); 
+                            renderServantsAttendanceTable(); 
+                            renderDashboard(); 
+                        } 
+                    });
+
+                    // 5. مزامنة قائمة الخدام
+                    db.ref('servants').on('value', snap => { 
+                        if (shouldAcceptCloudData('servants')) { 
+                            servants = snap.exists() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : []; 
+                            localStorage.setItem('my_church_servants', JSON.stringify(servants)); 
+                            renderServantsTable(); 
+                            renderServantsAttendanceTable(); 
+                            populatePlanServantsDropdown(); 
+                            renderDashboard(); 
+                            checkUpcomingBirthdays(); 
+                        } 
+                    });
+
+                    // 6. مزامنة خطة السنة
+                    db.ref('master_plan').on('value', snap => { 
+                        if (shouldAcceptCloudData('master_plan')) { 
+                            masterPlan = snap.exists() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : []; 
+                            localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan)); 
+                            renderMasterPlanTable(); 
+                            renderServantsAttendanceTable(); 
+                            checkUpcomingMasterPlanEvents(); 
+                        } 
+                    });
                 }
-            } catch (e) { document.getElementById('cloudStatusText').innerText = "خطأ في الاتصال"; }
+            } catch (e) { 
+                let statusText = document.getElementById('cloudStatusText');
+                if (statusText) statusText.innerText = "خطأ في الاتصال"; 
+            }
         }
 
         function switchTab(tabId, btn) {
