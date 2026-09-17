@@ -3505,23 +3505,22 @@
                 let localData = null;
                 if (path === 'members') localData = JSON.parse(localStorage.getItem('my_church_class'));
                 else if (path === 'attendance') {
-    let fullAtt = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
-    let todayList = fullAtt[today] || [];
-    let partitionObj = {};
-    todayList.forEach(item => {
-        let p = (item.phone || item.id || '').toString().replace(/\D/g, '');
-        if (p) partitionObj[p] = item;
-    });
-    // رفع حركات اليوم بنظام التجزئة الموفر للباندويث
-    db.ref(`attendance/${today}`).set(partitionObj).then(() => {
-        let currentPending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-        delete currentPending['attendance'];
-        localStorage.setItem('pending_sync_paths', JSON.stringify(currentPending));
-        updatePendingBadge();
-        updateLastSyncTimestamp();
-    }).catch(() => {});
-    return;
-}
+                    let fullAtt = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
+                    let todayList = fullAtt[today] || [];
+                    let partitionObj = {};
+                    todayList.forEach(item => {
+                        let p = (item.phone || item.id || '').toString().replace(/\D/g, '');
+                        if (p) partitionObj[p] = item;
+                    });
+                    db.ref(`attendance/${today}`).set(partitionObj).then(() => {
+                        let currentPending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+                        delete currentPending['attendance'];
+                        localStorage.setItem('pending_sync_paths', JSON.stringify(currentPending));
+                        updatePendingBadge();
+                        updateLastSyncTimestamp();
+                    }).catch(() => {});
+                    return;
+                }
                 else if (path === 'servants_attendance') localData = JSON.parse(localStorage.getItem('my_church_servants_attendance'));
                 else if (path === 'servants') localData = JSON.parse(localStorage.getItem('my_church_servants'));
                 else if (path === 'master_plan') localData = JSON.parse(localStorage.getItem('my_church_master_plan'));
@@ -3594,6 +3593,7 @@
             if (!savedConfig) {
                 let statusText = document.getElementById('cloudStatusText');
                 if (statusText) statusText.innerText = "العمل محلياً";
+                showCloudSetupModal();
                 return;
             }
 
@@ -3613,12 +3613,16 @@
                         const indicator = document.getElementById('cloudIndicator');
                         if (snap.val() === true) {
                             if (indicator) indicator.className = "cloud-status cloud-connected";
-                            if (statusText) statusText.innerText = "متصل وآمن 🟢";
-                            pushPendingData();
-                            updateLastSyncTimestamp();
+                            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+                            if (Object.keys(pending).length > 0) {
+                                if (statusText) statusText.innerText = "جاري رفع المتأخرات... ⏳";
+                                pushPendingData();
+                            } else {
+                                if (statusText) statusText.innerText = "متصل سحابياً 🟢";
+                            }
                         } else {
                             if (indicator) indicator.className = "cloud-status cloud-offline";
-                            if (statusText) statusText.innerText = "أوفلاين (محلي) 🟠";
+                            if (statusText) statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
                         }
                     });
 
@@ -3670,13 +3674,39 @@
                         } 
                     });
 
-                    // 3. مزامنة الحضور
+                    // 3. مزامنة الحضور (متوافقة مع بنية القواعد الجديدة الموزعة حسب رقم الهاتف / الكود)
                     db.ref('attendance').on('value', snap => {
+                        if (shouldAcceptCloudData('attendance')) {
+                            let cloudData = snap.exists() ? snap.val() : {};
+                            let formattedRecord = {};
+                            
+                            // تحويل بنية القواعد الجديدة الموزعة إلى مصفوفة اليوم المعتادة في الموقع
+                            Object.keys(cloudData).forEach(dateKey => {
+                                let dayNode = cloudData[dateKey];
+                                if (Array.isArray(dayNode)) {
+                                    formattedRecord[dateKey] = dayNode.filter(Boolean);
+                                } else if (dayNode && typeof dayNode === 'object') {
+                                    formattedRecord[dateKey] = Object.values(dayNode).filter(Boolean);
+                                } else {
+                                    formattedRecord[dateKey] = [];
+                                }
+                            });
+
+                            attendanceRecord = formattedRecord;
+                            if (!attendanceRecord[today]) attendanceRecord[today] = [];
+                            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                            renderAttendanceTable();
+                            renderLiveCardsFeed();
+                            renderMembersList();
+                            renderDashboard();
+                        }
+                    });
 
                     // 4. مزامنة حضور الخدام
                     db.ref('servants_attendance').on('value', snap => { 
                         if (shouldAcceptCloudData('servants_attendance')) { 
-                            servantsAttendance = snap.exists() ? snap.val() : {}; 
+                            let val = snap.val();
+                            servantsAttendance = snap.exists() ? (Array.isArray(val) ? { [today]: val.filter(Boolean) } : val) : {}; 
                             if (!servantsAttendance[today]) servantsAttendance[today] = []; 
                             localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance)); 
                             renderServantsAttendanceTable(); 
