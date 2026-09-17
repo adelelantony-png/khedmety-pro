@@ -3504,7 +3504,24 @@
             keys.forEach(path => {
                 let localData = null;
                 if (path === 'members') localData = JSON.parse(localStorage.getItem('my_church_class'));
-                else if (path === 'attendance') localData = JSON.parse(localStorage.getItem('my_church_attendance'));
+                else if (path === 'attendance') {
+    let fullAtt = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
+    let todayList = fullAtt[today] || [];
+    let partitionObj = {};
+    todayList.forEach(item => {
+        let p = (item.phone || item.id || '').toString().replace(/\D/g, '');
+        if (p) partitionObj[p] = item;
+    });
+    // رفع حركات اليوم بنظام التجزئة الموفر للباندويث
+    db.ref(`attendance/${today}`).set(partitionObj).then(() => {
+        let currentPending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
+        delete currentPending['attendance'];
+        localStorage.setItem('pending_sync_paths', JSON.stringify(currentPending));
+        updatePendingBadge();
+        updateLastSyncTimestamp();
+    }).catch(() => {});
+    return;
+}
                 else if (path === 'servants_attendance') localData = JSON.parse(localStorage.getItem('my_church_servants_attendance'));
                 else if (path === 'servants') localData = JSON.parse(localStorage.getItem('my_church_servants'));
                 else if (path === 'master_plan') localData = JSON.parse(localStorage.getItem('my_church_master_plan'));
@@ -3654,17 +3671,7 @@
                     });
 
                     // 3. مزامنة الحضور
-                    db.ref('attendance').on('value', snap => { 
-                        if (shouldAcceptCloudData('attendance')) { 
-                            attendanceRecord = snap.exists() ? snap.val() : {}; 
-                            if (!attendanceRecord[today]) attendanceRecord[today] = []; 
-                            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord)); 
-                            renderAttendanceTable(); 
-                            renderLiveCardsFeed(); 
-                            renderMembersList(); 
-                            renderDashboard(); 
-                        } 
-                    });
+                    db.ref('attendance').on('value', snap => {
 
                     // 4. مزامنة حضور الخدام
                     db.ref('servants_attendance').on('value', snap => { 
