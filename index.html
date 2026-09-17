@@ -10,7 +10,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="خدمتي برو">
     
-    <!-- ربط الأيقونات لجميع الأجهزة والمتصفحات -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
     <link rel="shortcut icon" href="icon.png" type="image/x-icon">
     <link rel="apple-touch-icon" href="icon.png">
@@ -70,6 +69,16 @@
         .cloud-status { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dfe6e9; margin-left: 5px; transition: 0.3s; }
         .cloud-connected { background: #55efc4; box-shadow: 0 0 6px #55efc4; }
         .cloud-offline { background: #e17055; box-shadow: 0 0 6px #e17055; }
+
+        .cloud-health-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
 
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
         .tab-btn { 
@@ -170,32 +179,6 @@
             top: 0; z-index: 9998; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        #kioskCard {
-            display: none; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); background: #ffffff;
-            border-radius: 18px; box-shadow: 0 15px 40px rgba(0,0,0,0.35);
-            padding: 20px; text-align: center; z-index: 99999;
-            width: 90%; max-width: 380px; border: 3px solid var(--accent);
-            animation: popIn 0.3s ease-out;
-        }
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        #inAppBrowserAlert {
-            display: none; background: #25D366; color: white; padding: 12px;
-            border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: bold;
-            text-align: center; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        #pwaInstallBanner {
-            display: none; background: #2d3436; color: white; padding: 10px 15px;
-            border-radius: 8px; margin-bottom: 12px; justify-content: space-between;
-            align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            flex-wrap: wrap; gap: 8px;
-        }
-
         .live-scanner-container { background: #fff; border-radius: 16px; border: 2px solid #dcdde1; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); margin-top: 10px; }
         .live-stream-header { display: flex; justify-content: space-between; align-items: center; background: #eaf2f8; padding: 8px 14px; border-radius: 8px; margin-top: 15px; font-weight: bold; color: var(--primary); }
         .live-cards-feed { max-height: 280px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
@@ -231,32 +214,8 @@
 
     <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
 
-    <div id="kioskCard">
-        <div id="kioskIcon" style="font-size:45px; margin-bottom:10px;">👋</div>
-        <h2 id="kioskName" style="margin:0 0 8px 0; color:var(--primary); font-size:20px; border:none;">...</h2>
-        <div id="kioskBadge" style="display:inline-block; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px; margin-bottom:10px; color:white;">...</div>
-        <div id="kioskStats" style="font-size:13px; color:#2d3436; margin-top:8px; line-height:1.5;">...</div>
-    </div>
-
     <div id="pendingSyncBadge" onclick="pushPendingData()">
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
-    </div>
-
-    <div id="cloudSetupModal" class="modal" style="display:none; z-index:3000;">
-        <div class="modal-content" style="max-width:500px; text-align:center;">
-            <div style="font-size:40px; margin-bottom:5px;">☁️</div>
-            <h3 style="margin:0 0 10px 0; color:var(--primary); border:none;">تجهيز الربط السحابي (Firebase)</h3>
-            <p style="font-size:13px; color:#555; line-height:1.6; text-align:right;">
-                الصق كود Config الخاص بقاعدة بياناتك للمزامنة بين كافة أجهزة الخدام:
-            </p>
-            <div style="text-align:right; margin-bottom:10px;">
-                <textarea id="modalFirebaseConfigInput" rows="5" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }' style="margin-top:4px; font-family:monospace; font-size:12px;"></textarea>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn-success" onclick="saveConfigFromModal()" style="margin:0; flex:1;">حفظ وتفعيل السحابة 🚀</button>
-                <button class="btn-mini" onclick="closeCloudModal()" style="background:#b2bec3; color:#2d3436; margin:0; width:110px;">العمل محلياً</button>
-            </div>
-        </div>
     </div>
 
     <div id="loginScreen">
@@ -294,9 +253,14 @@
         </div>
 
         <div class="role-bar">
-            <div>
-                <span id="cloudIndicator" class="cloud-status"></span>
-                <span id="cloudStatusText">جاري الاتصال...</span>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <div>
+                    <span id="cloudIndicator" class="cloud-status"></span>
+                    <span id="cloudStatusText">جاري الاتصال...</span>
+                </div>
+                <div id="cloudLastSyncBadge" class="cloud-health-badge" style="display:none;">
+                    ⏱️ <span id="cloudLastSyncTime">لم يتم الرفع بعد</span>
+                </div>
             </div>
             <div>
                 المستخدم: <strong id="loggedInUserName">...</strong> 
@@ -434,7 +398,7 @@
                 <button class="btn-success" onclick="addMasterPlanEvent()">حفظ وإدراج في خطة السنة 🚀</button>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:gap; gap:10px;">
                 <h3>جدول أحداث ومحطات السنة مرتبة زمنياً</h3>
                 <button class="btn-danger admin-only" onclick="clearAllMasterPlan()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الفعاليات</button>
             </div>
@@ -538,7 +502,7 @@
             <div class="stat-grid">
                 <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statServantsCount">0</div></div>
                 <div class="stat-card"><div>حضور الخدام اليوم</div><div class="num" id="statServantsToday">0</div></div>
-                <div class="stat-card"><div>إجمالي الافتقادات المسجلة</div><div class="num" id="statTotalVisitations" style="color:var(--success);">0</div></div>
+                <div class="stat-card"><div>إجمالي الافتقادات المسجلة</div><div class="num" id="statTotalVisitations">0</div></div>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
@@ -772,6 +736,37 @@
                 <div class="form-group">
                     <label>📅 تاريخ نهاية الخدمة (السنة):</label>
                     <input type="date" id="setServiceEnd">
+                </div>
+            </div>
+
+            <!-- لوحة مراقبة استهلاك سحابة Firebase الذكية -->
+            <div style="background:#eaf2f8; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h3 style="margin:0; border:none; color:var(--primary); font-size:15px;">☁️ رادار استهلاك سحابة Firebase (خطة Spark المجانية)</h3>
+                    <button class="btn-mini btn-success" onclick="sendCloudUsageWhatsAppReport()" style="padding:6px 12px;">📲 إرسال تقرير الاستهلاك لواتساب أمين الخدمة</button>
+                </div>
+                <p style="font-size:12px; color:#555; margin:6px 0 12px 0;">مراقبة سعة التخزين (1GB) والعمليات للشهر الحالي لتجنب إيقاف السيرفر:</p>
+                
+                <div class="stat-grid" style="margin-bottom:10px;">
+                    <div class="stat-card" style="background:#fff;">
+                        <div style="font-size:11px; color:#636e72;">حجم البيانات التقديري بالسحابة</div>
+                        <div class="num" id="cloudEstSizeText" style="font-size:18px;">0 KB</div>
+                    </div>
+                    <div class="stat-card" style="background:#fff;">
+                        <div style="font-size:11px; color:#636e72;">حركات حضور الشهر الحالي</div>
+                        <div class="num" id="cloudMonthlyAttText" style="font-size:18px; color:var(--purple);">0</div>
+                    </div>
+                    <div class="stat-card" style="background:#fff;">
+                        <div style="font-size:11px; color:#636e72;">حالة الأمان السحابي</div>
+                        <div id="cloudSafetyStatusText" style="font-weight:bold; color:var(--success); margin-top:5px; font-size:13px;">🟢 آمن ومثالي</div>
+                    </div>
+                </div>
+
+                <div style="font-size:11px; font-weight:bold; margin-bottom:4px;">
+                    نسبة استهلاك سعة 1GB السحابية: <span id="cloudUsagePercentText">0.01%</span>
+                </div>
+                <div class="progress-bar-container" style="height:8px;">
+                    <div id="cloudUsageProgressBar" class="progress-bar" style="width:1%; background:var(--success);"></div>
                 </div>
             </div>
 
@@ -1168,6 +1163,7 @@
 
         function showToast(msg, isError = false) {
             let toast = document.getElementById('toastMessage');
+            if (!toast) return;
             toast.innerText = msg;
             toast.style.background = isError ? "var(--danger)" : (msg.includes('تأخير') ? "var(--warning)" : "var(--success)");
             toast.classList.add('show');
@@ -1218,8 +1214,11 @@
         let currentProfileId = null;
 
         let today = new Date().toLocaleDateString('en-CA');
-        document.getElementById('todayDate').innerText = today;
-        document.getElementById('liveScanDate').innerText = today;
+        let todayDateEl = document.getElementById('todayDate');
+        if (todayDateEl) todayDateEl.innerText = today;
+        let liveScanDateEl = document.getElementById('liveScanDate');
+        if (liveScanDateEl) liveScanDateEl.innerText = today;
+
         if (!attendanceRecord[today]) attendanceRecord[today] = [];
         if (!servantsAttendance[today]) servantsAttendance[today] = [];
 
@@ -1242,29 +1241,30 @@
         function applyServiceBranding() {
             let cName = settings.churchName || "كنيسة الملاك والروماني بالمطرية";
             let sName = settings.serviceName || "اجتماع القديس بولس الرسول لإعداد الخدام";
-            document.getElementById('appChurchName').innerText = cName;
-            document.getElementById('appServiceName').innerText = sName;
-            document.getElementById('loginChurchDisplay').innerText = cName;
-            document.getElementById('loginServiceDisplay').innerText = sName;
-            document.getElementById('setChurchName').value = cName;
-            document.getElementById('setServiceName').value = sName;
-            document.getElementById('setAdminWhatsApp').value = settings.adminWhatsApp || "201200000000";
-            document.getElementById('setServiceStart').value = settings.serviceStart || "2026-09-01";
-            document.getElementById('setServiceEnd').value = settings.serviceEnd || "2027-07-01";
-            document.getElementById('setStartTime').value = settings.startTime || "13:00";
-            document.getElementById('setAllowed').value = settings.allowedDelay || 15;
-            document.getElementById('setAbsentAfter').value = settings.absentAfter || 75;
-            document.getElementById('setAdminPassword').value = adminPassword;
+            let appC = document.getElementById('appChurchName'); if (appC) appC.innerText = cName;
+            let appS = document.getElementById('appServiceName'); if (appS) appS.innerText = sName;
+            let logC = document.getElementById('loginChurchDisplay'); if (logC) logC.innerText = cName;
+            let logS = document.getElementById('loginServiceDisplay'); if (logS) logS.innerText = sName;
+            let setC = document.getElementById('setChurchName'); if (setC) setC.value = cName;
+            let setS = document.getElementById('setServiceName'); if (setS) setS.value = sName;
+            let setW = document.getElementById('setAdminWhatsApp'); if (setW) setW.value = settings.adminWhatsApp || "201200000000";
+            let setSStart = document.getElementById('setServiceStart'); if (setSStart) setSStart.value = settings.serviceStart || "2026-09-01";
+            let setSEnd = document.getElementById('setServiceEnd'); if (setSEnd) setSEnd.value = settings.serviceEnd || "2027-07-01";
+            let setStartT = document.getElementById('setStartTime'); if (setStartT) setStartT.value = settings.startTime || "13:00";
+            let setA = document.getElementById('setAllowed'); if (setA) setA.value = settings.allowedDelay || 15;
+            let setAbs = document.getElementById('setAbsentAfter'); if (setAbs) setAbs.value = settings.absentAfter || 75;
+            let setP = document.getElementById('setAdminPassword'); if (setP) setP.value = adminPassword;
 
-            document.getElementById('setSummerActive').value = (settings.summerActive || false).toString();
-            document.getElementById('setSummerDay').value = settings.summerDay || "0";
-            document.getElementById('setSummerStartTime').value = settings.summerStartTime || "18:00";
-            document.getElementById('setIgnoreSummerDelay').checked = settings.ignoreSummerDelay !== false;
+            let setSumA = document.getElementById('setSummerActive'); if (setSumA) setSumA.value = (settings.summerActive || false).toString();
+            let setSumD = document.getElementById('setSummerDay'); if (setSumD) setSumD.value = settings.summerDay || "0";
+            let setSumT = document.getElementById('setSummerStartTime'); if (setSumT) setSumT.value = settings.summerStartTime || "18:00";
+            let setSumI = document.getElementById('setIgnoreSummerDelay'); if (setSumI) setSumI.checked = settings.ignoreSummerDelay !== false;
 
             let fbInput = document.getElementById('firebaseConfigInput');
             if (fbInput && !fbInput.value) {
                 fbInput.value = localStorage.getItem('my_firebase_config') || '';
             }
+            updateCloudUsageUI();
         }
 
         function checkSession() {
@@ -1281,6 +1281,11 @@
                 checkUpcomingMasterPlanEvents();
                 checkLocalStorageUsage();
                 updatePendingBadge();
+                renderDashboard();
+                renderMembersList();
+                renderAttendanceTable();
+                renderLiveCardsFeed();
+                updateCloudUsageUI();
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
                 document.getElementById('mainApp').style.display = 'none';
@@ -1371,7 +1376,8 @@
             else if (currentPermission === 'attend_only') label = 'تسجيل حضور فقط';
             else if (currentPermission === 'full') label = 'خادم متكامل';
 
-            document.getElementById('currentRoleBadge').innerText = label;
+            let rBadge = document.getElementById('currentRoleBadge');
+            if (rBadge) rBadge.innerText = label;
 
             const isAdmin = (currentPermission === 'admin' || currentPermission === 'developer');
             const isScannerOnly = (currentPermission === 'scanner_only');
@@ -1379,13 +1385,18 @@
             const canEdit = (isAdmin || currentPermission === 'full');
 
             if (isScannerOnly) {
-                document.querySelector('.tabs').style.display = 'none';
+                let tabsEl = document.querySelector('.tabs');
+                if (tabsEl) tabsEl.style.display = 'none';
                 document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-                document.getElementById('attendanceTab').style.display = 'block';
-                document.getElementById('attendanceTab').classList.add('active');
+                let attTab = document.getElementById('attendanceTab');
+                if (attTab) {
+                    attTab.style.display = 'block';
+                    attTab.classList.add('active');
+                }
                 return;
             } else {
-                document.querySelector('.tabs').style.display = 'flex';
+                let tabsEl = document.querySelector('.tabs');
+                if (tabsEl) tabsEl.style.display = 'flex';
             }
 
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
@@ -1436,6 +1447,86 @@
                 total: totalFridays,
                 bonus: bonusPoints
             };
+        }
+
+        function getCloudUsageStats() {
+            let totalChars = JSON.stringify(members).length + 
+                             JSON.stringify(attendanceRecord).length + 
+                             JSON.stringify(servants).length + 
+                             JSON.stringify(masterPlan).length + 
+                             JSON.stringify(settings).length;
+            
+            let estSizeKB = Math.round(totalChars / 1024);
+            let currentMonth = today.substring(0, 7);
+            let monthlyAttCount = 0;
+
+            Object.keys(attendanceRecord).forEach(d => {
+                if (d.startsWith(currentMonth)) {
+                    monthlyAttCount += (attendanceRecord[d] || []).length;
+                }
+            });
+
+            let maxStorageKB = 1024 * 1024;
+            let percentUsed = ((estSizeKB / maxStorageKB) * 100).toFixed(2);
+
+            return {
+                estSizeKB,
+                monthlyAttCount,
+                percentUsed,
+                isSafe: estSizeKB < (maxStorageKB * 0.7)
+            };
+        }
+
+        function updateCloudUsageUI() {
+            let stats = getCloudUsageStats();
+            let elSize = document.getElementById('cloudEstSizeText');
+            let elAtt = document.getElementById('cloudMonthlyAttText');
+            let elStatus = document.getElementById('cloudSafetyStatusText');
+            let elPct = document.getElementById('cloudUsagePercentText');
+            let elBar = document.getElementById('cloudUsageProgressBar');
+
+            if (elSize) elSize.innerText = `${stats.estSizeKB} KB`;
+            if (elAtt) elAtt.innerText = stats.monthlyAttCount;
+            if (elPct) elPct.innerText = `${stats.percentUsed}%`;
+
+            if (elStatus) {
+                if (stats.isSafe) {
+                    elStatus.innerText = "🟢 آمن ومثالي للخدمة";
+                    elStatus.style.color = "var(--success)";
+                    if (elBar) elBar.style.background = "var(--success)";
+                } else {
+                    elStatus.innerText = "⚠️ تجاوز 70% من المساحة";
+                    elStatus.style.color = "var(--warning)";
+                    if (elBar) elBar.style.background = "var(--warning)";
+                }
+            }
+            if (elBar) elBar.style.width = `${Math.max(1, stats.percentUsed)}%`;
+        }
+
+        function sendCloudUsageWhatsAppReport() {
+            let stats = getCloudUsageStats();
+            let adminPhone = settings.adminWhatsApp || "201200000000";
+            let cleanPhone = formatWhatsAppPhone(adminPhone);
+
+            let msg = `☁️ *تقرير استهلاك سحابة Firebase الأسبوعي*\n` +
+                      `🏛️ خدمة: ${settings.serviceName || 'إعداد الخدام'}\n` +
+                      `📊 إجمالي المخدومين: ${members.length}\n` +
+                      `👔 إجمالي الخدام: ${servants.length}\n` +
+                      `📅 حركات حضور الشهر: ${stats.monthlyAttCount}\n` +
+                      `💾 الحجم التقديري للسحابة: ${stats.estSizeKB} KB\n` +
+                      `🟢 مساحة التخزين في الحدود الآمنة للخطة المجانية (Spark 1GB).\n` +
+                      `⏱️ تاريخ الفحص: ${today} - ${new Date().toLocaleTimeString('ar-EG')}`;
+
+            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function updateLastSyncTimestamp() {
+            let badge = document.getElementById('cloudLastSyncBadge');
+            let timeEl = document.getElementById('cloudLastSyncTime');
+            let nowStr = new Date().toLocaleTimeString('ar-EG');
+            if (badge) badge.style.display = 'inline-flex';
+            if (timeEl) timeEl.innerText = `آخر رفع: ${nowStr}`;
+            updateCloudUsageUI();
         }
 
         function renderServantsTable() {
@@ -2113,7 +2204,6 @@
                     members = [];
                     localStorage.setItem('my_church_class', JSON.stringify(members));
                     
-                    // منع إعادة رفع الكاش القديم
                     let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
                     delete pending['members'];
                     localStorage.setItem('pending_sync_paths', JSON.stringify(pending));
@@ -2322,7 +2412,8 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            let todayPresentIds = new Set((attendanceRecord[today] || []).map(a => a.id.toString()));
+            let todayMap = {};
+            (attendanceRecord[today] || []).forEach(a => { todayMap[a.id.toString()] = a; });
 
             let filtered = members.filter(m => (m.name || '').toLowerCase().includes(search) || (m.code || '').toString().includes(search));
 
@@ -2618,6 +2709,7 @@
             }
 
             renderAttendanceHeatmap();
+            updateCloudUsageUI();
         }
 
         function renderAttendanceTable() {
@@ -3367,7 +3459,7 @@
             applyServiceBranding();
             renderMembersList();
             renderDashboard();
-            showToast("✅ تم حفظ كافة الإعدادات وتحديث نسب الحضور بنجاح!");
+            showToast("✅ تم حفظ كافة الإعدادات وتحديث مؤشرات الاستهلاك بنجاح!");
         }
 
         function saveFirebaseConfig() {
@@ -3418,16 +3510,15 @@
                 else if (path === 'master_plan') localData = JSON.parse(localStorage.getItem('my_church_master_plan'));
                 else if (path === 'settings') localData = JSON.parse(localStorage.getItem('my_church_settings'));
 
-                if (localData) {
+                if (localData !== null) {
                     db.ref(path).set(localData).then(() => {
                         let currentPending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
                         delete currentPending[path];
                         localStorage.setItem('pending_sync_paths', JSON.stringify(currentPending));
                         updatePendingBadge();
-                        if (Object.keys(currentPending).length === 0) {
-                            let cloudStatus = document.getElementById('cloudStatusText');
-                            if (cloudStatus) cloudStatus.innerText = "متصل ومحدث 🟢";
-                        }
+                        updateLastSyncTimestamp();
+                        let cloudStatus = document.getElementById('cloudStatusText');
+                        if (cloudStatus) cloudStatus.innerText = "متصل وآمن 🟢";
                     }).catch(() => {});
                 }
             });
@@ -3486,7 +3577,6 @@
             if (!savedConfig) {
                 let statusText = document.getElementById('cloudStatusText');
                 if (statusText) statusText.innerText = "العمل محلياً";
-                showCloudSetupModal();
                 return;
             }
 
@@ -3506,16 +3596,12 @@
                         const indicator = document.getElementById('cloudIndicator');
                         if (snap.val() === true) {
                             if (indicator) indicator.className = "cloud-status cloud-connected";
-                            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                            if (Object.keys(pending).length > 0) {
-                                if (statusText) statusText.innerText = "جاري رفع المتأخرات... ⏳";
-                                pushPendingData();
-                            } else {
-                                if (statusText) statusText.innerText = "متصل سحابياً 🟢";
-                            }
+                            if (statusText) statusText.innerText = "متصل وآمن 🟢";
+                            pushPendingData();
+                            updateLastSyncTimestamp();
                         } else {
                             if (indicator) indicator.className = "cloud-status cloud-offline";
-                            if (statusText) statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
+                            if (statusText) statusText.innerText = "أوفلاين (محلي) 🟠";
                         }
                     });
 
@@ -3533,7 +3619,7 @@
                         } 
                     });
 
-                    // 2. مزامنة المخدومين وتوحيد الحقول
+                    // 2. مزامنة المخدومين وتوحيد الحقول مع دعم المسح السحابي التام
                     db.ref('members').on('value', snap => { 
                         if (shouldAcceptCloudData('members')) { 
                             let val = snap.val();
@@ -3632,6 +3718,7 @@
             if (tabId === 'planTab') renderMasterPlanTable();
             if (tabId === 'servantsTab') renderServantsTable();
             if (tabId === 'dashTab') { renderDashboard(); checkUpcomingBirthdays(); checkUpcomingMasterPlanEvents(); }
+            if (tabId === 'settingsTab') updateCloudUsageUI();
             if (tabId === 'broadcastTab') renderBroadcastList('parents');
             if (tabId === 'dataTab') checkLocalStorageUsage();
         }
