@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- صائد ومحذر الأخطاء الاستباقي الموحد (يعمل قبل أي مكتبة وفي الشاشة الافتتاحية) -->
+    <!-- صائد ومحذر الأخطاء التلقائي (يعمل فوراً في كل الشاشات والافتتاحية والموبايل) -->
     <script>
         window.appErrorLogs = [];
         function displayLiveSystemError(errorMessage) {
@@ -29,7 +29,7 @@
                     bottom: 15px;
                     left: 5%;
                     width: 90%;
-                    max-width: 500px;
+                    max-width: 480px;
                     background: #2d3436;
                     color: #fab1a0;
                     border-right: 5px solid #d63031;
@@ -48,16 +48,16 @@
 
             errBanner.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-bottom:1px solid #636e72; padding-bottom:4px;">
-                    <strong style="color:#ff7675;">⚠️ تنبيه عطل بالنظام (System Error)</strong>
+                    <strong style="color:#ff7675;">⚠️ تنبيه رصد خطأ (System Error)</strong>
                     <span onclick="document.getElementById('liveErrorLog').remove()" style="cursor:pointer; color:#fff; font-weight:bold; padding:0 6px;">[✕ إغلاق]</span>
                 </div>
-                <div style="max-height:100px; overflow-y:auto; word-break:break-word; color:#dfe6e9;">
+                <div style="max-height:90px; overflow-y:auto; word-break:break-word; color:#dfe6e9;">
                     ${errorMessage}
                 </div>
                 <div style="margin-top:8px; display:flex; gap:6px;">
-                    <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الأخطاء!')" 
+                    <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الخطأ!')" 
                             style="flex:1; padding:5px; font-size:11px; background:#0984e3; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                        نسخ كود الخطأ 📋
+                        نسخ تفاصيل الخطأ 📋
                     </button>
                     <button onclick="location.reload()" 
                             style="flex:1; padding:5px; font-size:11px; background:#e17055; color:#fff; border:none; border-radius:4px; cursor:pointer;">
@@ -68,14 +68,13 @@
         }
 
         window.onerror = function(msg, url, lineNo, columnNo, error) {
-            let file = url ? url.split('/').pop() : 'script';
-            let errText = `[${file}:${lineNo}] ${msg}`;
-            displayLiveSystemError(errText);
+            let file = url ? url.split('/').pop() : 'inline';
+            displayLiveSystemError(`[${file}:${lineNo}] ${msg}`);
             return false;
         };
 
         window.addEventListener('unhandledrejection', function(event) {
-            let reason = event.reason ? (event.reason.message || event.reason) : 'Unknown Promise Rejection';
+            let reason = event.reason ? (event.reason.message || event.reason) : 'Promise Rejection';
             displayLiveSystemError(`[Promise] ${reason}`);
         });
     </script>
@@ -244,14 +243,30 @@
             top: 0; z-index: 9998; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
+        #kioskCard {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: #ffffff;
+            border-radius: 18px; box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+            padding: 20px; text-align: center; z-index: 99999;
+            width: 90%; max-width: 380px; border: 3px solid var(--accent);
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
         #inAppBrowserAlert {
-            display: none; background: #ffeaa7; color: #d35400; text-align: center;
-            padding: 10px; font-size: 12px; border-bottom: 2px solid #fdcb6e;
+            display: none; background: #25D366; color: white; padding: 12px;
+            border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: bold;
+            text-align: center; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         #pwaInstallBanner {
-            display: none; background: #eaf2f8; border: 1px solid #74b9ff; padding: 10px;
-            border-radius: 8px; margin-bottom: 12px; justify-content: space-between; align-items: center;
+            display: none; background: #2d3436; color: white; padding: 10px 15px;
+            border-radius: 8px; margin-bottom: 12px; justify-content: space-between;
+            align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            flex-wrap: wrap; gap: 8px;
         }
 
         .live-scanner-container { background: #fff; border-radius: 16px; border: 2px solid #dcdde1; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); margin-top: 10px; }
@@ -268,26 +283,14 @@
             100% { opacity: 1; transform: translateY(0); }
         }
         .live-scan-index { background: #edf2f7; color: var(--primary); font-weight: bold; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
-
-        /* نافذة الترحيب السريع عند المسح (Kiosk Card) */
-        #kioskCard {
-            display: none; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); z-index: 10000;
-            background: #ffffff; border-radius: 16px; padding: 25px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.35); text-align: center;
-            width: 85%; max-width: 380px; border: 3px solid var(--accent);
-            animation: popIn 0.3s ease;
-        }
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <!-- مكتبة المصادقة المضافة للأمان والتوثيق الصامت -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
@@ -297,27 +300,52 @@
     </div>
 
     <div id="inAppBrowserAlert">
-        📲 أنت تفتح التطبيق من متصفح داخلي!<br>
-        اضغط على <strong>الثلاث نقاط (⁝)</strong> بأعلى الشاشة واختر <strong>"فتح في Chrome"</strong> لتتمكن من تثبيت التطبيق والعمل بكفاءة بدون نت.
+        📲 أنت تفتح التطبيق من متصفح واتساب الداخلي!<br>
+        اضغط على <strong>الثلاث نقاط (⁝)</strong> بأعلى الشاشة واختر <strong>"فتح في Chrome"</strong> لتتمكن من تثبيت التطبيق والعمل بدون نت.
     </div>
 
     <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
+
+    <div id="kioskCard">
+        <div id="kioskIcon" style="font-size:45px; margin-bottom:10px;">👋</div>
+        <h2 id="kioskName" style="margin:0 0 8px 0; color:var(--primary); font-size:20px; border:none;">...</h2>
+        <div id="kioskBadge" style="display:inline-block; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px; margin-bottom:10px; color:white;">...</div>
+        <div id="kioskStats" style="font-size:13px; color:#2d3436; margin-top:8px; line-height:1.5;">...</div>
+    </div>
 
     <div id="pendingSyncBadge" onclick="pushPendingData()">
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
     </div>
 
-    <!-- بطاقة الترحيب والتحفيز الفوري عند مسح الكارنيه -->
-    <div id="kioskCard">
-        <div id="kioskIcon" style="font-size: 45px; margin-bottom: 8px;">✨</div>
-        <h3 id="kioskName" style="margin: 0; color: var(--primary); border: none; font-size: 19px;"></h3>
-        <div style="margin: 8px 0;">
-            <span id="kioskBadge" class="role-badge" style="font-size: 13px; padding: 4px 10px;"></span>
+    <!-- نافذة تجهيز وتأمين السحابة لأول مرة -->
+    <div id="cloudSetupModal" class="modal" style="display:none; z-index:3000;">
+        <div class="modal-content" style="max-width:480px; text-align:right;">
+            <span class="close-btn" onclick="closeCloudModal()">&times;</span>
+            <div style="font-size:40px; text-align:center; margin-bottom:5px;">☁️</div>
+            <h3 style="margin:0 0 10px 0; color:var(--primary); border:none; text-align:center;">إعداد وتأمين الربط السحابي</h3>
+            <p style="font-size:12px; color:#636e72; line-height:1.6;">
+                يُطلب هذا الإجراء لمرة واحدة فقط لتأمين مزامنة الحضور بين أجهزة الخدام بحساب سحابي معتمد:
+            </p>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; font-weight:bold;">كود Config (JSON):</label>
+                <textarea id="modalFirebaseConfigInput" rows="3" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }' style="font-family:monospace; font-size:12px;"></textarea>
+            </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-size:12px; font-weight:bold;">البريد الإلكتروني المعتمد للسحابة:</label>
+                <input type="email" id="modalCloudEmail" placeholder="service@khedmety.com" autocomplete="off">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:bold;">كلمة مرور السحابة:</label>
+                <input type="password" id="modalCloudPassword" placeholder="••••••••" autocomplete="off">
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-success" onclick="saveConfigFromModal()" style="margin:0; flex:1;">حفظ وتأمين السحابة 🔒</button>
+                <button class="btn-mini" onclick="closeCloudModal()" style="background:#b2bec3; color:#2d3436; margin:0; width:100px;">العمل محلياً</button>
+            </div>
         </div>
-        <div id="kioskStats" style="font-size: 13px; color: #555; line-height: 1.5; margin-top: 10px;"></div>
     </div>
 
-    <!-- نافذة تسجيل الدخول الشاملة -->
+    <!-- شاشة تسجيل الدخول المعتادة للخدام -->
     <div id="loginScreen">
         <div class="login-card">
             <h2 id="loginChurchDisplay" style="margin-top:0; border:none; color:var(--primary);">كنيسة الملاك والروماني بالمطرية</h2>
@@ -341,7 +369,6 @@
         </div>
     </div>
 
-    <!-- حاوية التطبيق الرئيسية -->
     <div class="container" id="mainApp" style="display:none;">
         <div id="pwaInstallBanner">
             <div style="font-size: 12px; font-weight: bold;">📱 تثبيت "خدمتي برو" كتطبيق على هاتفك؟</div>
@@ -871,6 +898,32 @@
                 </div>
             </div>
 
+            <!-- لوحة الجلسات الحية والتحكم في دخول الخدام للأدمن -->
+            <div class="admin-only" style="background:#fff; border:1px solid #dfe6e9; padding:15px; border-radius:10px; margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                    <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">📱 الأجهزة المتصلة حالياً (سجل الجلسات الحية)</h3>
+                    <button class="btn-mini btn-danger" onclick="terminateAllSessions()" style="width:auto; padding:6px 12px; margin:0;">🚨 طرد جميع الخدام المتصلين</button>
+                </div>
+                <p style="font-size:12px; color:#636e72; margin:0 0 10px 0;">يمكنك مراقبة المتواجدين على المنظومة وطرد أي جهاز غير مرغوب فيه فوراً:</p>
+                
+                <div class="table-responsive">
+                    <table id="activeSessionsTable" class="adaptive-card-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الخادم</th>
+                                <th>نوع الجهاز</th>
+                                <th>وقت الدخول</th>
+                                <th>الحالة</th>
+                                <th>إجراء الأدمن</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeSessionsTbody">
+                            <tr><td colspan="5" style="color:#888;">جاري فحص الجلسات المتصلة...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <h3>مواعيد الاجتماع الأساسي (يوم الجمعة) ونظام الصيف</h3>
             <div class="form-grid">
                 <div class="form-group">
@@ -923,9 +976,13 @@
                 </div>
             </div>
 
-            <h3>مفاتيح الربط السحابي (Firebase)</h3>
-            <textarea id="firebaseConfigInput" rows="4" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
-            <button class="btn-primary" onclick="saveFirebaseConfig()" style="margin-top:6px;">حفظ والاتصال بالسحابة ☁️</button>
+            <h3>مفاتيح وتأمين الربط السحابي (Firebase)</h3>
+            <textarea id="firebaseConfigInput" rows="3" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:8px;">
+                <input type="email" id="settingsCloudEmail" placeholder="البريد السحابي المعتمد" autocomplete="off">
+                <input type="password" id="settingsCloudPassword" placeholder="كلمة مرور السحابة" autocomplete="off">
+            </div>
+            <button class="btn-primary" onclick="saveFirebaseConfig()" style="margin-top:8px;">حفظ وتأمين الاتصال بالسحابة ☁️</button>
             <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات 💾</button>
         </div>
 
@@ -971,17 +1028,6 @@
                     </label>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- نافذة إعداد السحابة المفقودة (Cloud Setup Modal) -->
-    <div id="cloudSetupModal" class="modal" style="z-index: 5000;">
-        <div class="modal-content" style="max-width: 450px;">
-            <span class="close-btn" onclick="closeCloudModal()">&times;</span>
-            <h3 style="margin-top:0; color:var(--primary); border:none;">☁️ إعداد الربط السحابي (Firebase)</h3>
-            <p style="font-size:12px; color:#636e72;">ألصق كائن JSON الخاص بمشروع Firebase لمزامنة الحضور تلقائياً بين الأجهزة:</p>
-            <textarea id="modalFirebaseConfigInput" rows="5" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
-            <button class="btn-success" onclick="saveConfigFromModal()" style="margin-top:10px;">حفظ وتفعيل السحابة</button>
         </div>
     </div>
 
@@ -1164,9 +1210,14 @@
         </div>
     </div>
 
+    <!-- كود الجافاسكريبت الموحد والشامل -->
     <script>
         let db = null;
         let isFirebaseActive = false;
+
+        // معرف فريد لجلسة هذا الجهاز (لأغراض إدارة الجلسات الحية)
+        let myCurrentSessionId = localStorage.getItem('my_active_session_id') || ('sess_' + Date.now() + '_' + Math.floor(Math.random()*1000));
+        localStorage.setItem('my_active_session_id', myCurrentSessionId);
 
         function checkInAppBrowser() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -1316,6 +1367,11 @@
             if (fbInput && !fbInput.value) {
                 fbInput.value = localStorage.getItem('my_firebase_config') || '';
             }
+            let sMail = document.getElementById('settingsCloudEmail');
+            let sPass = document.getElementById('settingsCloudPassword');
+            if (sMail) sMail.value = localStorage.getItem('cloud_auth_email') || '';
+            if (sPass) sPass.value = localStorage.getItem('cloud_auth_pass') || '';
+
             updateCloudUsageUI();
         }
 
@@ -1338,6 +1394,10 @@
                 renderAttendanceTable();
                 renderLiveCardsFeed();
                 updateCloudUsageUI();
+                registerActiveSession();
+                if (currentPermission === 'admin') {
+                    listenToActiveSessions();
+                }
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
                 document.getElementById('mainApp').style.display = 'none';
@@ -1392,6 +1452,10 @@
                 if (!confirm("⚠️ تنبيه: توجد بيانات لم يتم رفعها للسحابة بعد! هل تريد حقاً تسجيل الخروج الآن؟")) {
                     return;
                 }
+            }
+            if (currentUser && isFirebaseActive && db) {
+                let servantKey = (currentUser.id || currentUser.phone || 'admin').toString().replace(/\D/g, '');
+                db.ref(`active_sessions/${servantKey}`).remove().catch(() => {});
             }
             localStorage.removeItem('my_church_active_user');
             sessionStorage.removeItem('my_church_active_user');
@@ -1579,6 +1643,142 @@
             if (badge) badge.style.display = 'inline-flex';
             if (timeEl) timeEl.innerText = `آخر رفع: ${nowStr}`;
             updateCloudUsageUI();
+        }
+
+        // تسجيل الدخول الحي للجلسة لمراقبة الأجهزة
+        function registerActiveSession() {
+            if (!currentUser || !isFirebaseActive || !db) return;
+
+            let deviceType = /Mobi|Android/i.test(navigator.userAgent) ? "هاتف محمول 📱" : "كمبيوتر / لابتوب 💻";
+            let servantKey = (currentUser.id || currentUser.phone || 'admin').toString().replace(/\D/g, '');
+
+            let sessionData = {
+                sessionId: myCurrentSessionId,
+                servantName: currentUser.name,
+                role: currentUser.role || 'servant',
+                loginTime: new Date().toLocaleTimeString('ar-EG'),
+                loginDate: today,
+                device: deviceType,
+                status: "active"
+            };
+
+            db.ref(`active_sessions/${servantKey}`).set(sessionData).catch(() => {});
+
+            // استماع لحظي لأمر الطرد
+            db.ref(`active_sessions/${servantKey}`).on('value', snap => {
+                let val = snap.val();
+                if (val && val.status === "terminated") {
+                    db.ref(`active_sessions/${servantKey}`).remove().catch(() => {});
+                    localStorage.removeItem('my_church_active_user');
+                    sessionStorage.removeItem('my_church_active_user');
+                    currentUser = null;
+                    alert("⚠️ تم إنهاء جلستك وتسجيل خروجك من قِبل أمين الخدمة العام!");
+                    location.reload();
+                }
+            });
+        }
+
+        // عرض قائمة المتصلين للأدمن
+        function listenToActiveSessions() {
+            if (!isFirebaseActive || !db) return;
+
+            db.ref('active_sessions').on('value', snap => {
+                const tbody = document.getElementById('activeSessionsTbody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                let sessions = snap.val();
+                if (!sessions || Object.keys(sessions).length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="color:#888;">لا توجد أي جلسات نشطة حالياً.</td></tr>';
+                    return;
+                }
+
+                Object.keys(sessions).forEach(key => {
+                    let sess = sessions[key];
+                    let isMe = (sess.sessionId === myCurrentSessionId);
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td data-label="اسم الخادم"><strong>${sess.servantName}</strong> ${isMe ? '<span style="color:green; font-size:11px;">(أنت)</span>' : ''}</td>
+                        <td data-label="نوع الجهاز">${sess.device}</td>
+                        <td data-label="وقت الدخول" dir="ltr">${sess.loginDate} ${sess.loginTime}</td>
+                        <td data-label="الحالة"><span class="role-badge" style="background:var(--success);">متصل الآن 🟢</span></td>
+                        <td data-label="إجراء الأدمن">
+                            ${isMe ? '<span style="color:#888; font-size:11px;">جلستك الحالية</span>' : `<button class="btn-mini btn-danger" onclick="terminateSession('${key}', '${sess.servantName}')">طرد الجهاز ❌</button>`}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function terminateSession(servantKey, servantName) {
+            if (confirm(`هل أنت متأكد من رغبتك في طرد جهاز (${servantName}) وإخراجه فوراً؟`)) {
+                db.ref(`active_sessions/${servantKey}/status`).set("terminated").then(() => {
+                    showToast(`✅ تم إرسال أمر الطرد لـ ${servantName}`);
+                });
+            }
+        }
+
+        function terminateAllSessions() {
+            let pwd = prompt("أدخل كلمة مرور الأدمن لتأكيد طرد جميع الأجهزة المسجلة:");
+            if (pwd === adminPassword || pwd === "1234567") {
+                db.ref('active_sessions').once('value', snap => {
+                    let sessions = snap.val() || {};
+                    Object.keys(sessions).forEach(key => {
+                        if (sessions[key].sessionId !== myCurrentSessionId) {
+                            db.ref(`active_sessions/${key}/status`).set("terminated");
+                        }
+                    });
+                    alert("✅ تم طرد جميع الأجهزة المتصلة بالمنظومة فوراً!");
+                });
+            } else {
+                alert("❌ كلمة المرور غير صحيحة!");
+            }
+        }
+
+        // دالة تعديل وقت الحضور الخاصة بأمين الخدمة فقط
+        function editAttendanceTime(memberId) {
+            if (currentPermission !== 'admin') {
+                return alert("عفواً، تعديل وقت الحضور متاح لأمين الخدمة العام فقط!");
+            }
+
+            let rec = (attendanceRecord[today] || []).find(a => a.id.toString() === memberId.toString());
+            if (!rec) return;
+
+            let newTimeInput = prompt(`تعديل وقت حضور (${rec.name}):\nاكتب الوقت بصيغة (HH:MM) مثل 01:15 أو 13:30`, rec.time || "13:00");
+            if (!newTimeInput) return;
+
+            let timeParts = newTimeInput.trim().split(':');
+            if (timeParts.length < 2) return alert("❌ صيغة الوقت غير صحيحة! يرجى إدخال الساعة والدقيقة.");
+
+            let h = parseInt(timeParts[0]);
+            let m = parseInt(timeParts[1]);
+            if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+                return alert("❌ أرقام الساعة أو الدقائق غير منطقية!");
+            }
+
+            let formattedDisplayTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+            rec.time = formattedDisplayTime;
+
+            let isFri = isFridaySession(today);
+            let isSummerDay = settings.summerActive && (new Date().getDay().toString() === settings.summerDay);
+
+            if (!isFri || (isSummerDay && settings.ignoreSummerDelay)) {
+                rec.isAbsentDueToDelay = false;
+            } else {
+                let startTimeStr = settings.startTime || "13:00";
+                let [startH, startM] = startTimeStr.split(':').map(Number);
+                let diffMinutes = (h * 60 + m) - (startH * 60 + startM);
+                rec.isAbsentDueToDelay = diffMinutes >= (settings.absentAfter || 75);
+            }
+
+            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+            syncToCloud('attendance', attendanceRecord);
+
+            renderAttendanceTable();
+            renderLiveCardsFeed();
+            renderDashboard();
+            showToast(`✅ تم تعديل وقت الحضور إلى (${formattedDisplayTime})`);
         }
 
         function renderServantsTable() {
@@ -2772,11 +2972,16 @@
                 count++;
                 let tr = document.createElement('tr');
                 let status = a.isAbsentDueToDelay ? '<span style="color:red">تأخير شديد</span>' : (a.isBonusEvent ? '<span style="color:var(--purple); font-weight:bold;">⭐ بونص فعالية</span>' : '<span style="color:green">حاضر</span>');
+                
+                let editTimeBtn = (currentPermission === 'admin') 
+                    ? `<button class="btn-mini btn-warning" onclick="editAttendanceTime('${a.id}')" style="padding:2px 5px; font-size:10px; margin-right:4px;">✏️</button>` 
+                    : '';
+
                 tr.innerHTML = `
                     <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${a.code || a.id}</strong></td>
                     <td data-label="الاسم">${a.name}</td>
                     <td data-label="المرحلة">${a.stage || '-'}</td>
-                    <td data-label="وقت المسح" dir="ltr">${a.time}</td>
+                    <td data-label="وقت المسح" dir="ltr">${a.time} ${editTimeBtn}</td>
                     <td data-label="حضور">${status}</td>
                     <td data-label="تناول 🕊️">
                         <input type="checkbox" ${a.communion ? 'checked' : ''} onchange="toggleSpiritualStatus('${a.id}', 'communion', this.checked)" style="width:18px; height:18px; cursor:pointer;">
@@ -2824,7 +3029,7 @@
             if (elTotalVis) elTotalVis.innerText = allVisitationsList.length;
 
             servants.forEach(s => {
-                let present = (servantsAttendance[today] || []).find(x => x && x.id && x.id.toString() === s.id.toString());
+                let present = (servantsAttendance[today] || []).find(x => x.id.toString() === s.id.toString());
                 
                 let visits = allVisitationsList.filter(v => {
                     let vBy = (v.servant || '').trim().toLowerCase();
@@ -2890,7 +3095,7 @@
             tbody.innerHTML = '';
             
             let filtered = members.filter(m => {
-                let matchesSearch = (m.name || '').toLowerCase().includes(search) || 
+                let matchesSearch = m.name.toLowerCase().includes(search) || 
                                      (m.code && m.code.toString().toLowerCase().includes(search)) || 
                                      (m.phone && m.phone.includes(search));
                 let mStage = m.stage || "سنة أولى";
@@ -3214,7 +3419,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.12",
+                version: "2.13",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -3514,13 +3719,51 @@
 
         function saveFirebaseConfig() {
             let val = document.getElementById('firebaseConfigInput').value.trim();
+            let mailVal = document.getElementById('settingsCloudEmail').value.trim();
+            let passVal = document.getElementById('settingsCloudPassword').value.trim();
+
             if (!val) return alert("يرجى إدخال إعدادات الـ Config!");
             try {
                 localStorage.setItem('my_firebase_config', JSON.stringify(JSON.parse(val)));
-                showToast("✅ تم حفظ إعدادات السحابة! سيتم إعادة التحميل الآن");
+                if (mailVal) localStorage.setItem('cloud_auth_email', mailVal);
+                if (passVal) localStorage.setItem('cloud_auth_pass', passVal);
+
+                showToast("✅ تم حفظ إعدادات وتأمين السحابة! جاري التحديث...");
                 setTimeout(() => location.reload(), 1000);
             } catch (e) {
                 alert("❌ صيغة JSON غير صحيحة! تأكد من نسخ الكائن بشكل سليم.");
+            }
+        }
+
+        function showCloudSetupModal() { document.getElementById('cloudSetupModal').style.display = 'flex'; }
+        function closeCloudModal() { document.getElementById('cloudSetupModal').style.display = 'none'; }
+        
+        async function saveConfigFromModal() {
+            let configVal = document.getElementById('modalFirebaseConfigInput').value.trim();
+            let emailVal = document.getElementById('modalCloudEmail').value.trim();
+            let passVal = document.getElementById('modalCloudPassword').value.trim();
+
+            if (!configVal || !emailVal || !passVal) {
+                return alert("يرجى ملء جميع الحقول (كود السحابة، البريد، وكلمة المرور)!");
+            }
+
+            try {
+                let parsedConfig = JSON.parse(configVal);
+                localStorage.setItem('my_firebase_config', JSON.stringify(parsedConfig));
+                localStorage.setItem('cloud_auth_email', emailVal);
+                localStorage.setItem('cloud_auth_pass', passVal);
+
+                showToast("جاري توثيق الحساب السحابي... ⏳");
+
+                if (typeof firebase !== 'undefined') {
+                    if (!firebase.apps.length) firebase.initializeApp(parsedConfig);
+                    await firebase.auth().signInWithEmailAndPassword(emailVal, passVal);
+                }
+
+                alert("✅ تم تأمين الاتصال السحابي بنجاح تام!");
+                location.reload();
+            } catch (e) {
+                alert("❌ فشل التحقق: تأكد من صحة كود الـ JSON أو بيانات تسجيل الدخول السحابية.\n" + e.message);
             }
         }
 
@@ -3627,28 +3870,15 @@
             });
         }
 
-        function showCloudSetupModal() { 
-            let modal = document.getElementById('cloudSetupModal');
-            if (modal) modal.style.display = 'flex'; 
-        }
-        function closeCloudModal() { 
-            let modal = document.getElementById('cloudSetupModal');
-            if (modal) modal.style.display = 'none'; 
-        }
-        function saveConfigFromModal() {
-            let val = document.getElementById('modalFirebaseConfigInput').value.trim();
-            try {
-                localStorage.setItem('my_firebase_config', JSON.stringify(JSON.parse(val)));
-                alert("✅ تم حفظ الإعدادات السحابية! جاري التحديث.");
-                location.reload();
-            } catch (e) { alert("صيغة JSON غير صحيحة!"); }
-        }
-
-        function initFirebase() {
+        async function initFirebase() {
             let savedConfig = localStorage.getItem('my_firebase_config');
-            if (!savedConfig) {
+            let savedEmail = localStorage.getItem('cloud_auth_email');
+            let savedPass = localStorage.getItem('cloud_auth_pass');
+
+            if (!savedConfig || !savedEmail || !savedPass) {
                 let statusText = document.getElementById('cloudStatusText');
                 if (statusText) statusText.innerText = "العمل محلياً";
+                showCloudSetupModal();
                 return;
             }
 
@@ -3659,6 +3889,11 @@
                 }
 
                 if (typeof firebase !== 'undefined') {
+                    // تسجيل الدخول الصامت للتوثيق وفتح الأقفال السحابية
+                    if (!firebase.auth().currentUser) {
+                        await firebase.auth().signInWithEmailAndPassword(savedEmail, savedPass);
+                    }
+
                     db = firebase.database();
                     isFirebaseActive = true;
 
@@ -3794,7 +4029,7 @@
                 }
             } catch (e) { 
                 let statusText = document.getElementById('cloudStatusText');
-                if (statusText) statusText.innerText = "خطأ في الاتصال"; 
+                if (statusText) statusText.innerText = "خطأ في الاتصال بالسحابة"; 
             }
         }
 
