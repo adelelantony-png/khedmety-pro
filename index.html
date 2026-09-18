@@ -14,6 +14,71 @@
     <link rel="shortcut icon" href="icon.png" type="image/x-icon">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
+
+    <!-- صائد ومحذر الأخطاء الاستباقي الموحد (يعمل قبل أي مكتبة وفي الشاشة الافتتاحية) -->
+    <script>
+        window.appErrorLogs = [];
+        function displayLiveSystemError(errorMessage) {
+            window.appErrorLogs.push(errorMessage);
+            let errBanner = document.getElementById('liveErrorLog');
+            if (!errBanner) {
+                errBanner = document.createElement('div');
+                errBanner.id = 'liveErrorLog';
+                errBanner.style.cssText = `
+                    position: fixed;
+                    bottom: 15px;
+                    left: 5%;
+                    width: 90%;
+                    max-width: 500px;
+                    background: #2d3436;
+                    color: #fab1a0;
+                    border-right: 5px solid #d63031;
+                    padding: 12px;
+                    font-size: 12px;
+                    font-family: monospace;
+                    z-index: 9999999;
+                    border-radius: 8px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+                    direction: ltr;
+                    text-align: left;
+                    box-sizing: border-box;
+                `;
+                document.body ? document.body.appendChild(errBanner) : document.addEventListener('DOMContentLoaded', () => document.body.appendChild(errBanner));
+            }
+
+            errBanner.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-bottom:1px solid #636e72; padding-bottom:4px;">
+                    <strong style="color:#ff7675;">⚠️ تنبيه عطل بالنظام (System Error)</strong>
+                    <span onclick="document.getElementById('liveErrorLog').remove()" style="cursor:pointer; color:#fff; font-weight:bold; padding:0 6px;">[✕ إغلاق]</span>
+                </div>
+                <div style="max-height:100px; overflow-y:auto; word-break:break-word; color:#dfe6e9;">
+                    ${errorMessage}
+                </div>
+                <div style="margin-top:8px; display:flex; gap:6px;">
+                    <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الأخطاء!')" 
+                            style="flex:1; padding:5px; font-size:11px; background:#0984e3; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                        نسخ كود الخطأ 📋
+                    </button>
+                    <button onclick="location.reload()" 
+                            style="flex:1; padding:5px; font-size:11px; background:#e17055; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                        إعادة تحميل الصفحة 🔄
+                    </button>
+                </div>
+            `;
+        }
+
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            let file = url ? url.split('/').pop() : 'script';
+            let errText = `[${file}:${lineNo}] ${msg}`;
+            displayLiveSystemError(errText);
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            let reason = event.reason ? (event.reason.message || event.reason) : 'Unknown Promise Rejection';
+            displayLiveSystemError(`[Promise] ${reason}`);
+        });
+    </script>
     
     <style>
         :root { 
@@ -179,6 +244,16 @@
             top: 0; z-index: 9998; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
+        #inAppBrowserAlert {
+            display: none; background: #ffeaa7; color: #d35400; text-align: center;
+            padding: 10px; font-size: 12px; border-bottom: 2px solid #fdcb6e;
+        }
+
+        #pwaInstallBanner {
+            display: none; background: #eaf2f8; border: 1px solid #74b9ff; padding: 10px;
+            border-radius: 8px; margin-bottom: 12px; justify-content: space-between; align-items: center;
+        }
+
         .live-scanner-container { background: #fff; border-radius: 16px; border: 2px solid #dcdde1; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); margin-top: 10px; }
         .live-stream-header { display: flex; justify-content: space-between; align-items: center; background: #eaf2f8; padding: 8px 14px; border-radius: 8px; margin-top: 15px; font-weight: bold; color: var(--primary); }
         .live-cards-feed { max-height: 280px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
@@ -193,6 +268,20 @@
             100% { opacity: 1; transform: translateY(0); }
         }
         .live-scan-index { background: #edf2f7; color: var(--primary); font-weight: bold; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+
+        /* نافذة الترحيب السريع عند المسح (Kiosk Card) */
+        #kioskCard {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); z-index: 10000;
+            background: #ffffff; border-radius: 16px; padding: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.35); text-align: center;
+            width: 85%; max-width: 380px; border: 3px solid var(--accent);
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -208,8 +297,8 @@
     </div>
 
     <div id="inAppBrowserAlert">
-        📲 أنت تفتح التطبيق من متصفح واتساب الداخلي!<br>
-        اضغط على <strong>الثلاث نقاط (⁝)</strong> بأعلى الشاشة واختر <strong>"فتح في Chrome"</strong> لتتمكن من تثبيت التطبيق والعمل بدون نت.
+        📲 أنت تفتح التطبيق من متصفح داخلي!<br>
+        اضغط على <strong>الثلاث نقاط (⁝)</strong> بأعلى الشاشة واختر <strong>"فتح في Chrome"</strong> لتتمكن من تثبيت التطبيق والعمل بكفاءة بدون نت.
     </div>
 
     <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
@@ -218,6 +307,17 @@
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
     </div>
 
+    <!-- بطاقة الترحيب والتحفيز الفوري عند مسح الكارنيه -->
+    <div id="kioskCard">
+        <div id="kioskIcon" style="font-size: 45px; margin-bottom: 8px;">✨</div>
+        <h3 id="kioskName" style="margin: 0; color: var(--primary); border: none; font-size: 19px;"></h3>
+        <div style="margin: 8px 0;">
+            <span id="kioskBadge" class="role-badge" style="font-size: 13px; padding: 4px 10px;"></span>
+        </div>
+        <div id="kioskStats" style="font-size: 13px; color: #555; line-height: 1.5; margin-top: 10px;"></div>
+    </div>
+
+    <!-- نافذة تسجيل الدخول الشاملة -->
     <div id="loginScreen">
         <div class="login-card">
             <h2 id="loginChurchDisplay" style="margin-top:0; border:none; color:var(--primary);">كنيسة الملاك والروماني بالمطرية</h2>
@@ -241,6 +341,7 @@
         </div>
     </div>
 
+    <!-- حاوية التطبيق الرئيسية -->
     <div class="container" id="mainApp" style="display:none;">
         <div id="pwaInstallBanner">
             <div style="font-size: 12px; font-weight: bold;">📱 تثبيت "خدمتي برو" كتطبيق على هاتفك؟</div>
@@ -398,7 +499,7 @@
                 <button class="btn-success" onclick="addMasterPlanEvent()">حفظ وإدراج في خطة السنة 🚀</button>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:gap; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
                 <h3>جدول أحداث ومحطات السنة مرتبة زمنياً</h3>
                 <button class="btn-danger admin-only" onclick="clearAllMasterPlan()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الفعاليات</button>
             </div>
@@ -873,6 +974,17 @@
         </div>
     </div>
 
+    <!-- نافذة إعداد السحابة المفقودة (Cloud Setup Modal) -->
+    <div id="cloudSetupModal" class="modal" style="z-index: 5000;">
+        <div class="modal-content" style="max-width: 450px;">
+            <span class="close-btn" onclick="closeCloudModal()">&times;</span>
+            <h3 style="margin-top:0; color:var(--primary); border:none;">☁️ إعداد الربط السحابي (Firebase)</h3>
+            <p style="font-size:12px; color:#636e72;">ألصق كائن JSON الخاص بمشروع Firebase لمزامنة الحضور تلقائياً بين الأجهزة:</p>
+            <textarea id="modalFirebaseConfigInput" rows="5" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
+            <button class="btn-success" onclick="saveConfigFromModal()" style="margin-top:10px;">حفظ وتفعيل السحابة</button>
+        </div>
+    </div>
+
     <!-- نافذة الملف الشخصي المبوب -->
     <div id="profileModal" class="modal">
         <div class="modal-content">
@@ -1026,7 +1138,7 @@
         </div>
     </div>
 
-    <!-- نافذة قائمة الحضور اليدوي السريع (Checkboxes) -->
+    <!-- نافذة قائمة الحضور اليدوي السريع -->
     <div id="manualAttendanceModal" class="modal" style="z-index:4000;">
         <div class="modal-content" style="max-width:600px;">
             <span class="close-btn" onclick="closeManualAttendanceModal()">&times;</span>
@@ -1056,66 +1168,6 @@
         let db = null;
         let isFirebaseActive = false;
 
-        window.appErrorLogs = [];
-
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            let errText = `[سطر ${lineNo}] ${msg}`;
-            window.appErrorLogs.push(errText);
-
-            let activeUser = null;
-            try {
-                activeUser = JSON.parse(localStorage.getItem('my_church_active_user') || sessionStorage.getItem('my_church_active_user'));
-            } catch(e){}
-
-            let isAuthorized = activeUser && (
-                activeUser.role === 'admin' || 
-                activeUser.permission === 'admin' || 
-                activeUser.permission === 'developer'
-            );
-
-            if (!isAuthorized) return false;
-
-            let errBanner = document.getElementById('liveErrorLog');
-            if (!errBanner) {
-                errBanner = document.createElement('div');
-                errBanner.id = 'liveErrorLog';
-                errBanner.style.cssText = `
-                    position: fixed;
-                    bottom: 12px;
-                    left: 12px;
-                    background: #2d3436;
-                    color: #ff7675;
-                    border-left: 5px solid #d63031;
-                    padding: 10px 14px;
-                    font-size: 11px;
-                    font-family: monospace;
-                    z-index: 999999;
-                    border-radius: 8px;
-                    max-width: 90%;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-                    direction: ltr;
-                    text-align: left;
-                `;
-                document.body.appendChild(errBanner);
-            }
-
-            errBanner.innerHTML = `
-                <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:4px;">
-                    <strong style="color:#fab1a0;">⚠️ تم رصد خطأ برمجي (خاص بالأدمن):</strong>
-                    <span onclick="document.getElementById('liveErrorLog').remove()" style="cursor:pointer; color:#fff; font-weight:bold;">[إغلاق ✕]</span>
-                </div>
-                <div style="max-height:80px; overflow-y:auto; word-break:break-word;">
-                    ${errText}
-                </div>
-                <button onclick="navigator.clipboard.writeText(window.appErrorLogs.join('\\n')); alert('تم نسخ سجل الأخطاء!')" 
-                        style="margin-top:6px; padding:3px 8px; font-size:10px; background:#0984e3; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                    نسخ تفاصيل الخطأ 📋
-                </button>
-            `;
-
-            return false;
-        };
-
         function checkInAppBrowser() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             const isWhatsApp = ua.indexOf('WhatsApp') > -1 || ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1;
@@ -1134,7 +1186,7 @@
             return digits;
         }
 
-        let audioCtx = window.audioCtx || null;
+        let audioCtx = null;
         function playBeepSound(type) {
             try {
                 if (!audioCtx) {
@@ -1234,7 +1286,7 @@
                     bDay = parts[0] ? parseInt(parts[0]).toString() : "01";
                 }
             }
-            m.qrCode = `${m.name.trim()}/${bDay}`;
+            m.qrCode = `${(m.name || '').trim()}/${bDay}`;
             return m.qrCode;
         }
 
@@ -1429,7 +1481,7 @@
 
             Object.keys(attendanceRecord).forEach(d => {
                 let recList = attendanceRecord[d] || [];
-                let found = recList.find(a => a.id.toString() === memberId.toString() && !a.isAbsentDueToDelay);
+                let found = recList.find(a => a && a.id && a.id.toString() === memberId.toString() && !a.isAbsentDueToDelay);
                 if (found) {
                     if (isFridaySession(d)) {
                         fridayAttended++;
@@ -1881,7 +1933,7 @@
 
             let attendedSessions = 0;
             Object.keys(servantsAttendance).forEach(d => {
-                let present = (servantsAttendance[d] || []).some(s => s.id.toString() === servantId.toString());
+                let present = (servantsAttendance[d] || []).some(s => s && s.id && s.id.toString() === servantId.toString());
                 if (present) attendedSessions++;
             });
 
@@ -2542,11 +2594,9 @@
             lastScannedTime = nowTimestamp;
 
             let parsedName = scannedText;
-            let parsedDay = "";
             if (scannedText.includes('/')) {
                 let parts = scannedText.split('/');
                 parsedName = parts[0].trim();
-                parsedDay = parts[1] ? parts[1].trim() : "";
             }
 
             let member = members.find(m => {
@@ -2774,7 +2824,7 @@
             if (elTotalVis) elTotalVis.innerText = allVisitationsList.length;
 
             servants.forEach(s => {
-                let present = (servantsAttendance[today] || []).find(x => x.id.toString() === s.id.toString());
+                let present = (servantsAttendance[today] || []).find(x => x && x.id && x.id.toString() === s.id.toString());
                 
                 let visits = allVisitationsList.filter(v => {
                     let vBy = (v.servant || '').trim().toLowerCase();
@@ -2840,7 +2890,7 @@
             tbody.innerHTML = '';
             
             let filtered = members.filter(m => {
-                let matchesSearch = m.name.toLowerCase().includes(search) || 
+                let matchesSearch = (m.name || '').toLowerCase().includes(search) || 
                                      (m.code && m.code.toString().toLowerCase().includes(search)) || 
                                      (m.phone && m.phone.includes(search));
                 let mStage = m.stage || "سنة أولى";
@@ -3577,8 +3627,14 @@
             });
         }
 
-        function showCloudSetupModal() { document.getElementById('cloudSetupModal').style.display = 'flex'; }
-        function closeCloudModal() { document.getElementById('cloudSetupModal').style.display = 'none'; }
+        function showCloudSetupModal() { 
+            let modal = document.getElementById('cloudSetupModal');
+            if (modal) modal.style.display = 'flex'; 
+        }
+        function closeCloudModal() { 
+            let modal = document.getElementById('cloudSetupModal');
+            if (modal) modal.style.display = 'none'; 
+        }
         function saveConfigFromModal() {
             let val = document.getElementById('modalFirebaseConfigInput').value.trim();
             try {
@@ -3593,7 +3649,6 @@
             if (!savedConfig) {
                 let statusText = document.getElementById('cloudStatusText');
                 if (statusText) statusText.innerText = "العمل محلياً";
-                showCloudSetupModal();
                 return;
             }
 
@@ -3640,7 +3695,7 @@
                         } 
                     });
 
-                    // 2. مزامنة المخدومين وتوحيد الحقول مع دعم المسح السحابي التام
+                    // 2. مزامنة المخدومين
                     db.ref('members').on('value', snap => { 
                         if (shouldAcceptCloudData('members')) { 
                             let val = snap.val();
@@ -3674,13 +3729,12 @@
                         } 
                     });
 
-                    // 3. مزامنة الحضور (متوافقة مع بنية القواعد الجديدة الموزعة حسب رقم الهاتف / الكود)
+                    // 3. مزامنة الحضور
                     db.ref('attendance').on('value', snap => {
                         if (shouldAcceptCloudData('attendance')) {
                             let cloudData = snap.exists() ? snap.val() : {};
                             let formattedRecord = {};
                             
-                            // تحويل بنية القواعد الجديدة الموزعة إلى مصفوفة اليوم المعتادة في الموقع
                             Object.keys(cloudData).forEach(dateKey => {
                                 let dayNode = cloudData[dateKey];
                                 if (Array.isArray(dayNode)) {
