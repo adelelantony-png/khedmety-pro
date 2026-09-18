@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- صائد ومحذر الأخطاء التلقائي (يعمل فوراً في كل الشاشات والافتتاحية والموبايل) -->
+    <!-- محذر وصائد الأخطاء التلقائي الاستباقي (يعمل فوراً في كل الشاشات والافتتاحية والموبايل) -->
     <script>
         window.appErrorLogs = [];
         function displayLiveSystemError(errorMessage) {
@@ -77,6 +77,30 @@
             let reason = event.reason ? (event.reason.message || event.reason) : 'Promise Rejection';
             displayLiveSystemError(`[Promise] ${reason}`);
         });
+
+        // 1. فحص وتطبيق رابط التهيئة التلقائي إن وجد في رابط الصفحة
+        (function checkAutoSetupFromUrl() {
+            let hash = window.location.hash;
+            if (hash && hash.startsWith('#setup=')) {
+                try {
+                    let encodedPayload = hash.replace('#setup=', '');
+                    let jsonString = decodeURIComponent(escape(atob(encodedPayload)));
+                    let payload = JSON.parse(jsonString);
+
+                    if (payload.cfg && payload.em && payload.pw) {
+                        localStorage.setItem('my_firebase_config', JSON.stringify(payload.cfg));
+                        localStorage.setItem('cloud_auth_email', payload.em);
+                        localStorage.setItem('cloud_auth_pass', payload.pw);
+
+                        window.history.replaceState(null, null, window.location.pathname);
+                        alert("✅ تم ضبط وإعداد السحابة لجهازك بنجاح تام وبشكل آلي!");
+                        location.reload();
+                    }
+                } catch (err) {
+                    console.error("فشل استخراج بيانات الرابط التلقائي:", err);
+                }
+            }
+        })();
     </script>
     
     <style>
@@ -289,7 +313,6 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <!-- مكتبة المصادقة المضافة للأمان والتوثيق الصامت -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
@@ -317,7 +340,7 @@
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
     </div>
 
-    <!-- نافذة تجهيز وتأمين السحابة لأول مرة -->
+    <!-- نافذة تجهيز وتأمين السحابة لأول مرة يدويّاً (إن لم يُستخدم الرابط التلقائي) -->
     <div id="cloudSetupModal" class="modal" style="display:none; z-index:3000;">
         <div class="modal-content" style="max-width:480px; text-align:right;">
             <span class="close-btn" onclick="closeCloudModal()">&times;</span>
@@ -328,7 +351,7 @@
             </p>
             <div style="margin-bottom:8px;">
                 <label style="font-size:12px; font-weight:bold;">كود Config (JSON):</label>
-                <textarea id="modalFirebaseConfigInput" rows="3" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }' style="font-family:monospace; font-size:12px;"></textarea>
+                <textarea id="modalFirebaseConfigInput" rows="4" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }' style="font-family:monospace; font-size:12px;"></textarea>
             </div>
             <div style="margin-bottom:8px;">
                 <label style="font-size:12px; font-weight:bold;">البريد الإلكتروني المعتمد للسحابة:</label>
@@ -867,6 +890,17 @@
                 </div>
             </div>
 
+            <!-- بطاقة إرسال رابط التفعيل التلقائي للخادم عبر واتساب بدون إدخال يدوي -->
+            <div class="admin-only" style="background:#e8f4fd; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
+                <h4 style="margin:0 0 6px 0; color:var(--primary); font-size:15px;">🔗 إرسال رابط التهيئة التلقائي للخادم (One-Click Setup)</h4>
+                <p style="font-size:12px; color:#555; margin:0 0 10px 0; line-height:1.5;">
+                    أرسل رابطاً مشفراً للخادم عبر واتساب لتفعيل السحابة على هاتفه بضغطة واحدة دون كتابة كود الـ JSON أو البريد أو كلمة المرور:
+                </p>
+                <button class="btn-primary" onclick="shareAutoSetupWhatsAppLink()" style="margin:0; padding:12px; font-size:13px;">
+                    📲 إرسال رابط التفعيل التلقائي عبر WhatsApp
+                </button>
+            </div>
+
             <!-- لوحة مراقبة استهلاك سحابة Firebase الذكية -->
             <div style="background:#eaf2f8; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -977,7 +1011,7 @@
             </div>
 
             <h3>مفاتيح وتأمين الربط السحابي (Firebase)</h3>
-            <textarea id="firebaseConfigInput" rows="3" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
+            <textarea id="firebaseConfigInput" rows="4" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:8px;">
                 <input type="email" id="settingsCloudEmail" placeholder="البريد السحابي المعتمد" autocomplete="off">
                 <input type="password" id="settingsCloudPassword" placeholder="كلمة مرور السحابة" autocomplete="off">
@@ -1215,7 +1249,6 @@
         let db = null;
         let isFirebaseActive = false;
 
-        // معرف فريد لجلسة هذا الجهاز (لأغراض إدارة الجلسات الحية)
         let myCurrentSessionId = localStorage.getItem('my_active_session_id') || ('sess_' + Date.now() + '_' + Math.floor(Math.random()*1000));
         localStorage.setItem('my_active_session_id', myCurrentSessionId);
 
@@ -1645,7 +1678,7 @@
             updateCloudUsageUI();
         }
 
-        // تسجيل الدخول الحي للجلسة لمراقبة الأجهزة
+        // تسجيل بصمة الجلسة في Firebase
         function registerActiveSession() {
             if (!currentUser || !isFirebaseActive || !db) return;
 
@@ -1664,7 +1697,7 @@
 
             db.ref(`active_sessions/${servantKey}`).set(sessionData).catch(() => {});
 
-            // استماع لحظي لأمر الطرد
+            // استماع فوري لأمر الطرد
             db.ref(`active_sessions/${servantKey}`).on('value', snap => {
                 let val = snap.val();
                 if (val && val.status === "terminated") {
@@ -1678,7 +1711,7 @@
             });
         }
 
-        // عرض قائمة المتصلين للأدمن
+        // عرض المتصلين حالياً في لوحة الإعدادات للأدمن
         function listenToActiveSessions() {
             if (!isFirebaseActive || !db) return;
 
@@ -1736,7 +1769,31 @@
             }
         }
 
-        // دالة تعديل وقت الحضور الخاصة بأمين الخدمة فقط
+        // دالة توليد ومشاركة رابط التفعيل التلقائي عبر واتساب
+        function shareAutoSetupWhatsAppLink() {
+            let savedConfig = localStorage.getItem('my_firebase_config');
+            let savedEmail = localStorage.getItem('cloud_auth_email');
+            let savedPass = localStorage.getItem('cloud_auth_pass');
+
+            if (!savedConfig || !savedEmail || !savedPass) {
+                return alert("⚠️ يرجى حفظ وتأمين السحابة على جهازك أولاً من نافذة الإعدادات قبل توليد الرابط!");
+            }
+
+            let payload = {
+                cfg: JSON.parse(savedConfig),
+                em: savedEmail,
+                pw: savedPass
+            };
+
+            let encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+            let fullSetupUrl = `${window.location.origin}${window.location.pathname}#setup=${encodedData}`;
+
+            let msg = `سلام ونعمة يا خادم،\nاضغط على الرابط التالي لتفعيل وربط تطبيق "خدمتي برو" بالسحابة على هاتفك تلقائياً وبضغطة واحدة:\n\n${fullSetupUrl}`;
+
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        // دالة تعديل وقت الحضور الخاصة بأمين الخدمة
         function editAttendanceTime(memberId) {
             if (currentPermission !== 'admin') {
                 return alert("عفواً، تعديل وقت الحضور متاح لأمين الخدمة العام فقط!");
@@ -3419,7 +3476,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.13",
+                version: "2.14",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -3889,7 +3946,6 @@
                 }
 
                 if (typeof firebase !== 'undefined') {
-                    // تسجيل الدخول الصامت للتوثيق وفتح الأقفال السحابية
                     if (!firebase.auth().currentUser) {
                         await firebase.auth().signInWithEmailAndPassword(savedEmail, savedPass);
                     }
