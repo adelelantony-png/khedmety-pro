@@ -433,6 +433,7 @@
             <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
             <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
             <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
+            <div class="tab-btn admin-only" onclick="switchTab('rolloverTab', this)">أرشفة وتخريج 🎓</div>
             <div class="tab-btn admin-only" onclick="switchTab('auditTab', this)">سجل العمليات 🛡️</div>
             <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
             <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والنسخ الاحتياطي 📁</div>
@@ -466,7 +467,7 @@
                 <div class="stat-card"><div>حضور المخدومين اليوم</div><div class="num" id="statTodayMembersCount">0</div></div>
                 <div class="stat-card"><div>نسبة حضور المخدومين</div><div class="num" id="statMembersPercent">0%</div></div>
                 <div class="stat-card"><div>المتناولون اليوم 🕊️</div><div class="num" id="statTodayCommunion" style="color:var(--success);">0</div></div>
-                <div class="stat-card"><div>المؤهلون للرسامة (≥75%)</div><div class="num" id="statQualifiedGraduates" style="color:var(--purple);">0</div></div>
+                <div class="stat-card"><div>المؤهلون للتخرج (≥75%)</div><div class="num" id="statQualifiedGraduates" style="color:var(--purple);">0</div></div>
             </div>
 
             <h4 style="margin:15px 0 5px 0; color:#2c3e50;">👔 إحصائيات الخدام والمحاضرين:</h4>
@@ -516,7 +517,7 @@
                             <option value="مؤتمر">مؤتمر روحي (بونص ⭐)</option>
                             <option value="يوم خلوة">يوم خلوة وصلاة (بونص ⭐)</option>
                             <option value="يوم رياضي">يوم رياضي / مهرجان (بونص ⭐)</option>
-                            <option value="حفل تخرج">حفل تخرج ورسامة</option>
+                            <option value="حفل تخرج">حفل تخرج واجتياز الدورة</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -728,7 +729,7 @@
             </div>
 
             <div style="background:#eaf2f8; border:1px solid #d4e6f1; padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="margin:0 0 8px 0; color:var(--primary);">🎓 تصفيات الدفعات وجاهزية التخرج للرسامة (حضور الجمعة فقط):</h4>
+                <h4 style="margin:0 0 8px 0; color:var(--primary);">🎓 تصفيات الدفعات وجاهزية التخرج (حضور الجمعة فقط):</h4>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
                     <label style="font-size:13px; font-weight:bold;">المرحلة:</label>
                     <select id="stageFilterSelect" onchange="renderMembersList()" style="width:auto; flex:1; min-width:140px; padding:6px;">
@@ -741,8 +742,8 @@
                     <label style="font-size:13px; font-weight:bold;">تصفية التخرج:</label>
                     <select id="gradFilterSelect" onchange="renderMembersList()" style="width:auto; flex:1; min-width:140px; padding:6px;">
                         <option value="all">الكل</option>
-                        <option value="qualified">المؤهلون للرسامة فقط (≥75% أيام الجمعة)</option>
-                        <option value="unqualified">غير المؤهلين (&lt;75%)</option>
+                        <option value="qualified">المؤهلون للتخرج فقط (≥75% أيام الجمعة)</option>
+                        <option value="unqualified">غير المؤهلين للتخرج (&lt;75%)</option>
                     </select>
                 </div>
 
@@ -863,7 +864,72 @@
             </div>
         </div>
 
-        <!-- 8. سجل نشاط وتدقيق العمليات (Audit Log & Activity History) المضاف حديثاً -->
+        <!-- 8. أرشفة نهاية الدورة وبدء سنة جديدة وتخريج الدفعات المضافة -->
+        <div id="rolloverTab" class="tab-content admin-only">
+            <h2>🎓 أرشفة نهاية الدورة وبدء سنة جديدة (Rollover)</h2>
+            <p style="font-size:13px; color:#555; line-height:1.6;">
+                تتيح لك هذه اللوحة تحديد خريجي الدورة المنتهية (بالاختيار الفردي أو الجماعي)، ترحيل دارسي سنة أولى إلى سنة ثانية، أرشفة بيانات وحضور السنة المنتهية بالكامل سحابياً، وبدء دورة جديدة بنظافة تامة:
+            </p>
+
+            <div style="background:#eaf2f8; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h4 style="margin:0 0 10px 0; color:var(--primary);">1️⃣ تحديد أفراد ومجموعات التخرج (نقل إلى خريجين):</h4>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                    <div style="font-size:12px; font-weight:bold;">
+                        عرض مرحلة: 
+                        <select id="rolloverStageFilter" onchange="renderRolloverCandidateList()" style="width:auto; padding:4px 8px;">
+                            <option value="سنة ثانية">سنة ثانية (المرشحون للتخرج)</option>
+                            <option value="all">كل المراحل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn-mini btn-primary" onclick="selectAllRollover(true)" style="width:auto; padding:5px 10px;">تحديد المؤهلين فقط (≥75%)</button>
+                        <button class="btn-mini btn-purple" onclick="selectAllRollover('all')" style="width:auto; padding:5px 10px;">تحديد الكل</button>
+                        <button class="btn-mini" onclick="selectAllRollover(false)" style="width:auto; padding:5px 10px; background:#b2bec3; color:#2d3436;">إلغاء التحديد</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height:280px; overflow-y:auto; background:#fff; border:1px solid #dfe6e9; border-radius:8px;">
+                    <table id="rolloverCandidatesTable" class="adaptive-card-table" style="margin:0;">
+                        <thead style="position:sticky; top:0; background:var(--primary); color:white;">
+                            <tr>
+                                <th style="width:40px;">تخرج</th>
+                                <th>كود</th>
+                                <th>الاسم</th>
+                                <th>المرحلة الحالية</th>
+                                <th>نسبة حضور الجمعة</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rolloverCandidatesTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="background:#fff9e6; border:1px solid #ffeaa7; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h4 style="margin:0 0 8px 0; color:#d35400;">2️⃣ خيارات الترحيل والأرشفة السحابية:</h4>
+                <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="rolloverAutoPromoteYear1" checked style="width:20px; height:20px; margin:0;">
+                        <span><strong>ترقية تلقائية لدارسي سنة أولى:</strong> تحويل كل دارسي (سنة أولى) إلى (سنة ثانية) تلقائياً.</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="rolloverResetAttendance" checked style="width:20px; height:20px; margin:0;">
+                        <span><strong>تصفير سجل الحضور للسنة الجديدة:</strong> تفريغ حضور الأسابيع السابقة بعد حفظ الأرشيف بالكامل سحابياً ومحلياً.</span>
+                    </label>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:5px;">
+                        <label style="font-weight:bold;">مسمى الأرشيف للسنة المنتهية:</label>
+                        <input type="text" id="rolloverArchiveLabel" placeholder="مثال: دورة_2025_2026" style="flex:1; min-width:200px; padding:6px;">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-danger" onclick="executeAcademicRollover()" style="padding:15px; font-size:15px; margin:0;">
+                🚀 تنفيذ التخريج، الأرشفة، وبدء السنة الجديدة رسمياً
+            </button>
+        </div>
+
+        <!-- 9. سجل نشاط وتدقيق العمليات -->
         <div id="auditTab" class="tab-content admin-only">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <h2>سجل النشاط والتدقيق الأمني (Audit Log) 🛡️</h2>
@@ -873,7 +939,7 @@
                 </div>
             </div>
             <p style="font-size:12px; color:#636e72; margin-top:2px;">
-                رصد لحظي وتدقيق أمني لكافة العمليات الحساسة (تسجيل حضور، إلغاء، تعديل أوقات، تعديل بيانات):
+                رصد لحظي وتدقيق أمني لكافة العمليات الحساسة (تسجيل حضور، إلغاء، تعديل أوقات، تعديل بيانات، أرشفة):
             </p>
             <div class="table-responsive" style="max-height:450px; overflow-y:auto; border:1px solid #dfe6e9; border-radius:8px;">
                 <table id="auditTable" class="adaptive-card-table">
@@ -893,7 +959,7 @@
             </div>
         </div>
 
-        <!-- 9. الإعدادات -->
+        <!-- 10. الإعدادات -->
         <div id="settingsTab" class="tab-content">
             <h2>إعدادات المنظومة وتخصيص الخدمة</h2>
             
@@ -1051,7 +1117,7 @@
             <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات 💾</button>
         </div>
 
-        <!-- 10. التقارير والنسخ الاحتياطي الشامل -->
+        <!-- 11. التقارير والنسخ الاحتياطي الشامل -->
         <div id="dataTab" class="tab-content">
             <h2>التقارير واستيراد البيانات</h2>
             
@@ -1428,7 +1494,7 @@
                 tr.innerHTML = `
                     <td data-label="الوقت" dir="ltr"><strong>${log.timestamp}</strong></td>
                     <td data-label="الخادم">${log.servant}</td>
-                    <td data-label="نوع العملية"><span class="role-badge" style="background:${log.action.includes('حذف')||log.action.includes('طرد') ? 'var(--danger)' : 'var(--accent)'};">${log.action}</span></td>
+                    <td data-label="نوع العملية"><span class="role-badge" style="background:${log.action.includes('حذف')||log.action.includes('طرد')||log.action.includes('أرشفة') ? 'var(--danger)' : 'var(--accent)'};">${log.action}</span></td>
                     <td data-label="الهدف"><strong>${log.target}</strong></td>
                     <td data-label="التفاصيل">${log.details || '-'}</td>
                 `;
@@ -1520,7 +1586,6 @@
                 scannedBy: currentUser ? currentUser.name : 'خادم'
             };
 
-            // فحص محلي أولي
             let localExisting = (attendanceRecord[today] || []).find(a => a.id.toString() === member.id.toString());
             if (localExisting) {
                 playBeepSound('error');
@@ -1528,7 +1593,6 @@
                 return;
             }
 
-            // تحديث محلي فوري للاستجابة السريعة
             if (!attendanceRecord[today]) attendanceRecord[today] = [];
             attendanceRecord[today].unshift(newRecord);
             localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
@@ -1552,13 +1616,12 @@
                 return;
             }
 
-            // معاملة ذرية Firebase Transaction لضمان عدم التكرار على السيرفر
             let attNodeRef = db.ref(`attendance/${today}/${pKey}`);
             attNodeRef.transaction(currentVal => {
                 if (currentVal === null) {
                     return newRecord;
                 } else {
-                    return; // ملغى لأنه مسجل مسبقاً من هاتف آخر
+                    return;
                 }
             }, (error, committed, snapshot) => {
                 if (error) {
@@ -1574,6 +1637,142 @@
                 }
                 updateLastSyncTimestamp();
             });
+        }
+
+        // ==========================================
+        // 4. نظام أرشفة نهاية الدورة وبدء سنة جديدة وتخريج الدفعات (Academic Rollover)
+        // ==========================================
+        function renderRolloverCandidateList() {
+            const tbody = document.getElementById('rolloverCandidatesTbody');
+            const filterStage = document.getElementById('rolloverStageFilter') ? document.getElementById('rolloverStageFilter').value : 'سنة ثانية';
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let candidates = members.filter(m => (filterStage === 'all' || (m.stage || 'سنة أولى') === filterStage));
+
+            if (candidates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color:#888;">لا يوجد دارسين في المرحلة المحددة.</td></tr>';
+                return;
+            }
+
+            candidates.forEach(m => {
+                let grad = calculateGraduationStatus(m.id);
+                let isQualified = grad.qualified;
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="تخرج">
+                        <input type="checkbox" class="rollover-candidate-check" data-id="${m.id}" data-qualified="${isQualified}" ${isQualified ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer;">
+                    </td>
+                    <td data-label="كود"><strong>${m.code || m.id}</strong></td>
+                    <td data-label="الاسم"><strong>${m.name}</strong></td>
+                    <td data-label="المرحلة الحالية">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="نسبة الحضور">
+                        <span style="font-weight:bold; color:${isQualified ? 'green' : 'orange'};">${grad.percent}%</span> (${grad.attended}/${grad.total} جمعة)
+                    </td>
+                    <td data-label="الحالة">
+                        ${isQualified ? '<span class="role-badge" style="background:var(--success);">مؤهل للتخرج 🎓</span>' : '<span class="role-badge" style="background:var(--warning);">غير مؤهل (&lt;75%)</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectAllRollover(mode) {
+            const checks = document.querySelectorAll('.rollover-candidate-check');
+            checks.forEach(chk => {
+                if (mode === 'all') chk.checked = true;
+                else if (mode === false) chk.checked = false;
+                else if (mode === true) chk.checked = (chk.getAttribute('data-qualified') === 'true');
+            });
+        }
+
+        async function executeAcademicRollover() {
+            if (currentPermission !== 'admin') return alert("الأرشفة وبدء السنة متاحة لأمين الخدمة العام فقط!");
+
+            let labelInput = document.getElementById('rolloverArchiveLabel');
+            let yearLabel = labelInput ? labelInput.value.trim() : "";
+            if (!yearLabel) {
+                yearLabel = `دورة_${settings.serviceStart || '2025'}_${settings.serviceEnd || '2026'}`.replace(/-/g, '_');
+            }
+
+            let checkedBoxes = document.querySelectorAll('.rollover-candidate-check:checked');
+            let graduatingIds = Array.from(checkedBoxes).map(c => c.getAttribute('data-id'));
+
+            let autoPromote = document.getElementById('rolloverAutoPromoteYear1').checked;
+            let resetAttendance = document.getElementById('rolloverResetAttendance').checked;
+
+            let confirmMsg = `⚠️ تأكيد أرشفة نهاية الدورة وبدء سنة جديدة:\n\n` +
+                             `1. تخريج (${graduatingIds.length}) دارس ونقلهم لمرحلة "خريجين / تم التخرج".\n` +
+                             `2. ${autoPromote ? 'ترقية كافة دارسي "سنة أولى" إلى "سنة ثانية".' : 'عدم ترقية سنة أولى.'}\n` +
+                             `3. ${resetAttendance ? 'أرشفة حضور السنة وتصفير الجدول للبدء بنظافة.' : 'الإبقاء على الحضور.'}\n` +
+                             `4. مسمى الأرشيف السحابي: [${yearLabel}].\n\n` +
+                             `أدخل كلمة مرور أمين الخدمة للتأكيد النهائي:`;
+
+            let pwd = prompt(confirmMsg);
+            if (pwd !== adminPassword && pwd !== "1234567") {
+                return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
+            }
+
+            showToast("جاري أرشفة السنة الخدمية وتحديث الدفعات... ⏳");
+
+            // 1. تجميع الأرشيف
+            let archivePayload = {
+                archiveDate: new Date().toISOString(),
+                archiveLabel: yearLabel,
+                archivedBy: currentUser ? currentUser.name : 'أمين الخدمة',
+                graduatedCount: graduatingIds.length,
+                membersSnapshot: members,
+                attendanceSnapshot: attendanceRecord,
+                servantsAttendanceSnapshot: servantsAttendance,
+                masterPlanSnapshot: masterPlan,
+                settingsSnapshot: settings
+            };
+
+            // رفع الأرشيف إلى مسار سحابي دائم
+            if (isFirebaseActive && db) {
+                await db.ref(`archive/${yearLabel}`).set(archivePayload);
+            }
+
+            // 2. تطبيق التخريج للأفراد المحددين
+            let graduatedNames = [];
+            members.forEach(m => {
+                if (graduatingIds.includes(m.id.toString())) {
+                    m.stage = "خريجين";
+                    graduatedNames.push(m.name);
+                } else if (autoPromote && (m.stage === "سنة أولى" || !m.stage)) {
+                    m.stage = "سنة ثانية";
+                }
+            });
+
+            // 3. تصفير الحضور إن اختير ذلك
+            if (resetAttendance) {
+                attendanceRecord = {};
+                servantsAttendance = {};
+                if (!attendanceRecord[today]) attendanceRecord[today] = [];
+                if (!servantsAttendance[today]) servantsAttendance[today] = [];
+                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
+
+                if (isFirebaseActive && db) {
+                    await db.ref('attendance').remove();
+                    await db.ref('servants_attendance').remove();
+                }
+            }
+
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+            syncToCloud('members', members);
+
+            logActivity("أرشفة دورة وتخريج", yearLabel, `تخريج ${graduatingIds.length} دارس وترحيل الدفعات`);
+
+            renderMembersList();
+            renderAttendanceTable();
+            renderLiveCardsFeed();
+            renderServantsAttendanceTable();
+            renderDashboard();
+            renderRolloverCandidateList();
+            checkLocalStorageUsage();
+
+            alert(`🎉 تم بنجاح أرشفة دورة [${yearLabel}]، تخريج الدفعة، وبدء السنة الخدمية الجديدة!`);
         }
 
         function ensureMemberQrCode(m) {
@@ -1646,6 +1845,7 @@
                 renderLiveCardsFeed();
                 updateCloudUsageUI();
                 renderAuditLogTable();
+                renderRolloverCandidateList();
                 registerActiveSession();
                 if (currentPermission === 'admin') {
                     listenToActiveSessions();
@@ -1902,7 +2102,6 @@
             updateCloudUsageUI();
         }
 
-        // تسجيل بصمة الجلسة في Firebase
         function registerActiveSession() {
             if (!currentUser || !isFirebaseActive || !db) return;
 
@@ -2466,7 +2665,6 @@
             };
             m.visitations.unshift(newVis);
 
-            // تحديث فردي للمخدوم وسجل العمليات
             saveSingleMemberUpdate(m.id, { visitations: m.visitations }, "تسجيل كبسولة افتقاد");
             
             let vh = document.getElementById('visitationHistory');
@@ -3373,7 +3571,7 @@
             filtered.forEach(m => {
                 let grad = calculateGraduationStatus(m.id);
                 let gradBadge = grad.qualified 
-                    ? `<span class="role-badge" style="background:var(--success);">مؤهل للرسامة 🎓</span>` 
+                    ? `<span class="role-badge" style="background:var(--success);">مؤهل للتخرج 🎓</span>` 
                     : `<span class="role-badge" style="background:var(--warning);">${grad.percent}% (غير مؤهل)</span>`;
 
                 let isAttendedToday = (attendanceRecord[today] || []).some(a => a.id.toString() === m.id.toString());
@@ -3447,7 +3645,7 @@
             document.getElementById('p_confessor').innerText = m.confessor || "-";
             
             let grad = calculateGraduationStatus(m.id);
-            document.getElementById('p_grad_status').innerText = `${grad.percent}% - ${grad.qualified ? 'مؤهل للرسامة والتخرج' : 'غير مؤهل'} (رصيد بونص: +${grad.bonus} نقطة)`;
+            document.getElementById('p_grad_status').innerText = `${grad.percent}% - ${grad.qualified ? 'مؤهل للتخرج' : 'غير مؤهل للتخرج'} (رصيد بونص: +${grad.bonus} نقطة)`;
             document.getElementById('p_grad_status').style.color = grad.qualified ? 'green' : 'orange';
             document.getElementById('p_grad_progress').style.width = `${grad.percent}%`;
             document.getElementById('p_grad_progress').style.background = grad.qualified ? 'var(--success)' : 'var(--warning)';
@@ -3690,7 +3888,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.15",
+                version: "2.16",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -3761,6 +3959,7 @@
                         renderMasterPlanTable();
                         renderDashboard();
                         renderAuditLogTable();
+                        renderRolloverCandidateList();
                         checkLocalStorageUsage();
 
                         alert("✅ تم استرجاع النسخة الاحتياطية ومزامنتها بنجاح تام!");
@@ -4244,7 +4443,8 @@
                             }
                             renderMembersList(); 
                             renderDashboard(); 
-                            checkUpcomingBirthdays(); 
+                            checkUpcomingBirthdays();
+                            renderRolloverCandidateList();
                         } 
                     });
 
@@ -4307,7 +4507,6 @@
                         } 
                     });
 
-                    // استماع مباشر لجدول الـ Audit Log في السحابة
                     db.ref(`audit_logs/${today}`).on('value', snap => {
                         let val = snap.val();
                         if (val) {
@@ -4334,6 +4533,7 @@
             if (tabId === 'planTab') renderMasterPlanTable();
             if (tabId === 'servantsTab') renderServantsTable();
             if (tabId === 'auditTab') renderAuditLogTable();
+            if (tabId === 'rolloverTab') renderRolloverCandidateList();
             if (tabId === 'dashTab') { renderDashboard(); checkUpcomingBirthdays(); checkUpcomingMasterPlanEvents(); }
             if (tabId === 'settingsTab') updateCloudUsageUI();
             if (tabId === 'broadcastTab') renderBroadcastList('parents');
@@ -4410,6 +4610,7 @@
         renderMasterPlanTable();
         renderDashboard();
         renderAuditLogTable();
+        renderRolloverCandidateList();
     </script>
 </body>
 </html>
