@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- محذر وصائد الأخطاء التلقائي الاستباقي (يعمل فوراً في كل الشاشات والافتتاحية والموبايل) -->
+    <!-- محذر وصائد الأخطاء التلقائي الاستباقي -->
     <script>
         window.appErrorLogs = [];
         function displayLiveSystemError(errorMessage) {
@@ -78,7 +78,7 @@
             displayLiveSystemError(`[Promise] ${reason}`);
         });
 
-        // 1. فحص وتطبيق رابط التهيئة التلقائي إن وجد في رابط الصفحة
+        // فحص وتطبيق رابط التهيئة التلقائي إن وجد في الرابط
         (function checkAutoSetupFromUrl() {
             let hash = window.location.hash;
             if (hash && hash.startsWith('#setup=')) {
@@ -340,7 +340,7 @@
         <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
     </div>
 
-    <!-- نافذة تجهيز وتأمين السحابة لأول مرة يدويّاً (إن لم يُستخدم الرابط التلقائي) -->
+    <!-- نافذة تجهيز وتأمين السحابة لأول مرة -->
     <div id="cloudSetupModal" class="modal" style="display:none; z-index:3000;">
         <div class="modal-content" style="max-width:480px; text-align:right;">
             <span class="close-btn" onclick="closeCloudModal()">&times;</span>
@@ -355,7 +355,7 @@
             </div>
             <div style="margin-bottom:8px;">
                 <label style="font-size:12px; font-weight:bold;">البريد الإلكتروني المعتمد للسحابة:</label>
-                <input type="email" id="modalCloudEmail" placeholder="service@khedmety.com" autocomplete="off">
+                <input type="email" id="modalCloudEmail" placeholder="admin@khedmety.com" autocomplete="off">
             </div>
             <div style="margin-bottom:12px;">
                 <label style="font-size:12px; font-weight:bold;">كلمة مرور السحابة:</label>
@@ -433,6 +433,7 @@
             <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
             <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
             <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
+            <div class="tab-btn admin-only" onclick="switchTab('auditTab', this)">سجل العمليات 🛡️</div>
             <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
             <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والنسخ الاحتياطي 📁</div>
         </div>
@@ -862,7 +863,37 @@
             </div>
         </div>
 
-        <!-- 8. الإعدادات -->
+        <!-- 8. سجل نشاط وتدقيق العمليات (Audit Log & Activity History) المضاف حديثاً -->
+        <div id="auditTab" class="tab-content admin-only">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>سجل النشاط والتدقيق الأمني (Audit Log) 🛡️</h2>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-mini btn-primary" onclick="exportAuditLogToExcel()" style="width:auto; padding:6px 12px; margin:0;">📊 تصدير السجل Excel</button>
+                    <button class="btn-mini btn-danger" onclick="clearAuditLogs()" style="width:auto; padding:6px 12px; margin:0;">🗑️ تفريغ سجل اليوم</button>
+                </div>
+            </div>
+            <p style="font-size:12px; color:#636e72; margin-top:2px;">
+                رصد لحظي وتدقيق أمني لكافة العمليات الحساسة (تسجيل حضور، إلغاء، تعديل أوقات، تعديل بيانات):
+            </p>
+            <div class="table-responsive" style="max-height:450px; overflow-y:auto; border:1px solid #dfe6e9; border-radius:8px;">
+                <table id="auditTable" class="adaptive-card-table">
+                    <thead style="position:sticky; top:0; background:var(--primary); color:white;">
+                        <tr>
+                            <th>الوقت</th>
+                            <th>الخادم المنفذ</th>
+                            <th>نوع العملية</th>
+                            <th>المخدوم / الهدف</th>
+                            <th>التفاصيل والملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableTbody">
+                        <tr><td colspan="5" style="color:#888;">جاري تحميل سجل النشاطات...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 9. الإعدادات -->
         <div id="settingsTab" class="tab-content">
             <h2>إعدادات المنظومة وتخصيص الخدمة</h2>
             
@@ -1020,7 +1051,7 @@
             <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات 💾</button>
         </div>
 
-        <!-- 9. التقارير والنسخ الاحتياطي الشامل -->
+        <!-- 10. التقارير والنسخ الاحتياطي الشامل -->
         <div id="dataTab" class="tab-content">
             <h2>التقارير واستيراد البيانات</h2>
             
@@ -1319,6 +1350,7 @@
         let attendanceRecord = JSON.parse(localStorage.getItem('my_church_attendance')) || {};
         let servantsAttendance = JSON.parse(localStorage.getItem('my_church_servants_attendance')) || {};
         let masterPlan = JSON.parse(localStorage.getItem('my_church_master_plan')) || [];
+        let auditLogs = JSON.parse(localStorage.getItem('my_church_audit_logs')) || [];
         
         let servants = JSON.parse(localStorage.getItem('my_church_servants')) || [
             { id: 1001, name: "عادل جورج", phone: "1234567", dob: "1995-05-15", code: "admin", role: "admin", permission: "admin", roleType: "أمين خدمة" }
@@ -1357,6 +1389,192 @@
 
         if (!attendanceRecord[today]) attendanceRecord[today] = [];
         if (!servantsAttendance[today]) servantsAttendance[today] = [];
+
+        // ==========================================
+        // 1. نظام تسجيل النشاط والتدقيق الأمني (Audit Log)
+        // ==========================================
+        function logActivity(actionType, targetName, details = "") {
+            let logItem = {
+                id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                timestamp: new Date().toLocaleTimeString('ar-EG'),
+                date: today,
+                servant: currentUser ? currentUser.name : 'خادم غير محدد',
+                action: actionType,
+                target: targetName,
+                details: details
+            };
+
+            auditLogs.unshift(logItem);
+            localStorage.setItem('my_church_audit_logs', JSON.stringify(auditLogs.slice(0, 300)));
+
+            if (isFirebaseActive && db) {
+                db.ref(`audit_logs/${today}`).push(logItem).catch(() => {});
+            }
+            renderAuditLogTable();
+        }
+
+        function renderAuditLogTable() {
+            const tbody = document.getElementById('auditTableTbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (auditLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color:#888;">لا توجد نشاطات مسجلة اليوم حتى الآن.</td></tr>';
+                return;
+            }
+
+            auditLogs.slice(0, 100).forEach(log => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="الوقت" dir="ltr"><strong>${log.timestamp}</strong></td>
+                    <td data-label="الخادم">${log.servant}</td>
+                    <td data-label="نوع العملية"><span class="role-badge" style="background:${log.action.includes('حذف')||log.action.includes('طرد') ? 'var(--danger)' : 'var(--accent)'};">${log.action}</span></td>
+                    <td data-label="الهدف"><strong>${log.target}</strong></td>
+                    <td data-label="التفاصيل">${log.details || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportAuditLogToExcel() {
+            let headers = ["التاريخ", "الوقت", "الخادم المنفذ", "نوع العملية", "المخدوم / الهدف", "التفاصيل"];
+            let rows = auditLogs.map(l => [l.date, l.timestamp, l.servant, l.action, l.target, l.details]);
+            let ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 25 }, { wch: 30 }];
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "AuditLog");
+            XLSX.writeFile(wb, `سجل_العمليات_الأمني_${today}.xlsx`);
+        }
+
+        function clearAuditLogs() {
+            let pwd = prompt("أدخل كلمة مرور الأدمن لتفريغ سجل تدقيق العمليات:");
+            if (pwd === adminPassword || pwd === "1234567") {
+                auditLogs = [];
+                localStorage.removeItem('my_church_audit_logs');
+                if (isFirebaseActive && db) {
+                    db.ref(`audit_logs/${today}`).remove().catch(() => {});
+                }
+                renderAuditLogTable();
+                showToast("✅ تم تفريغ سجل العمليات بنجاح!");
+            } else {
+                alert("❌ كلمة المرور غير صحيحة!");
+            }
+        }
+
+        // ==========================================
+        // 2. التحديث المباشر للمخدوم الفردي (Single Member Direct Update)
+        // ==========================================
+        function saveSingleMemberUpdate(memberId, updatedFields, actionLabel = "تعديل مخدوم") {
+            let mIndex = members.findIndex(x => x.id.toString() === memberId.toString());
+            if (mIndex !== -1) {
+                members[mIndex] = { ...members[mIndex], ...updatedFields };
+                localStorage.setItem('my_church_class', JSON.stringify(members));
+            }
+
+            if (isFirebaseActive && db) {
+                db.ref(`members/${memberId}`).update(updatedFields)
+                    .then(() => updateLastSyncTimestamp())
+                    .catch(() => syncToCloud('members', members));
+            }
+
+            let memberName = (mIndex !== -1) ? members[mIndex].name : memberId;
+            logActivity(actionLabel, memberName, Object.keys(updatedFields).join(', '));
+            renderMembersList();
+            renderDashboard();
+        }
+
+        // ==========================================
+        // 3. دالة تسجيل الحضور الذري المقاوم للتكرار والنزاعات (Atomic Attendance Registration)
+        // ==========================================
+        function atomicRegisterAttendance(member) {
+            let pKey = (member.code || member.id || '').toString().replace(/\D/g, '');
+            let now = new Date();
+            let isFri = isFridaySession(today);
+            let isSummerDay = settings.summerActive && (now.getDay().toString() === settings.summerDay);
+            let isAbsent = false;
+
+            if (!isFri || (isSummerDay && settings.ignoreSummerDelay)) {
+                isAbsent = false;
+            } else {
+                let startTimeStr = settings.startTime || "13:00";
+                let [startH, startM] = startTimeStr.split(':').map(Number);
+                let diffMinutes = (now.getHours() * 60 + now.getMinutes()) - (startH * 60 + startM);
+                isAbsent = diffMinutes >= (settings.absentAfter || 75);
+            }
+
+            let defaultPts = isFri ? 5 : 15;
+            let newRecord = {
+                id: member.id,
+                code: member.code || member.id,
+                name: member.name,
+                phone: member.phone || "",
+                stage: member.stage || 'سنة أولى',
+                gender: member.gender || 'بنين',
+                time: now.toLocaleTimeString('ar-EG'),
+                isAbsentDueToDelay: isAbsent,
+                attended: true,
+                communion: false,
+                participation: false,
+                points: defaultPts,
+                isBonusEvent: !isFri,
+                scannedBy: currentUser ? currentUser.name : 'خادم'
+            };
+
+            // فحص محلي أولي
+            let localExisting = (attendanceRecord[today] || []).find(a => a.id.toString() === member.id.toString());
+            if (localExisting) {
+                playBeepSound('error');
+                showToast(`⚠️ مسجل بالفعل اليوم: ${member.name}`, true);
+                return;
+            }
+
+            // تحديث محلي فوري للاستجابة السريعة
+            if (!attendanceRecord[today]) attendanceRecord[today] = [];
+            attendanceRecord[today].unshift(newRecord);
+            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+
+            renderAttendanceTable();
+            renderLiveCardsFeed();
+            renderMembersList();
+            renderDashboard();
+            showKioskWelcome(member, isAbsent, 'member');
+
+            if (!isFirebaseActive || !db) {
+                syncToCloud('attendance', attendanceRecord);
+                if (isAbsent) {
+                    playBeepSound('error');
+                    showToast(`⚠️ ${member.name} (تأخير شديد)`, true);
+                } else {
+                    playBeepSound('success');
+                    showToast(`✅ تم تسجيل حضور (محلياً): ${member.name}`);
+                }
+                logActivity("تسجيل حضور (أوفلاين)", member.name, isAbsent ? "تأخير" : "حاضر");
+                return;
+            }
+
+            // معاملة ذرية Firebase Transaction لضمان عدم التكرار على السيرفر
+            let attNodeRef = db.ref(`attendance/${today}/${pKey}`);
+            attNodeRef.transaction(currentVal => {
+                if (currentVal === null) {
+                    return newRecord;
+                } else {
+                    return; // ملغى لأنه مسجل مسبقاً من هاتف آخر
+                }
+            }, (error, committed, snapshot) => {
+                if (error) {
+                    showToast("❌ خطأ أثناء المزامنة السحابية", true);
+                } else if (!committed) {
+                    playBeepSound('error');
+                    let recordedBy = snapshot.val() ? snapshot.val().scannedBy : 'خادم آخر';
+                    showToast(`⚠️ مسجل مسبقاً اليوم بواسطة: ${recordedBy}`, true);
+                } else {
+                    playBeepSound('success');
+                    showToast(`✅ تم توثيق حضور: ${member.name} سحابياً`);
+                    logActivity("تسجيل حضور", member.name, `سجله: ${currentUser ? currentUser.name : 'خادم'}`);
+                }
+                updateLastSyncTimestamp();
+            });
+        }
 
         function ensureMemberQrCode(m) {
             let bDay = "01";
@@ -1427,6 +1645,7 @@
                 renderAttendanceTable();
                 renderLiveCardsFeed();
                 updateCloudUsageUI();
+                renderAuditLogTable();
                 registerActiveSession();
                 if (currentPermission === 'admin') {
                     listenToActiveSessions();
@@ -1460,6 +1679,7 @@
                     sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
                 }
 
+                logActivity("تسجيل دخول", currentUser.name, "أمين خدمة عام");
                 err.style.display = 'none'; checkSession(); return;
             }
 
@@ -1472,6 +1692,7 @@
                     sessionStorage.setItem('my_church_active_user', JSON.stringify(currentUser));
                 }
                 recordServantAttendance(found);
+                logActivity("تسجيل دخول", found.name, `خادم - كود: ${found.code}`);
                 err.style.display = 'none'; checkSession();
             } else {
                 err.innerText = "بيانات الدخول غير صحيحة!";
@@ -1489,6 +1710,9 @@
             if (currentUser && isFirebaseActive && db) {
                 let servantKey = (currentUser.id || currentUser.phone || 'admin').toString().replace(/\D/g, '');
                 db.ref(`active_sessions/${servantKey}`).remove().catch(() => {});
+            }
+            if (currentUser) {
+                logActivity("تسجيل خروج", currentUser.name, "خروج يدوي");
             }
             localStorage.removeItem('my_church_active_user');
             sessionStorage.removeItem('my_church_active_user');
@@ -1697,7 +1921,6 @@
 
             db.ref(`active_sessions/${servantKey}`).set(sessionData).catch(() => {});
 
-            // استماع فوري لأمر الطرد
             db.ref(`active_sessions/${servantKey}`).on('value', snap => {
                 let val = snap.val();
                 if (val && val.status === "terminated") {
@@ -1711,7 +1934,6 @@
             });
         }
 
-        // عرض المتصلين حالياً في لوحة الإعدادات للأدمن
         function listenToActiveSessions() {
             if (!isFirebaseActive || !db) return;
 
@@ -1747,6 +1969,7 @@
         function terminateSession(servantKey, servantName) {
             if (confirm(`هل أنت متأكد من رغبتك في طرد جهاز (${servantName}) وإخراجه فوراً؟`)) {
                 db.ref(`active_sessions/${servantKey}/status`).set("terminated").then(() => {
+                    logActivity("طرد جلسة خادم", servantName, "إنهاء اتصال عن بُعد");
                     showToast(`✅ تم إرسال أمر الطرد لـ ${servantName}`);
                 });
             }
@@ -1762,6 +1985,7 @@
                             db.ref(`active_sessions/${key}/status`).set("terminated");
                         }
                     });
+                    logActivity("طرد شامل", "جميع الجلسات", "طرد جميع الأجهزة المتصلة");
                     alert("✅ تم طرد جميع الأجهزة المتصلة بالمنظومة فوراً!");
                 });
             } else {
@@ -1769,7 +1993,6 @@
             }
         }
 
-        // دالة توليد ومشاركة رابط التفعيل التلقائي عبر واتساب
         function shareAutoSetupWhatsAppLink() {
             let savedConfig = localStorage.getItem('my_firebase_config');
             let savedEmail = localStorage.getItem('cloud_auth_email');
@@ -1793,7 +2016,6 @@
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        // دالة تعديل وقت الحضور الخاصة بأمين الخدمة
         function editAttendanceTime(memberId) {
             if (currentPermission !== 'admin') {
                 return alert("عفواً، تعديل وقت الحضور متاح لأمين الخدمة العام فقط!");
@@ -1815,6 +2037,7 @@
             }
 
             let formattedDisplayTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+            let oldTime = rec.time;
             rec.time = formattedDisplayTime;
 
             let isFri = isFridaySession(today);
@@ -1830,8 +2053,16 @@
             }
 
             localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-            syncToCloud('attendance', attendanceRecord);
 
+            let pKey = (rec.code || rec.id || '').toString().replace(/\D/g, '');
+            if (isFirebaseActive && db) {
+                db.ref(`attendance/${today}/${pKey}`).update({
+                    time: formattedDisplayTime,
+                    isAbsentDueToDelay: rec.isAbsentDueToDelay
+                });
+            }
+
+            logActivity("تعديل وقت حضور", rec.name, `من ${oldTime} إلى ${formattedDisplayTime}`);
             renderAttendanceTable();
             renderLiveCardsFeed();
             renderDashboard();
@@ -1868,7 +2099,7 @@
 
             if (!name || !phone) return alert("يرجى إدخال اسم ورقم هاتف الخادم!");
 
-            servants.push({
+            let newS = {
                 id: Date.now(),
                 name: name,
                 phone: phone,
@@ -1876,10 +2107,12 @@
                 dob: dob,
                 role: perm === 'admin' ? 'admin' : 'servant',
                 permission: perm
-            });
+            };
 
+            servants.push(newS);
             localStorage.setItem('my_church_servants', JSON.stringify(servants));
             syncToCloud('servants', servants);
+            logActivity("إضافة خادم", name, `صلاحية: ${perm}`);
             renderServantsTable();
             renderServantsAttendanceTable();
             populatePlanServantsDropdown();
@@ -1899,15 +2132,19 @@
             
             localStorage.setItem('my_church_servants', JSON.stringify(servants));
             syncToCloud('servants', servants);
+            logActivity("تعديل خادم", s.name, `هاتف: ${s.phone}`);
             renderServantsTable();
             renderServantsAttendanceTable();
         }
 
         function deleteServant(id) {
+            let s = servants.find(x => x.id === id);
+            let sName = s ? s.name : id;
             if (confirm("هل أنت متأكد من حذف هذا الخادم؟")) {
                 servants = servants.filter(s => s.id !== id);
                 localStorage.setItem('my_church_servants', JSON.stringify(servants));
                 syncToCloud('servants', servants);
+                logActivity("حذف خادم", sName, "تم الحذف من القائمة");
                 renderServantsTable();
                 renderServantsAttendanceTable();
             }
@@ -1920,6 +2157,7 @@
                     servants = servants.filter(s => s.role === 'admin' || s.permission === 'admin');
                     localStorage.setItem('my_church_servants', JSON.stringify(servants));
                     syncToCloud('servants', servants);
+                    logActivity("حذف الخدام", "تصفية جماعية", "حذف كافة حسابات الخدام ما عدا الأدمن");
                     renderServantsTable();
                     alert("✅ تم حذف باقي الخدام بنجاح.");
                 }
@@ -1961,6 +2199,7 @@
             });
 
             saveMasterPlan();
+            logActivity("إضافة فعالية خطة", title, `${type} بتاريخ ${date}`);
             renderMasterPlanTable();
             checkUpcomingMasterPlanEvents();
             alert("✅ تم إدراج الفعالية في خطة السنة بنجاح!");
@@ -2005,9 +2244,11 @@
         }
 
         function deleteMasterPlanEvent(id) {
+            let item = masterPlan.find(x => x.id === id);
             if (confirm("حذف هذه الفعالية من خطة السنة؟")) {
                 masterPlan = masterPlan.filter(x => x.id !== id);
                 saveMasterPlan();
+                if (item) logActivity("حذف فعالية خطة", item.title, `حذف فعالية تاريخ ${item.date}`);
                 renderMasterPlanTable();
                 checkUpcomingMasterPlanEvents();
             }
@@ -2018,6 +2259,7 @@
             if (pwd === adminPassword || pwd === '1234567') {
                 masterPlan = [];
                 saveMasterPlan();
+                logActivity("حذف خطة السنة", "تفريغ شامل", "حذف كافة الفعاليات المسجلة");
                 renderMasterPlanTable();
                 checkUpcomingMasterPlanEvents();
                 alert("✅ تم تفريغ خطة السنة بالكامل.");
@@ -2077,6 +2319,7 @@
                         }
                     });
                     saveMasterPlan();
+                    logActivity("استيراد خطة سنة", "Excel", `تم استيراد ${added} فعالية`);
                     renderMasterPlanTable();
                     checkUpcomingMasterPlanEvents();
                     alert(`✅ تم استيراد (${added}) فعالية في خطة السنة بنجاح!`);
@@ -2215,17 +2458,20 @@
             let m = members.find(x => x.id.toString() === currentProfileId.toString());
             if (!m) return;
             if (!m.visitations) m.visitations = [];
-            m.visitations.unshift({
+            
+            let newVis = {
                 date: new Date().toLocaleDateString('en-CA'),
                 text: text,
                 by: currentUser ? currentUser.name : 'خادم'
-            });
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
+            };
+            m.visitations.unshift(newVis);
+
+            // تحديث فردي للمخدوم وسجل العمليات
+            saveSingleMemberUpdate(m.id, { visitations: m.visitations }, "تسجيل كبسولة افتقاد");
             
             let vh = document.getElementById('visitationHistory');
             if (vh) {
-                vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${new Date().toLocaleDateString('en-CA')} (${currentUser ? currentUser.name : 'خادم'}):</strong> ${text}</div>` + vh.innerHTML;
+                vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${newVis.date} (${newVis.by}):</strong> ${text}</div>` + vh.innerHTML;
             }
             
             renderServantsAttendanceTable();
@@ -2263,8 +2509,7 @@
                 notes: notes
             });
 
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
+            saveSingleMemberUpdate(m.id, { fieldEvaluations: m.fieldEvaluations }, "تقييم درس ميداني");
             renderFieldEvaluationsList(m);
             checkLocalStorageUsage();
             showToast(`✅ تم حفظ تقييم النزول الميداني (${totalScore}/100)`);
@@ -2457,6 +2702,7 @@
                 syncToCloud('attendance', attendanceRecord);
                 syncToCloud('servants_attendance', servantsAttendance);
 
+                logActivity("استيراد كود طوارئ", targetDate, `استيراد ${imported.attendance.length} حضور`);
                 renderAttendanceTable();
                 renderLiveCardsFeed();
                 renderServantsAttendanceTable();
@@ -2470,15 +2716,17 @@
 
         function recordServantAttendance(servant) {
             if (!servantsAttendance[today].some(s => s.id.toString() === servant.id.toString())) {
-                servantsAttendance[today].push({
+                let newServRec = {
                     id: servant.id,
                     name: servant.name,
                     code: servant.code || servant.id,
                     phone: servant.phone || "",
                     time: new Date().toLocaleTimeString('ar-EG')
-                });
+                };
+                servantsAttendance[today].push(newServRec);
                 localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
                 syncToCloud('servants_attendance', servantsAttendance);
+                logActivity("حضور خادم", servant.name, `وقت: ${newServRec.time}`);
                 renderServantsAttendanceTable();
                 renderDashboard();
                 checkLocalStorageUsage();
@@ -2500,6 +2748,7 @@
                 servantsAttendance[today] = (servantsAttendance[today] || []).filter(item => item.id.toString() !== servantId.toString());
                 localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
                 syncToCloud('servants_attendance', servantsAttendance);
+                logActivity("إلغاء حضور خادم", sName, "إلغاء يدوي");
                 renderServantsAttendanceTable();
                 renderDashboard();
                 checkLocalStorageUsage();
@@ -2521,6 +2770,7 @@
                         db.ref('members').set([]);
                     }
 
+                    logActivity("حذف المخدومين", "تصفية كاملة", "حذف كافة سجلات المخدومين بالكامل");
                     renderMembersList();
                     renderDashboard();
                     checkLocalStorageUsage();
@@ -2537,7 +2787,13 @@
             if (confirm(`إلغاء تسجيل حضور (${mName}) لليوم؟`)) {
                 attendanceRecord[today] = (attendanceRecord[today] || []).filter(item => item.id.toString() !== memberId.toString());
                 localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                syncToCloud('attendance', attendanceRecord);
+
+                let pKey = (m?.code || memberId).toString().replace(/\D/g, '');
+                if (isFirebaseActive && db) {
+                    db.ref(`attendance/${today}/${pKey}`).remove().catch(() => {});
+                }
+
+                logActivity("إلغاء حضور مخدوم", mName, "حذف تسجيل الحضور اليومي");
                 renderAttendanceTable();
                 renderLiveCardsFeed();
                 renderMembersList();
@@ -2558,9 +2814,13 @@
                 servantsAttendance[today] = [];
                 localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
                 localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
-                syncToCloud('attendance', attendanceRecord);
-                syncToCloud('servants_attendance', servantsAttendance);
 
+                if (isFirebaseActive && db) {
+                    db.ref(`attendance/${today}`).remove().catch(() => {});
+                    db.ref(`servants_attendance/${today}`).remove().catch(() => {});
+                }
+
+                logActivity("تصفير حضور اليوم", today, "حذف سجل الحضور لليوم بالكامل");
                 renderAttendanceTable();
                 renderLiveCardsFeed();
                 renderServantsAttendanceTable();
@@ -2571,67 +2831,7 @@
         }
 
         function registerMemberAttendance(member) {
-            let existing = (attendanceRecord[today] || []).find(a => a.id.toString() === member.id.toString());
-            if (existing) {
-                playBeepSound('error');
-                showToast(`⚠️ مسجل بالفعل اليوم: ${member.name}`, true);
-                return;
-            }
-
-            let now = new Date();
-            let isFri = isFridaySession(today);
-            let isSummerDay = settings.summerActive && (now.getDay().toString() === settings.summerDay);
-            let isAbsent = false;
-
-            if (!isFri) {
-                isAbsent = false;
-            } else if (isSummerDay && settings.ignoreSummerDelay) {
-                isAbsent = false;
-            } else {
-                let startTimeStr = settings.startTime || "13:00";
-                let [startH, startM] = startTimeStr.split(':').map(Number);
-                let diffMinutes = (now.getHours() * 60 + now.getMinutes()) - (startH * 60 + startM);
-                isAbsent = diffMinutes >= (settings.absentAfter || 75);
-            }
-
-            if (!attendanceRecord[today]) attendanceRecord[today] = [];
-
-            let defaultPts = isFri ? 5 : 15;
-
-            attendanceRecord[today].unshift({
-                id: member.id,
-                code: member.code || member.id,
-                name: member.name,
-                phone: member.phone || "",
-                stage: member.stage || 'سنة أولى',
-                gender: member.gender || 'بنين',
-                time: now.toLocaleTimeString('ar-EG'),
-                isAbsentDueToDelay: isAbsent,
-                attended: true,
-                communion: false,
-                participation: false,
-                points: defaultPts,
-                isBonusEvent: !isFri,
-                scannedBy: currentUser ? currentUser.name : 'تسجيل يدوي'
-            });
-
-            localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-            syncToCloud('attendance', attendanceRecord);
-
-            showKioskWelcome(member, isAbsent, 'member');
-
-            if (isAbsent) {
-                playBeepSound('error');
-                showToast(`⚠️ ${member.name} (تأخير شديد)`, true);
-            } else {
-                playBeepSound('success');
-                showToast(`✅ تم تسجيل حضور: ${member.name} (${isFri ? 'جمعة أساسي' : 'فعالية/رحلة بونص ⭐'})`);
-            }
-            renderAttendanceTable();
-            renderLiveCardsFeed();
-            renderMembersList();
-            renderDashboard();
-            checkLocalStorageUsage();
+            atomicRegisterAttendance(member);
         }
 
         function toggleSpiritualStatus(memberId, field, isChecked) {
@@ -2649,7 +2849,16 @@
             }
 
             localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-            syncToCloud('attendance', attendanceRecord);
+
+            let pKey = (rec.code || rec.id || '').toString().replace(/\D/g, '');
+            if (isFirebaseActive && db) {
+                db.ref(`attendance/${today}/${pKey}`).update({
+                    [field]: isChecked,
+                    points: rec.points
+                });
+            }
+
+            logActivity(`تحديث سر ${field === 'communion' ? 'التناول' : 'المشاركة'}`, rec.name, isChecked ? "تم الرصد (+بونص)" : "إلغاء");
             renderAttendanceTable();
             renderDashboard();
             renderMembersList();
@@ -2697,7 +2906,7 @@
             });
 
             if (member) {
-                registerMemberAttendance(member);
+                atomicRegisterAttendance(member);
                 document.getElementById('manualAttendInput').value = '';
             } else {
                 playBeepSound('error');
@@ -2753,12 +2962,9 @@
             if (!member) return;
 
             if (isChecked) {
-                registerMemberAttendance(member);
+                atomicRegisterAttendance(member);
             } else {
-                attendanceRecord[today] = (attendanceRecord[today] || []).filter(a => a.id.toString() !== memberId.toString());
-                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
-                syncToCloud('attendance', attendanceRecord);
-                showToast(`ℹ️ تم إلغاء حضور: ${member.name}`, true);
+                cancelMemberAttendance(memberId);
             }
 
             renderAttendanceTable();
@@ -2870,7 +3076,7 @@
             });
 
             if (member) {
-                registerMemberAttendance(member);
+                atomicRegisterAttendance(member);
             } else {
                 let s = servants.find(x => (x.code && x.code.toString() === scannedText) || x.id.toString() === scannedText || (x.name && scannedText.includes(x.name)));
                 if (s) {
@@ -3199,7 +3405,7 @@
 
         function registerMemberAttendanceFromTable(memberId) {
             let member = members.find(m => m.id.toString() === memberId.toString());
-            if (member) registerMemberAttendance(member);
+            if (member) atomicRegisterAttendance(member);
         }
 
         function switchProfileTab(tabId, btn) {
@@ -3258,7 +3464,7 @@
                     manualProfileBtn.disabled = false;
                     manualProfileBtn.style.opacity = "1";
                     manualProfileBtn.onclick = function() {
-                        registerMemberAttendance(m);
+                        atomicRegisterAttendance(m);
                         openProfile(m.id);
                     };
                 }
@@ -3332,9 +3538,13 @@
             document.getElementById('btn_delete_member').onclick = function() {
                 if (currentPermission !== 'admin') return alert("متاح لأمين الخدمة فقط!");
                 if (confirm(`حذف ${m.name} نهائياً؟`)) {
+                    let deletedName = m.name;
                     members = members.filter(x => x.id.toString() !== m.id.toString());
                     localStorage.setItem('my_church_class', JSON.stringify(members));
-                    syncToCloud('members', members);
+                    if (isFirebaseActive && db) {
+                        db.ref(`members/${m.id}`).remove().catch(() => {});
+                    }
+                    logActivity("حذف مخدوم", deletedName, "حذف نهائي للملف");
                     closeProfile(); 
                     renderMembersList(); 
                     renderDashboard(); 
@@ -3372,24 +3582,28 @@
             let newDob = document.getElementById('edit_m_dob').value;
             if (!newName) return alert("اسم الدارس مطلوب!");
 
-            m.code = document.getElementById('edit_m_code').value.trim();
-            m.name = newName;
-            m.stage = document.getElementById('edit_m_stage').value;
-            m.gender = document.getElementById('edit_m_gender').value;
-            m.phone = formatWhatsAppPhone(document.getElementById('edit_m_phone').value);
-            m.parent_phone = formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value);
-            m.dob = newDob;
-            m.confessor = document.getElementById('edit_m_confessor').value.trim();
-            m.address = document.getElementById('edit_m_address').value.trim();
-            
-            ensureMemberQrCode(m);
+            let updatedFields = {
+                code: document.getElementById('edit_m_code').value.trim(),
+                name: newName,
+                stage: document.getElementById('edit_m_stage').value,
+                gender: document.getElementById('edit_m_gender').value,
+                phone: formatWhatsAppPhone(document.getElementById('edit_m_phone').value),
+                parent_phone: formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value),
+                dob: newDob,
+                confessor: document.getElementById('edit_m_confessor').value.trim(),
+                address: document.getElementById('edit_m_address').value.trim()
+            };
 
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
+            let bDay = "01";
+            if (newDob) {
+                let parts = newDob.split(/[-/]/);
+                bDay = parts[2] ? parseInt(parts[2]).toString() : "01";
+            }
+            updatedFields.qrCode = `${newName}/${bDay}`;
+
+            saveSingleMemberUpdate(m.id, updatedFields, "تعديل بيانات دارس");
             closeEditMemberModal();
             openProfile(m.id);
-            renderMembersList();
-            renderDashboard();
             showToast("✅ تم تحديث بيانات الدارس بنجاح!");
         }
 
@@ -3476,7 +3690,7 @@
 
         function downloadFullBackup() {
             let backupData = {
-                version: "2.14",
+                version: "2.15",
                 exportDate: new Date().toISOString(),
                 churchName: settings.churchName,
                 serviceName: settings.serviceName,
@@ -3485,6 +3699,7 @@
                 attendanceRecord: attendanceRecord,
                 servantsAttendance: servantsAttendance,
                 masterPlan: masterPlan,
+                auditLogs: auditLogs,
                 settings: settings
             };
 
@@ -3496,6 +3711,7 @@
             downloadAnchor.click();
             downloadAnchor.remove();
 
+            logActivity("نسخ احتياطي", "النظام", "تحميل ملف JSON كامل");
             showToast("💾 تم تحميل ملف النسخة الاحتياطية بنجاح!");
         }
 
@@ -3517,6 +3733,7 @@
                         attendanceRecord = imported.attendanceRecord || {};
                         servantsAttendance = imported.servantsAttendance || {};
                         masterPlan = imported.masterPlan || [];
+                        auditLogs = imported.auditLogs || [];
                         settings = imported.settings || settings;
 
                         localStorage.setItem('my_church_class', JSON.stringify(members));
@@ -3524,6 +3741,7 @@
                         localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
                         localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
                         localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
+                        localStorage.setItem('my_church_audit_logs', JSON.stringify(auditLogs));
                         localStorage.setItem('my_church_settings', JSON.stringify(settings));
 
                         syncToCloud('members', members);
@@ -3533,6 +3751,7 @@
                         syncToCloud('master_plan', masterPlan);
                         syncToCloud('settings', settings);
 
+                        logActivity("استعادة نسخة احتياطية", "النظام", "استرجاع كامل لقاعدة البيانات");
                         applyServiceBranding();
                         renderMembersList();
                         renderAttendanceTable();
@@ -3541,6 +3760,7 @@
                         renderServantsTable();
                         renderMasterPlanTable();
                         renderDashboard();
+                        renderAuditLogTable();
                         checkLocalStorageUsage();
 
                         alert("✅ تم استرجاع النسخة الاحتياطية ومزامنتها بنجاح تام!");
@@ -3651,6 +3871,7 @@
                 
                 localStorage.setItem('my_church_class', JSON.stringify(members));
                 syncToCloud('members', members);
+                logActivity("استيراد مخدومين", "Excel", `إضافة ${addedCount} وتحديث ${updatedCount}`);
                 renderMembersList(); 
                 renderDashboard(); 
                 checkUpcomingBirthdays();
@@ -3681,7 +3902,7 @@
                 return;
             }
 
-            members.push({
+            let newMember = {
                 id: Date.now(),
                 code: examCode,
                 qrCode: generatedQr,
@@ -3696,9 +3917,16 @@
                 other_data: document.getElementById('m_other').value,
                 visitations: [],
                 fieldEvaluations: []
-            });
+            };
+
+            members.push(newMember);
             localStorage.setItem('my_church_class', JSON.stringify(members));
-            syncToCloud('members', members);
+            
+            if (isFirebaseActive && db) {
+                db.ref(`members/${newMember.id}`).set(newMember).catch(() => syncToCloud('members', members));
+            }
+
+            logActivity("إضافة دارس جديد", name, `كود: ${examCode} - مرحلة: ${newMember.stage}`);
             this.reset(); 
             renderMembersList(); 
             renderDashboard(); 
@@ -3736,6 +3964,7 @@
                 localStorage.setItem('my_church_class', JSON.stringify(members));
                 syncToCloud('members', members);
                 
+                logActivity("تحويل دفعات", `${sourceStage} إلى ${targetStage}`, `نقل ${count} فرد`);
                 document.getElementById('stageFilterSelect').value = targetStage;
                 document.getElementById('gradFilterSelect').value = 'all';
                 renderMembersList();
@@ -3768,6 +3997,7 @@
 
             localStorage.setItem('my_church_settings', JSON.stringify(settings));
             syncToCloud('settings', settings);
+            logActivity("تعديل إعدادات عامة", "النظام", "تحديث مواعيد أو اسم الخدمة");
             applyServiceBranding();
             renderMembersList();
             renderDashboard();
@@ -3977,7 +4207,6 @@
                         return !pending[path]; 
                     }
 
-                    // 1. مزامنة الإعدادات
                     db.ref('settings').on('value', snap => { 
                         if (shouldAcceptCloudData('settings')) { 
                             settings = snap.exists() ? snap.val() : {}; 
@@ -3986,7 +4215,6 @@
                         } 
                     });
 
-                    // 2. مزامنة المخدومين
                     db.ref('members').on('value', snap => { 
                         if (shouldAcceptCloudData('members')) { 
                             let val = snap.val();
@@ -4020,7 +4248,6 @@
                         } 
                     });
 
-                    // 3. مزامنة الحضور
                     db.ref('attendance').on('value', snap => {
                         if (shouldAcceptCloudData('attendance')) {
                             let cloudData = snap.exists() ? snap.val() : {};
@@ -4047,7 +4274,6 @@
                         }
                     });
 
-                    // 4. مزامنة حضور الخدام
                     db.ref('servants_attendance').on('value', snap => { 
                         if (shouldAcceptCloudData('servants_attendance')) { 
                             let val = snap.val();
@@ -4059,7 +4285,6 @@
                         } 
                     });
 
-                    // 5. مزامنة قائمة الخدام
                     db.ref('servants').on('value', snap => { 
                         if (shouldAcceptCloudData('servants')) { 
                             servants = snap.exists() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : []; 
@@ -4072,7 +4297,6 @@
                         } 
                     });
 
-                    // 6. مزامنة خطة السنة
                     db.ref('master_plan').on('value', snap => { 
                         if (shouldAcceptCloudData('master_plan')) { 
                             masterPlan = snap.exists() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : []; 
@@ -4081,6 +4305,16 @@
                             renderServantsAttendanceTable(); 
                             checkUpcomingMasterPlanEvents(); 
                         } 
+                    });
+
+                    // استماع مباشر لجدول الـ Audit Log في السحابة
+                    db.ref(`audit_logs/${today}`).on('value', snap => {
+                        let val = snap.val();
+                        if (val) {
+                            auditLogs = Object.values(val).reverse();
+                            localStorage.setItem('my_church_audit_logs', JSON.stringify(auditLogs.slice(0, 300)));
+                            renderAuditLogTable();
+                        }
                     });
                 }
             } catch (e) { 
@@ -4099,6 +4333,7 @@
             if (tabId === 'servantsAttendanceTab') renderServantsAttendanceTable();
             if (tabId === 'planTab') renderMasterPlanTable();
             if (tabId === 'servantsTab') renderServantsTable();
+            if (tabId === 'auditTab') renderAuditLogTable();
             if (tabId === 'dashTab') { renderDashboard(); checkUpcomingBirthdays(); checkUpcomingMasterPlanEvents(); }
             if (tabId === 'settingsTab') updateCloudUsageUI();
             if (tabId === 'broadcastTab') renderBroadcastList('parents');
@@ -4174,6 +4409,7 @@
         renderServantsTable();
         renderMasterPlanTable();
         renderDashboard();
+        renderAuditLogTable();
     </script>
 </body>
 </html>
