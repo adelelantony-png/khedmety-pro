@@ -2468,9 +2468,20 @@
         }
 
         function saveMasterPlan() {
-            localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
+    localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
+    
+    // حفظ مباشر في السحابة فورياً دون انتظار
+    if (isFirebaseActive && db) {
+        db.ref('master_plan').set(masterPlan).then(() => {
+            updateLastSyncTimestamp();
+            showToast("✅ تم تحديث خطة السنة على السحابة فوراً!");
+        }).catch(err => {
             syncToCloud('master_plan', masterPlan);
-        }
+        });
+    } else {
+        syncToCloud('master_plan', masterPlan);
+    }
+}
 
         function downloadMasterPlanTemplate() {
             let headers = ["النوع", "التاريخ (YYYY-MM-DD)", "عنوان الفعالية", "المكان", "المرحلة", "المسؤول / المحاضر"];
