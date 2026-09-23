@@ -1366,7 +1366,129 @@
 
         let myCurrentSessionId = localStorage.getItem('my_active_session_id') || ('sess_' + Date.now() + '_' + Math.floor(Math.random()*1000));
         localStorage.setItem('my_active_session_id', myCurrentSessionId);
+// قياس واحتساب حجم التخزين المحلي المستخدم وتحديث شريط السعة
+function checkLocalStorageUsage() {
+    let totalBytes = 0;
+    for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+            totalBytes += (localStorage[key].length + key.length) * 2;
+        }
+    }
+    
+    const maxBytes = 5 * 1024 * 1024; // سعة LocalStorage التقريبية (5MB)
+    const usagePercent = Math.min(100, Math.round((totalBytes / maxBytes) * 100));
+    const usageKB = Math.round(totalBytes / 1024);
 
+    const bar = document.getElementById('storageUsageBar');
+    const txt = document.getElementById('storageUsageText');
+
+    if (bar && txt) {
+        bar.style.width = usagePercent + '%';
+        txt.innerText = `${usageKB} KB (${usagePercent}%) من أصل 5 MB`;
+
+        if (usagePercent > 80) {
+            bar.style.background = 'var(--danger)';
+            txt.innerHTML += ' <strong style="color:var(--danger);">(⚠️ المساحة قاربت على الامتلاء، يرجى أخذ نسخة احتياطية)</strong>';
+        } else {
+            bar.style.background = 'var(--success)';
+        }
+    }
+}
+// ==========================================
+// النسخ الاحتياطي الشامل للمنظومة واسترجاعه (Full Backup & Restore)
+// ==========================================
+
+function downloadFullBackup() {
+    let backupData = {
+        version: "2.17",
+        exportDate: new Date().toISOString(),
+        churchName: settings.churchName || "",
+        serviceName: settings.serviceName || "",
+        members: members || [],
+        servants: servants || [],
+        attendanceRecord: attendanceRecord || {},
+        servantsAttendance: servantsAttendance || {},
+        masterPlan: masterPlan || [],
+        auditLogs: auditLogs || [],
+        settings: settings || {}
+    };
+
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    let downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `نسخة_احتياطية_خدمتي_${new Date().toLocaleDateString('en-CA')}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+
+    if (typeof logActivity === "function") {
+        logActivity("نسخ احتياطي", "النظام", "تحميل ملف JSON كامل");
+    }
+    showToast("💾 تم تحميل ملف النسخة الاحتياطية بنجاح!");
+}
+
+function restoreFullBackup(event) {
+    let file = event.target.files[0];
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let imported = JSON.parse(e.target.result);
+            if (!imported.members || !imported.attendanceRecord) {
+                return alert("❌ هذا الملف غير صالح أو لا يحتوي على بنية بيانات نظام خدمتي برو!");
+            }
+
+            if (confirm("⚠️ تحذير: استعادة هذه النسخة سيستبدل البيانات الحالية بالكامل بالبيانات المستوردة. هل تريد الاستمرار؟")) {
+                members = imported.members || [];
+                servants = imported.servants || [];
+                attendanceRecord = imported.attendanceRecord || {};
+                servantsAttendance = imported.servantsAttendance || {};
+                masterPlan = imported.masterPlan || [];
+                auditLogs = imported.auditLogs || [];
+                settings = imported.settings || settings;
+
+                localStorage.setItem('my_church_class', JSON.stringify(members));
+                localStorage.setItem('my_church_servants', JSON.stringify(servants));
+                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+                localStorage.setItem('my_church_servants_attendance', JSON.stringify(servantsAttendance));
+                localStorage.setItem('my_church_master_plan', JSON.stringify(masterPlan));
+                localStorage.setItem('my_church_audit_logs', JSON.stringify(auditLogs));
+                localStorage.setItem('my_church_settings', JSON.stringify(settings));
+
+                syncToCloud('members', members);
+                syncToCloud('servants', servants);
+                syncToCloud('attendance', attendanceRecord);
+                syncToCloud('servants_attendance', servantsAttendance);
+                syncToCloud('master_plan', masterPlan);
+                syncToCloud('settings', settings);
+
+                if (typeof logActivity === "function") {
+                    logActivity("استعادة نسخة احتياطية", "النظام", "استرجاع كامل لقاعدة البيانات");
+                }
+
+                applyServiceBranding();
+                renderMembersList();
+                renderAttendanceTable();
+                renderLiveCardsFeed();
+                renderServantsAttendanceTable();
+                renderServantsTable();
+                renderMasterPlanTable();
+                renderDashboard();
+                if (typeof renderAuditLogTable === "function") renderAuditLogTable();
+                if (typeof renderRolloverCandidateList === "function") renderRolloverCandidateList();
+                if (typeof renderAttendanceCalendar === "function") renderAttendanceCalendar();
+                checkLocalStorageUsage();
+
+                alert("✅ تم استرجاع النسخة الاحتياطية ومزامنتها بنجاح تام!");
+            }
+        } catch (err) {
+            alert("❌ حدث خطأ أثناء قراءة ملف النسخة الاحتياطية: " + err.message);
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
         function checkInAppBrowser() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             const isWhatsApp = ua.indexOf('WhatsApp') > -1 || ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1;
