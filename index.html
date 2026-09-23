@@ -1953,7 +1953,198 @@
 
             updateCloudUsageUI();
         }
+// ==========================================
+        // الدوال الأساسية لعرض الجداول (Core Rendering Functions)
+        // ==========================================
 
+        function renderMembersList() {
+            const tbody = document.querySelector('#membersTable tbody');
+            if (!tbody) return;
+            const searchBox = document.getElementById('searchBox');
+            const search = searchBox ? searchBox.value.toLowerCase() : '';
+            const stageFilterSelect = document.getElementById('stageFilterSelect');
+            const stageFilter = stageFilterSelect ? stageFilterSelect.value : 'all';
+            const gradFilterSelect = document.getElementById('gradFilterSelect');
+            const gradFilter = gradFilterSelect ? gradFilterSelect.value : 'all';
+            
+            tbody.innerHTML = '';
+            
+            let filtered = members.filter(m => {
+                let matchesSearch = m.name.toLowerCase().includes(search) || 
+                                     (m.code && m.code.toString().toLowerCase().includes(search)) || 
+                                     (m.phone && m.phone.includes(search));
+                let mStage = m.stage || "سنة أولى";
+                let matchesStage = (stageFilter === 'all') || (mStage === stageFilter);
+                
+                let grad = calculateGraduationStatus(m.id);
+                let matchesGrad = (gradFilter === 'all') || (gradFilter === 'qualified' && grad.qualified) || (gradFilter === 'unqualified' && !grad.qualified);
+
+                return matchesSearch && matchesStage && matchesGrad;
+            });
+
+            filtered.forEach(m => {
+                let grad = calculateGraduationStatus(m.id);
+                let gradBadge = grad.qualified 
+                    ? `<span class="role-badge" style="background:var(--success);">مؤهل للتخرج 🎓</span>` 
+                    : `<span class="role-badge" style="background:var(--warning);">${grad.percent}% (غير مؤهل)</span>`;
+
+                let isAttendedToday = (attendanceRecord[activeSelectedDate] || []).some(a => a.id.toString() === m.id.toString());
+                let manualBtn = isAttendedToday 
+                    ? `<span style="color:green; font-weight:bold; font-size:11px;">مسجل ✔️</span>` 
+                    : `<button class="btn-mini btn-success can-attend" onclick="registerMemberAttendanceFromTable('${m.id}')">تسجيل حضور ✔️</button>`;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${m.code || '-'}</strong></td>
+                    <td data-label="الاسم"><strong>${m.name}</strong></td>
+                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="التليفون">${m.phone}</td>
+                    <td data-label="حضور الجمعة الرسمي">
+                        <div style="font-weight:bold; font-size:11px;">${grad.percent}% (${grad.attended}/${grad.total})</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width:${grad.percent}%; background:${grad.qualified ? 'var(--success)' : 'var(--warning)'}"></div>
+                        </div>
+                    </td>
+                    <td data-label="نقاط بونص ⭐"><strong style="color:var(--purple);">+${grad.bonus} نقطة</strong></td>
+                    <td data-label="أهلية التخرج">${gradBadge}</td>
+                    <td data-label="تسجيل يدوي">${manualBtn}</td>
+                    <td data-label="الملف"><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile('${m.id}')">الملف 🪪</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            updateRoleUI();
+        }
+
+        function renderAttendanceTable() {
+            const tbody = document.querySelector('#attendanceTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            let count = 0;
+
+            (attendanceRecord[activeSelectedDate] || []).forEach(a => {
+                count++;
+                let tr = document.createElement('tr');
+                let status = a.isAbsentDueToDelay ? '<span style="color:red">تأخير شديد</span>' : (a.isBonusEvent ? '<span style="color:var(--purple); font-weight:bold;">⭐ بونص فعالية</span>' : '<span style="color:green">حاضر</span>');
+                
+                let editTimeBtn = (currentPermission === 'admin') 
+                    ? `<button class="btn-mini btn-warning" onclick="editAttendanceTime('${a.id}')" style="padding:2px 5px; font-size:10px; margin-right:4px;">✏️</button>` 
+                    : '';
+
+                tr.innerHTML = `
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${a.code || a.id}</strong></td>
+                    <td data-label="الاسم">${a.name}</td>
+                    <td data-label="المرحلة">${a.stage || '-'}</td>
+                    <td data-label="وقت المسح" dir="ltr">${a.time} ${editTimeBtn}</td>
+                    <td data-label="حضور">${status}</td>
+                    <td data-label="تناول 🕊️">
+                        <input type="checkbox" ${a.communion ? 'checked' : ''} onchange="toggleSpiritualStatus('${a.id}', 'communion', this.checked)" style="width:18px; height:18px; cursor:pointer;">
+                    </td>
+                    <td data-label="مشاركة 💡">
+                        <input type="checkbox" ${a.participation ? 'checked' : ''} onchange="toggleSpiritualStatus('${a.id}', 'participation', this.checked)" style="width:18px; height:18px; cursor:pointer;">
+                    </td>
+                    <td data-label="النقاط ⭐"><strong style="color:var(--accent);">${a.points || 5}</strong></td>
+                    <td data-label="المسجِّل">${a.scannedBy || '-'}</td>
+                    <td data-label="إجراء" class="can-attend">
+                        <button class="btn-mini btn-danger" onclick="cancelMemberAttendance('${a.id}')">إلغاء ❌</button>
+                    </td>
+                `;
+                tbody.insertBefore(tr, tbody.firstChild);
+            });
+            
+            const elCount = document.getElementById('todayAttendanceCount');
+            if (elCount) elCount.innerText = count;
+
+            let todayDateEl = document.getElementById('todayDate');
+            if (todayDateEl) {
+                let isFri = isFridaySession(activeSelectedDate);
+                let label = isFri ? "(اجتماع الجمعة)" : "(نشاط إضافي / بونص ⭐)";
+                todayDateEl.innerText = `${activeSelectedDate} ${label} ${activeSelectedDate === today ? '• اليوم' : ''}`;
+            }
+
+            let searchActiveBadge = document.getElementById('searchActiveDateBadge');
+            if (searchActiveBadge) searchActiveBadge.innerText = activeSelectedDate;
+
+            updateRoleUI();
+        }
+
+        function renderServantsAttendanceTable() {
+            const tbody = document.querySelector('#servantsAttendanceTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            const elStatCount = document.getElementById('statServantsCount');
+            if (elStatCount) elStatCount.innerText = servants.length;
+            
+            const elTodayCount = document.getElementById('statServantsToday');
+            if (elTodayCount) elTodayCount.innerText = (servantsAttendance[today] || []).length;
+
+            let allVisitationsList = [];
+
+            members.forEach(m => {
+                if (m.visitations && Array.isArray(m.visitations)) {
+                    m.visitations.forEach(v => {
+                        let sName = v.by || 'غير محدد';
+                        allVisitationsList.push({ date: v.date, servant: sName, memberName: m.name, text: v.text });
+                    });
+                }
+            });
+
+            const elTotalVis = document.getElementById('statTotalVisitations');
+            if (elTotalVis) elTotalVis.innerText = allVisitationsList.length;
+
+            servants.forEach(s => {
+                let present = (servantsAttendance[today] || []).find(x => x.id.toString() === s.id.toString());
+                
+                let visits = allVisitationsList.filter(v => {
+                    let vBy = (v.servant || '').trim().toLowerCase();
+                    let sName = (s.name || '').trim().toLowerCase();
+                    return vBy === sName || (s.role === 'admin' && (vBy.includes('أمين الخدمة') || vBy === 'admin'));
+                }).length;
+                
+                let todayEvent = masterPlan.find(l => (l.responsible || '').trim().toLowerCase() === s.name.trim().toLowerCase() && l.date === today);
+                let planInfo = todayEvent ? `<strong style="color:red;">📍 ${todayEvent.type}: ${todayEvent.title}</strong>` : '<span style="color:#7f8c8d;">لا توجد تكليفات اليوم</span>';
+
+                let actionBtn = present 
+                    ? `<button class="btn-mini btn-danger" onclick="cancelServantAttendance(${s.id})">إلغاء الحضور ❌</button>`
+                    : `<button class="btn-mini btn-success" onclick="manualMarkServant(${s.id})">تسجيل حضور ✔️</button>`;
+
+                let commit = calculateServantCommitment(s.id);
+                let commitBadge = `
+                    <div style="font-weight:bold; font-size:11px;">${commit.percent}% (${commit.attended}/${commit.total})</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width:${commit.percent}%; background:${commit.isCommitted ? 'var(--success)' : 'var(--warning)'}"></div>
+                    </div>
+                `;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="كود الخادم">${s.code || s.id}</td>
+                    <td data-label="الاسم"><strong>${s.name}</strong></td>
+                    <td data-label="الهاتف">${s.phone}</td>
+                    <td data-label="حالة اليوم">${present ? `<span style="color:green; font-weight:bold;">حاضر (${present.time})</span>` : '<span style="color:red;">لم يحضر</span>'}</td>
+                    <td data-label="النسبة السنوية">${commitBadge}</td>
+                    <td data-label="تكليف اليوم">${planInfo}</td>
+                    <td data-label="الافتقادات"><span class="role-badge" style="background:#00b894;">${visits} افتقاد</span></td>
+                    <td data-label="إجراء" class="can-edit">${actionBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const recentTbody = document.querySelector('#recentVisitationsTable tbody');
+            if (recentTbody) {
+                recentTbody.innerHTML = '';
+                if (allVisitationsList.length === 0) {
+                    recentTbody.innerHTML = '<tr><td colspan="4" style="color:#888;">لم يتم تسجيل أي افتقادات حتى الآن.</td></tr>';
+                } else {
+                    allVisitationsList.slice(0, 10).forEach(v => {
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `<td data-label="التاريخ">${v.date}</td><td data-label="الخادم المسؤول"><strong>${v.servant}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td data-label="الملاحظات">${v.text}</td>`;
+                        recentTbody.appendChild(tr);
+                    });
+                }
+            }
+            updateRoleUI();
+        }
         function checkSession() {
             if (currentUser) {
                 document.getElementById('loginScreen').style.display = 'none';
