@@ -4303,7 +4303,229 @@ function restoreFullBackup(event) {
                 }
             });
         }
+// ==========================================
+        // منظومة إدارة المخدومين والملف الشخصي
+        // ==========================================
 
+        // 1. دالة رسم وتحديث جدول المخدومين
+        function renderMembersList() {
+            const tbody = document.querySelector('#membersTable tbody');
+            if (!tbody) return;
+            const searchBox = document.getElementById('searchBox');
+            const search = searchBox ? searchBox.value.toLowerCase() : '';
+            const stageFilterSelect = document.getElementById('stageFilterSelect');
+            const stageFilter = stageFilterSelect ? stageFilterSelect.value : 'all';
+            const gradFilterSelect = document.getElementById('gradFilterSelect');
+            const gradFilter = gradFilterSelect ? gradFilterSelect.value : 'all';
+            
+            tbody.innerHTML = '';
+            
+            let filtered = members.filter(m => {
+                let matchesSearch = m.name.toLowerCase().includes(search) || 
+                                     (m.code && m.code.toString().toLowerCase().includes(search)) || 
+                                     (m.phone && m.phone.includes(search));
+                let mStage = m.stage || "سنة أولى";
+                let matchesStage = (stageFilter === 'all') || (mStage === stageFilter);
+                
+                let grad = calculateGraduationStatus(m.id);
+                let matchesGrad = (gradFilter === 'all') || (gradFilter === 'qualified' && grad.qualified) || (gradFilter === 'unqualified' && !grad.qualified);
+
+                return matchesSearch && matchesStage && matchesGrad;
+            });
+
+            filtered.forEach(m => {
+                let grad = calculateGraduationStatus(m.id);
+                let gradBadge = grad.qualified 
+                    ? `<span class="role-badge" style="background:var(--success);">مؤهل للتخرج 🎓</span>` 
+                    : `<span class="role-badge" style="background:var(--warning);">${grad.percent}% (غير مؤهل)</span>`;
+
+                let isAttendedToday = (attendanceRecord[activeSelectedDate] || []).some(a => a.id.toString() === m.id.toString());
+                let manualBtn = isAttendedToday 
+                    ? `<span style="color:green; font-weight:bold; font-size:11px;">مسجل ✔️</span>` 
+                    : `<button class="btn-mini btn-success can-attend" onclick="registerMemberAttendanceFromTable('${m.id}')">تسجيل حضور ✔️</button>`;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${m.code || '-'}</strong></td>
+                    <td data-label="الاسم"><strong>${m.name}</strong></td>
+                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="التليفون">${m.phone}</td>
+                    <td data-label="حضور الجمعة الرسمي">
+                        <div style="font-weight:bold; font-size:11px;">${grad.percent}% (${grad.attended}/${grad.total})</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width:${grad.percent}%; background:${grad.qualified ? 'var(--success)' : 'var(--warning)'}"></div>
+                        </div>
+                    </td>
+                    <td data-label="نقاط بونص ⭐"><strong style="color:var(--purple);">+${grad.bonus} نقطة</strong></td>
+                    <td data-label="أهلية التخرج">${gradBadge}</td>
+                    <td data-label="تسجيل يدوي">${manualBtn}</td>
+                    <td data-label="الملف"><button class="btn-primary" style="padding:4px 8px; margin:0; font-size:11px;" onclick="openProfile('${m.id}')">الملف 🪪</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            updateRoleUI();
+        }
+
+        function registerMemberAttendanceFromTable(memberId) {
+            let member = members.find(m => m.id.toString() === memberId.toString());
+            if (member) atomicRegisterAttendance(member);
+        }
+
+        function switchProfileTab(tabId, btn) {
+            document.querySelectorAll('.profile-tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('#profileModal button[id^="tabBtn_"]').forEach(b => {
+                b.style.background = '#dfe6e9'; 
+                b.style.color = '#333';
+            });
+            
+            let targetTab = document.getElementById(tabId);
+            if (targetTab) targetTab.style.display = 'block'; 
+            if (btn) {
+                btn.style.background = 'var(--primary)'; 
+                btn.style.color = 'white';
+            }
+        }
+
+        // 2. دالة فتح الملف الشخصي المبوب
+        function openProfile(id) {
+            if (!id) return;
+            currentProfileId = id.toString();
+            let m = members.find(x => x.id && x.id.toString() === currentProfileId);
+            if (!m) {
+                console.error("لم يتم العثور على ملف المخدوم ذو المعرف:", id);
+                return;
+            }
+
+            document.getElementById('profileModal').style.display = 'flex';
+
+            let qrString = ensureMemberQrCode(m);
+
+            document.getElementById('p_name').innerText = m.name || "";
+            document.getElementById('p_exam_code').innerText = m.code || '-';
+            document.getElementById('p_stage').innerText = m.stage || 'سنة أولى';
+            document.getElementById('p_gender').innerText = m.gender || 'بنين';
+            document.getElementById('p_phone').innerText = m.phone || "-";
+            document.getElementById('p_parent_phone').innerText = m.parent_phone || "-";
+            document.getElementById('p_address').innerText = m.address || "-";
+            document.getElementById('p_dob').innerText = m.dob || "-";
+            document.getElementById('p_confessor').innerText = m.confessor || "-";
+            
+            let grad = calculateGraduationStatus(m.id);
+            document.getElementById('p_grad_status').innerText = `${grad.percent}% - ${grad.qualified ? 'مؤهل للتخرج' : 'غير مؤهل للتخرج'} (رصيد بونص: +${grad.bonus} نقطة)`;
+            document.getElementById('p_grad_status').style.color = grad.qualified ? 'green' : 'orange';
+            document.getElementById('p_grad_progress').style.width = `${grad.percent}%`;
+            document.getElementById('p_grad_progress').style.background = grad.qualified ? 'var(--success)' : 'var(--warning)';
+
+            let isAttendedToday = (attendanceRecord[activeSelectedDate] || []).some(a => a.id.toString() === m.id.toString());
+            let manualProfileBtn = document.getElementById('btn_profile_manual_attend');
+            if (manualProfileBtn) {
+                if (isAttendedToday) {
+                    manualProfileBtn.innerText = `✔️ مسجل حضور في (${activeSelectedDate})`;
+                    manualProfileBtn.disabled = true;
+                    manualProfileBtn.style.opacity = "0.7";
+                } else {
+                    manualProfileBtn.innerText = `✔️ تسجيل حضور في (${activeSelectedDate})`;
+                    manualProfileBtn.disabled = false;
+                    manualProfileBtn.style.opacity = "1";
+                    manualProfileBtn.onclick = function() {
+                        atomicRegisterAttendance(m);
+                        openProfile(m.id);
+                    };
+                }
+            }
+
+            let cleanPhone = formatWhatsAppPhone(m.phone);
+            document.getElementById('btn_wa').href = cleanPhone ? `https://wa.me/${cleanPhone}` : '#';
+
+            let spiritualMsg = encodeURIComponent(`سلام ونعمة يا ${m.name}، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، لو محتاج أي ترتيب أو جلسة صلاة مع أبونا عرفني وربنا يديم بركته في حياتك ❤️🕊️`);
+            let spiritualBtn = document.getElementById('btn_spiritual_wa');
+            if (spiritualBtn) {
+                spiritualBtn.href = cleanPhone ? `https://wa.me/${cleanPhone}?text=${spiritualMsg}` : '#';
+            }
+
+            let vh = document.getElementById('visitationHistory');
+            if (vh) {
+                vh.innerHTML = '';
+                (m.visitations || []).forEach(v => {
+                    vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
+                });
+            }
+
+            let atb = document.getElementById('p_attendance_tbody');
+            if (atb) {
+                atb.innerHTML = '';
+                let dates = Object.keys(attendanceRecord).sort().reverse();
+                let hasAtt = false;
+                dates.forEach(d => {
+                    let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
+                    if (rec) {
+                        hasAtt = true;
+                        let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : (rec.isBonusEvent ? '<span style="color:var(--purple); font-weight:bold;">⭐ بونص فعالية</span>' : '<span style="color:green; font-weight:bold;">حاضر جمعة</span>');
+                        atb.innerHTML += `<tr><td data-label="التاريخ" style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td data-label="الوقت" dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td data-label="الحالة" style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
+                    }
+                });
+                if (!hasAtt) {
+                    atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
+                }
+            }
+
+            let supSelect = document.getElementById('evalSupervisor');
+            if (supSelect) {
+                supSelect.innerHTML = '<option value="">اختر الخادم المشرف المقيم...</option>';
+                servants.forEach(s => {
+                    supSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+                });
+            }
+            if (typeof renderFieldEvaluationsList === 'function') {
+                renderFieldEvaluationsList(m);
+            }
+
+            let qrWrapper = document.getElementById('profileQrWrapper');
+            if (qrWrapper) {
+                qrWrapper.innerHTML = '';
+                try {
+                    if (typeof qrcode !== 'undefined') {
+                        let qr = qrcode(0, 'L');
+                        let utf8String = unescape(encodeURIComponent(qrString));
+                        qr.addData(utf8String);
+                        qr.make();
+                        qrWrapper.innerHTML = qr.createImgTag(4, 8);
+                    }
+                } catch (e) {
+                    console.error("فشل رسم الباركود:", e);
+                }
+            }
+
+            let qrText = document.getElementById('profileQrText');
+            if (qrText) qrText.innerText = `QR: ${qrString}`;
+
+            switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
+
+            document.getElementById('btn_delete_member').onclick = function() {
+                if (currentPermission !== 'admin') return alert("متاح لأمين الخدمة فقط!");
+                if (confirm(`حذف ${m.name} نهائياً؟`)) {
+                    let deletedName = m.name;
+                    members = members.filter(x => x.id.toString() !== m.id.toString());
+                    localStorage.setItem('my_church_class', JSON.stringify(members));
+                    if (isFirebaseActive && db) {
+                        db.ref(`members/${m.id}`).remove().catch(() => {});
+                    }
+                    if (typeof logActivity === 'function') {
+                        logActivity("حذف مخدوم", deletedName, "حذف نهائي للملف");
+                    }
+                    closeProfile(); 
+                    renderMembersList(); 
+                    renderDashboard(); 
+                    if (typeof checkLocalStorageUsage === 'function') checkLocalStorageUsage();
+                }
+            };
+        }
+
+        // 3. دالة إغلاق الملف الشخصي
+        function closeProfile() {
+            const modal = document.getElementById('profileModal');
+            if (modal) modal.style.display = 'none';
+        }
         async function initFirebase() {
             let savedConfig = localStorage.getItem('my_firebase_config');
             let savedEmail = localStorage.getItem('cloud_auth_email');
@@ -4348,136 +4570,7 @@ function restoreFullBackup(event) {
                             if (statusText) statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
                         }
                     });
-// فتح نافذة الملف الشخصي المبوب للمخدوم
-function openProfile(id) {
-    if (!id) return;
-    currentProfileId = id.toString();
-    let m = members.find(x => x.id && x.id.toString() === currentProfileId);
-    if (!m) {
-        console.error("لم يتم العثور على ملف المخدوم ذو المعرف:", id);
-        return;
-    }
 
-    document.getElementById('profileModal').style.display = 'flex';
-
-    let qrString = ensureMemberQrCode(m);
-
-    document.getElementById('p_name').innerText = m.name || "";
-    document.getElementById('p_exam_code').innerText = m.code || '-';
-    document.getElementById('p_stage').innerText = m.stage || 'سنة أولى';
-    document.getElementById('p_gender').innerText = m.gender || 'بنين';
-    document.getElementById('p_phone').innerText = m.phone || "-";
-    document.getElementById('p_parent_phone').innerText = m.parent_phone || "-";
-    document.getElementById('p_address').innerText = m.address || "-";
-    document.getElementById('p_dob').innerText = m.dob || "-";
-    document.getElementById('p_confessor').innerText = m.confessor || "-";
-    
-    let grad = calculateGraduationStatus(m.id);
-    document.getElementById('p_grad_status').innerText = `${grad.percent}% - ${grad.qualified ? 'مؤهل للتخرج' : 'غير مؤهل للتخرج'} (رصيد بونص: +${grad.bonus} نقطة)`;
-    document.getElementById('p_grad_status').style.color = grad.qualified ? 'green' : 'orange';
-    document.getElementById('p_grad_progress').style.width = `${grad.percent}%`;
-    document.getElementById('p_grad_progress').style.background = grad.qualified ? 'var(--success)' : 'var(--warning)';
-
-    let isAttendedToday = (attendanceRecord[activeSelectedDate] || []).some(a => a.id.toString() === m.id.toString());
-    let manualProfileBtn = document.getElementById('btn_profile_manual_attend');
-    if (manualProfileBtn) {
-        if (isAttendedToday) {
-            manualProfileBtn.innerText = `✔️ مسجل حضور في (${activeSelectedDate})`;
-            manualProfileBtn.disabled = true;
-            manualProfileBtn.style.opacity = "0.7";
-        } else {
-            manualProfileBtn.innerText = `✔️ تسجيل حضور في (${activeSelectedDate})`;
-            manualProfileBtn.disabled = false;
-            manualProfileBtn.style.opacity = "1";
-            manualProfileBtn.onclick = function() {
-                atomicRegisterAttendance(m);
-                openProfile(m.id);
-            };
-        }
-    }
-
-    let cleanPhone = formatWhatsAppPhone(m.phone);
-    document.getElementById('btn_wa').href = cleanPhone ? `https://wa.me/${cleanPhone}` : '#';
-
-    let spiritualMsg = encodeURIComponent(`سلام ونعمة يا ${m.name}، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، لو محتاج أي ترتيب أو جلسة صلاة مع أبونا عرفني وربنا يديم بركته في حياتك ❤️🕊️`);
-    let spiritualBtn = document.getElementById('btn_spiritual_wa');
-    if (spiritualBtn) {
-        spiritualBtn.href = cleanPhone ? `https://wa.me/${cleanPhone}?text=${spiritualMsg}` : '#';
-    }
-
-    let vh = document.getElementById('visitationHistory');
-    if (vh) {
-        vh.innerHTML = '';
-        (m.visitations || []).forEach(v => {
-            vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
-        });
-    }
-
-    let atb = document.getElementById('p_attendance_tbody');
-    if (atb) {
-        atb.innerHTML = '';
-        let dates = Object.keys(attendanceRecord).sort().reverse();
-        let hasAtt = false;
-        dates.forEach(d => {
-            let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
-            if (rec) {
-                hasAtt = true;
-                let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : (rec.isBonusEvent ? '<span style="color:var(--purple); font-weight:bold;">⭐ بونص فعالية</span>' : '<span style="color:green; font-weight:bold;">حاضر جمعة</span>');
-                atb.innerHTML += `<tr><td data-label="التاريخ" style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td data-label="الوقت" dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td data-label="الحالة" style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
-            }
-        });
-        if (!hasAtt) {
-            atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
-        }
-    }
-
-    let supSelect = document.getElementById('evalSupervisor');
-    if (supSelect) {
-        supSelect.innerHTML = '<option value="">اختر الخادم المشرف المقيم...</option>';
-        servants.forEach(s => {
-            supSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-        });
-    }
-    renderFieldEvaluationsList(m);
-
-    let qrWrapper = document.getElementById('profileQrWrapper');
-    if (qrWrapper) {
-        qrWrapper.innerHTML = '';
-        try {
-            if (typeof qrcode !== 'undefined') {
-                let qr = qrcode(0, 'L');
-                let utf8String = unescape(encodeURIComponent(qrString));
-                qr.addData(utf8String);
-                qr.make();
-                qrWrapper.innerHTML = qr.createImgTag(4, 8);
-            }
-        } catch (e) {
-            console.error("فشل رسم الباركود:", e);
-        }
-    }
-
-    let qrText = document.getElementById('profileQrText');
-    if (qrText) qrText.innerText = `QR: ${qrString}`;
-
-    switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
-
-    document.getElementById('btn_delete_member').onclick = function() {
-        if (currentPermission !== 'admin') return alert("متاح لأمين الخدمة فقط!");
-        if (confirm(`حذف ${m.name} نهائياً؟`)) {
-            let deletedName = m.name;
-            members = members.filter(x => x.id.toString() !== m.id.toString());
-            localStorage.setItem('my_church_class', JSON.stringify(members));
-            if (isFirebaseActive && db) {
-                db.ref(`members/${m.id}`).remove().catch(() => {});
-            }
-            logActivity("حذف مخدوم", deletedName, "حذف نهائي للملف");
-            closeProfile(); 
-            renderMembersList(); 
-            renderDashboard(); 
-            checkLocalStorageUsage();
-        }
-    };
-}
                     function shouldAcceptCloudData(path) {
                         let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
                         return !pending[path]; 
