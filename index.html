@@ -4348,7 +4348,136 @@ function restoreFullBackup(event) {
                             if (statusText) statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
                         }
                     });
+// فتح نافذة الملف الشخصي المبوب للمخدوم
+function openProfile(id) {
+    if (!id) return;
+    currentProfileId = id.toString();
+    let m = members.find(x => x.id && x.id.toString() === currentProfileId);
+    if (!m) {
+        console.error("لم يتم العثور على ملف المخدوم ذو المعرف:", id);
+        return;
+    }
 
+    document.getElementById('profileModal').style.display = 'flex';
+
+    let qrString = ensureMemberQrCode(m);
+
+    document.getElementById('p_name').innerText = m.name || "";
+    document.getElementById('p_exam_code').innerText = m.code || '-';
+    document.getElementById('p_stage').innerText = m.stage || 'سنة أولى';
+    document.getElementById('p_gender').innerText = m.gender || 'بنين';
+    document.getElementById('p_phone').innerText = m.phone || "-";
+    document.getElementById('p_parent_phone').innerText = m.parent_phone || "-";
+    document.getElementById('p_address').innerText = m.address || "-";
+    document.getElementById('p_dob').innerText = m.dob || "-";
+    document.getElementById('p_confessor').innerText = m.confessor || "-";
+    
+    let grad = calculateGraduationStatus(m.id);
+    document.getElementById('p_grad_status').innerText = `${grad.percent}% - ${grad.qualified ? 'مؤهل للتخرج' : 'غير مؤهل للتخرج'} (رصيد بونص: +${grad.bonus} نقطة)`;
+    document.getElementById('p_grad_status').style.color = grad.qualified ? 'green' : 'orange';
+    document.getElementById('p_grad_progress').style.width = `${grad.percent}%`;
+    document.getElementById('p_grad_progress').style.background = grad.qualified ? 'var(--success)' : 'var(--warning)';
+
+    let isAttendedToday = (attendanceRecord[activeSelectedDate] || []).some(a => a.id.toString() === m.id.toString());
+    let manualProfileBtn = document.getElementById('btn_profile_manual_attend');
+    if (manualProfileBtn) {
+        if (isAttendedToday) {
+            manualProfileBtn.innerText = `✔️ مسجل حضور في (${activeSelectedDate})`;
+            manualProfileBtn.disabled = true;
+            manualProfileBtn.style.opacity = "0.7";
+        } else {
+            manualProfileBtn.innerText = `✔️ تسجيل حضور في (${activeSelectedDate})`;
+            manualProfileBtn.disabled = false;
+            manualProfileBtn.style.opacity = "1";
+            manualProfileBtn.onclick = function() {
+                atomicRegisterAttendance(m);
+                openProfile(m.id);
+            };
+        }
+    }
+
+    let cleanPhone = formatWhatsAppPhone(m.phone);
+    document.getElementById('btn_wa').href = cleanPhone ? `https://wa.me/${cleanPhone}` : '#';
+
+    let spiritualMsg = encodeURIComponent(`سلام ونعمة يا ${m.name}، طمني عليك وأخبارك إيه؟ حابب أطمن على مواظبتك في سر الاعتراف والتناول وقانونك الروحي، لو محتاج أي ترتيب أو جلسة صلاة مع أبونا عرفني وربنا يديم بركته في حياتك ❤️🕊️`);
+    let spiritualBtn = document.getElementById('btn_spiritual_wa');
+    if (spiritualBtn) {
+        spiritualBtn.href = cleanPhone ? `https://wa.me/${cleanPhone}?text=${spiritualMsg}` : '#';
+    }
+
+    let vh = document.getElementById('visitationHistory');
+    if (vh) {
+        vh.innerHTML = '';
+        (m.visitations || []).forEach(v => {
+            vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
+        });
+    }
+
+    let atb = document.getElementById('p_attendance_tbody');
+    if (atb) {
+        atb.innerHTML = '';
+        let dates = Object.keys(attendanceRecord).sort().reverse();
+        let hasAtt = false;
+        dates.forEach(d => {
+            let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
+            if (rec) {
+                hasAtt = true;
+                let stat = rec.isAbsentDueToDelay ? '<span style="color:red; font-weight:bold;">تأخير شديد</span>' : (rec.isBonusEvent ? '<span style="color:var(--purple); font-weight:bold;">⭐ بونص فعالية</span>' : '<span style="color:green; font-weight:bold;">حاضر جمعة</span>');
+                atb.innerHTML += `<tr><td data-label="التاريخ" style="padding:8px; border:1px solid #eee;"><strong>${d}</strong></td><td data-label="الوقت" dir="ltr" style="padding:8px; border:1px solid #eee; color:var(--accent); font-weight:bold;">${rec.time}</td><td data-label="الحالة" style="padding:8px; border:1px solid #eee;">${stat}</td></tr>`;
+            }
+        });
+        if (!hasAtt) {
+            atb.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#888;">لم يحضر أي اجتماع حتى الآن</td></tr>';
+        }
+    }
+
+    let supSelect = document.getElementById('evalSupervisor');
+    if (supSelect) {
+        supSelect.innerHTML = '<option value="">اختر الخادم المشرف المقيم...</option>';
+        servants.forEach(s => {
+            supSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+        });
+    }
+    renderFieldEvaluationsList(m);
+
+    let qrWrapper = document.getElementById('profileQrWrapper');
+    if (qrWrapper) {
+        qrWrapper.innerHTML = '';
+        try {
+            if (typeof qrcode !== 'undefined') {
+                let qr = qrcode(0, 'L');
+                let utf8String = unescape(encodeURIComponent(qrString));
+                qr.addData(utf8String);
+                qr.make();
+                qrWrapper.innerHTML = qr.createImgTag(4, 8);
+            }
+        } catch (e) {
+            console.error("فشل رسم الباركود:", e);
+        }
+    }
+
+    let qrText = document.getElementById('profileQrText');
+    if (qrText) qrText.innerText = `QR: ${qrString}`;
+
+    switchProfileTab('p_attendance_log', document.getElementById('tabBtn_attendance'));
+
+    document.getElementById('btn_delete_member').onclick = function() {
+        if (currentPermission !== 'admin') return alert("متاح لأمين الخدمة فقط!");
+        if (confirm(`حذف ${m.name} نهائياً؟`)) {
+            let deletedName = m.name;
+            members = members.filter(x => x.id.toString() !== m.id.toString());
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+            if (isFirebaseActive && db) {
+                db.ref(`members/${m.id}`).remove().catch(() => {});
+            }
+            logActivity("حذف مخدوم", deletedName, "حذف نهائي للملف");
+            closeProfile(); 
+            renderMembersList(); 
+            renderDashboard(); 
+            checkLocalStorageUsage();
+        }
+    };
+}
                     function shouldAcceptCloudData(path) {
                         let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
                         return !pending[path]; 
