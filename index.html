@@ -428,10 +428,9 @@
             <div class="tab-btn active" onclick="switchTab('dashTab', this)">الرئيسية 📊</div>
             <div class="tab-btn" onclick="switchTab('planTab', this)">خطة السنة 🗓️</div>
             <div class="tab-btn can-attend" onclick="switchTab('attendanceTab', this)">تسجيل الحضور 📷</div>
-            <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">سجل الخدام 📋</div>
+            <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">شؤون الخدام 👔</div>
             <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
             <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
-            <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
             <div class="tab-btn admin-only" onclick="switchTab('rolloverTab', this)">أرشفة وتخريج 🎓</div>
             <div class="tab-btn admin-only" onclick="switchTab('auditTab', this)">سجل العمليات 🛡️</div>
             <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
@@ -460,7 +459,7 @@
 
             <h2>لوحة التحكم والمتابعة</h2>
             
-            <h4 style="margin:10px 0 5px 0; color:var(--primary);">👥 إحصائيات المخدومين والدارسين:</h4>
+            <h4 style="margin:10px 0 5px 0; color:var(--primary);">👥 إحصائيات المخدومين والمخدومين:</h4>
             <div class="stat-grid">
                 <div class="stat-card"><div>إجمالي المخدومين</div><div class="num" id="statTotalMembers">0</div></div>
                 <div class="stat-card"><div>حضور المخدومين اليوم</div><div class="num" id="statTodayMembersCount">0</div></div>
@@ -534,7 +533,7 @@
                     <div class="form-group">
                         <label>المرحلة المستهدفة:</label>
                         <select id="planStage">
-                            <option value="عام لكل الخدمة">عام لكل الخدمة والدارسين</option>
+                            <option value="عام لكل الخدمة">عام لكل الخدمة والمخدومين</option>
                             <option value="سنة أولى">سنة أولى إعداد خدام</option>
                             <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
                             <option value="الخدام فقط">اجتماع الخدام فقط</option>
@@ -670,17 +669,41 @@
         </div>
         <!-- 4. سجل الخدام -->
         <div id="servantsAttendanceTab" class="tab-content">
-            <h2>متابعة التزام ونشاط خدام الاجتماع</h2>
+            <h2>شؤون الخدام، المتابعة، والصلاحيات 👔</h2>
+
             <div class="stat-grid">
                 <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statServantsCount">0</div></div>
                 <div class="stat-card"><div>حضور الخدام اليوم</div><div class="num" id="statServantsToday">0</div></div>
                 <div class="stat-card"><div>إجمالي الافتقادات المسجلة</div><div class="num" id="statTotalVisitations">0</div></div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
-                <h3>جدول التزام الخدام السنوي واليومي</h3>
-                <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الخدام</button>
+            <!-- قسم إضافة خادم جديد (يظهر للأدمن فقط) -->
+            <div class="admin-only" style="background:#f8f9fa; border:1px solid #dfe6e9; padding:15px; border-radius:8px; margin:15px 0;">
+                <h4 style="margin:0 0 10px 0; color:var(--primary);">➕ إضافة حساب خادم جديد وتحديد الصلاحية:</h4>
+                <div class="form-grid">
+                    <div class="form-group"><input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)"></div>
+                    <div class="form-group"><input type="text" id="newServantName" placeholder="اسم الخادم الرباعي"></div>
+                    <div class="form-group"><input type="text" id="newServantPhone" placeholder="رقم الهاتف (كلمة المرور)"></div>
+                    <div class="form-group"><input type="date" id="newServantDob" placeholder="تاريخ الميلاد"></div>
+                    <div class="form-group">
+                        <select id="newServantPermission">
+                            <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
+                            <option value="scanner_only">مسح الحضور بالكاميرا فقط</option>
+                            <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
+                            <option value="view_only">مشاهدة واطلاع فقط</option>
+                            <option value="developer">خادم ومطور نظام</option>
+                            <option value="admin">أمين خدمة (أدمن كامل الصلاحيات)</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-success" onclick="addServantManual()" style="margin:0;">حفظ وإضافة الخادم 🚀</button>
             </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+                <h3>جدول متابعة التزام الخدام وإدارة البيانات</h3>
+                <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ تفريغ حسابات الخدام</button>
+            </div>
+
             <div class="table-responsive">
                 <table id="servantsAttendanceTable" class="adaptive-card-table">
                     <thead>
@@ -691,15 +714,17 @@
                             <th>حالة اليوم</th>
                             <th>نسبة الالتزام السنوية</th>
                             <th>تكليف اليوم بالخطة</th>
-                            <th>إجمالي الافتقادات</th>
-                            <th class="can-edit">تسجيل / إلغاء حضور</th>
+                            <th>الافتقادات</th>
+                            <th class="can-edit">تسجيل الحضور</th>
+                            <th class="admin-only">تعديل</th>
+                            <th class="admin-only">حذف</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
 
-            <h3 style="margin-top:25px;">📝 سجل أحدث الافتقادات الميدانية</h3>
+            <h3 style="margin-top:25px;">📝 سجل أحدث الافتقادات الميدانية المسجلة</h3>
             <div class="table-responsive">
                 <table id="recentVisitationsTable" class="adaptive-card-table">
                     <thead>
@@ -715,7 +740,7 @@
             </div>
         </div>
 
-        <!-- 5. الدارسين والمخدومين -->
+        <!-- 5. المخدومين والمخدومين -->
         <div id="membersTab" class="tab-content">
             <div class="can-edit">
                 <h2>إضافة دارس جديد</h2>
@@ -792,7 +817,7 @@
                 <div class="modal-content" style="max-width:380px; text-align:center;">
                     <span class="close-btn" onclick="closeQrSearchModal()">&times;</span>
                     <h3 style="margin-top:0; border:none; color:var(--primary);">مسح كارنيه لفتح الملف 🪪</h3>
-                    <p style="font-size:12px; color:#636e72; margin-top:0;">وجّه الكاميرا نحو كود الدارس لفتح ملفه فوراً</p>
+                    <p style="font-size:12px; color:#636e72; margin-top:0;">وجّه الكاميرا نحو كود المخدوم لفتح ملفه فوراً</p>
                     <div id="qrSearchReader" style="width:100%; min-height:220px; background:#000; border-radius:8px; overflow:hidden;"></div>
                 </div>
             </div>
@@ -840,48 +865,7 @@
             </div>
         </div>
 
-        <!-- 7. إدارة الخدام -->
-        <div id="servantsTab" class="tab-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <h2>إدارة حسابات الخدام والصلاحيات (سري لأمين الخدمة)</h2>
-                <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الخدام</button>
-            </div>
-            <div class="form-grid">
-                <div class="form-group"><input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)"></div>
-                <div class="form-group"><input type="text" id="newServantName" placeholder="اسم الخادم الرباعي"></div>
-                <div class="form-group"><input type="text" id="newServantPhone" placeholder="رقم الهاتف (كلمة المرور)"></div>
-                <div class="form-group"><input type="date" id="newServantDob" placeholder="تاريخ الميلاد للتهنئة"></div>
-                <div class="form-group">
-                    <select id="newServantPermission">
-                        <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
-                        <option value="scanner_only">مسح الحضور بالكاميرا فقط (شاشة الكاميرا المباشرة)</option>
-                        <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
-                        <option value="view_only">مشاهدة واطلاع فقط</option>
-                        <option value="developer">خادم ومطور نظام (صلاحيات كاملة + فاحص أخطاء Log)</option>
-                        <option value="admin">أمين خدمة (أدمن كامل الصلاحيات + Log)</option>
-                    </select>
-                </div>
-            </div>
-            <button class="btn-success" onclick="addServantManual()">حفظ الخادم</button>
-
-            <h3 style="margin-top:25px;">قائمة الخدام والصلاحيات</h3>
-            <div class="table-responsive">
-                <table id="servantsTable" class="adaptive-card-table">
-                    <thead>
-                        <tr>
-                            <th>كود الخادم</th>
-                            <th>الاسم</th>
-                            <th>الهاتف</th>
-                            <th>تاريخ الميلاد</th>
-                            <th>الصلاحية</th>
-                            <th>تعديل</th>
-                            <th>حذف</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
+        
 
         <!-- 8. أرشفة نهاية الدورة وبدء سنة جديدة وتخريج الدفعات -->
         <div id="rolloverTab" class="tab-content admin-only">
@@ -1212,10 +1196,10 @@
             </div>
 
             <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:8px;">
-                ✔️ تسجيل حضور يدوي لهذا الدارس
+                ✔️ تسجيل حضور يدوي لهذا المخدوم
             </button>
             <button class="btn-warning can-edit" id="btn_profile_edit" style="margin-bottom:12px;" onclick="openEditMemberModal()">
-                ✏️ تعديل بيانات هذا الدارس
+                ✏️ تعديل بيانات هذا المخدوم
             </button>
 
             <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
@@ -1301,11 +1285,11 @@
         </div>
     </div>
 
-    <!-- نافذة تعديل بيانات الدارس -->
+    <!-- نافذة تعديل بيانات المخدوم -->
     <div id="editMemberModal" class="modal" style="z-index:4500;">
         <div class="modal-content" style="max-width:450px;">
             <span class="close-btn" onclick="closeEditMemberModal()">&times;</span>
-            <h3 style="margin-top:0; color:var(--primary); border:none;">✏️ تعديل بيانات الدارس</h3>
+            <h3 style="margin-top:0; color:var(--primary); border:none;">✏️ تعديل بيانات المخدوم</h3>
             <div class="form-grid">
                 <div><label>كود الامتحان:</label><input type="text" id="edit_m_code"></div>
                 <div><label>الاسم الرباعي:</label><input type="text" id="edit_m_name"></div>
@@ -1397,7 +1381,65 @@ function checkLocalStorageUsage() {
 // ==========================================
 // النسخ الاحتياطي الشامل للمنظومة واسترجاعه (Full Backup & Restore)
 // ==========================================
+// ==========================================
+// النسخ الاحتياطي الشامل للمنظومة واسترجاعه (Full Backup & Restore)
+// ==========================================
+```[cite: 4]
 
+وضع الكودين دول تحته مباشرة:
+
+```javascript
+// ==========================================
+// 1. دالة تصدير تقرير الحضور الشامل والبونص إلى Excel
+// ==========================================
+function exportAttendance(onlyToday = false) {
+    let targetDates = onlyToday ? [activeSelectedDate] : Object.keys(attendanceRecord).sort();
+    if (targetDates.length === 0) {
+        alert("لا توجد سجلات حضور مسجلة لتصديرها!");
+        return;
+    }
+
+    let rows = [];
+    members.forEach(m => {
+        let grad = calculateGraduationStatus(m.id);
+        let row = {
+            "كود الامتحان": m.code || m.id,
+            "الاسم الرباعي": m.name,
+            "المرحلة": m.stage || "سنة أولى",
+            "الهاتف": m.phone || "",
+            "نسبة حضور الجمعة": `${grad.percent}%`,
+            "أيام حضور الجمعة": `${grad.attended} من ${grad.total}`,
+            "إجمالي نقاط البونص": grad.bonus,
+            "حالة التخرج": grad.qualified ? "مؤهل للتخرج" : "غير مؤهل"
+        };
+
+        // إضافة حالة كل تاريخ محدد
+        targetDates.forEach(d => {
+            let rec = (attendanceRecord[d] || []).find(a => a.id.toString() === m.id.toString());
+            let statusText = "غائب";
+            if (rec) {
+                if (rec.isAbsentDueToDelay) statusText = "تأخير شديد";
+                else statusText = `حاضر (${rec.time})`;
+                if (rec.communion) statusText += " + تناول";
+                if (rec.participation) statusText += " + مشاركة";
+            }
+            row[d] = statusText;
+        });
+
+        rows.push(row);
+    });
+
+    let ws = XLSX.utils.json_to_sheet(rows);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance_Report");
+    let fileName = onlyToday ? `حضور_يوم_${activeSelectedDate}.xlsx` : `تقرير_حضور_الكورس_الشامل_${today}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast("📊 تم تصدير تقرير الإكسيل بنجاح!");
+}
+
+// ==========================================
+// 2. دالة حذف فعالية من خطة السنة
+// ==========================================
 function downloadFullBackup() {
     let backupData = {
         version: "2.17",
@@ -1789,24 +1831,24 @@ function restoreFullBackup(event) {
             let cleanId = memberId.toString().trim();
             let mIndex = members.findIndex(x => x.id && x.id.toString().trim() === cleanId);
 
-            if (mIndex !== -1) {
-                // دمج التعديلات مع الحفاظ التام على ID المخدوم الأصلي وتاريخ إنشائه
-                members[mIndex] = { 
-                    ...members[mIndex], 
-                    ...updatedFields, 
-                    id: members[mIndex].id 
-                };
-            } else {
+            if (mIndex === -1) {
                 console.error("تعذر العثور على المخدوم لتحديثه:", memberId);
                 return;
             }
 
-            // حفظ المصفوفة المحدثة بالكامل محلياً لمنع ازدواجية العنصر
+            // دمج التعديلات مع الحفاظ التام على ID المخدوم الأصلي
+            members[mIndex] = { 
+                ...members[mIndex], 
+                ...updatedFields, 
+                id: members[mIndex].id 
+            };
+
+            // حفظ المصفوفة المحدثة بالكامل محلياً
             localStorage.setItem('my_church_class', JSON.stringify(members));
 
-            // تحديث العقدة المحددة في Firebase مباشرة
+            // تحديث العقدة المحددة في Firebase مباشرة باسم الـ ID لضمان عدم إنشاء سجل جديد
             if (isFirebaseActive && db) {
-                db.ref(`members/${members[mIndex].id}`).update(updatedFields)
+                db.ref(`members/${members[mIndex].id}`).set(members[mIndex])
                     .then(() => updateLastSyncTimestamp())
                     .catch(() => syncToCloud('members', members));
             } else {
@@ -1825,7 +1867,8 @@ function restoreFullBackup(event) {
         function saveEditedMember() {
             if (!currentProfileId) return;
 
-            let mIndex = members.findIndex(x => x.id && x.id.toString().trim() === currentProfileId.toString().trim());
+            let cleanId = currentProfileId.toString().trim();
+            let mIndex = members.findIndex(x => x.id && x.id.toString().trim() === cleanId);
             if (mIndex === -1) {
                 alert("❌ تعذر تحديد المخدوم المراد تعديله!");
                 return;
@@ -1837,11 +1880,11 @@ function restoreFullBackup(event) {
             let newCode = document.getElementById('edit_m_code').value.trim();
 
             if (!newName) {
-                alert("يرجى كتابة اسم الدارس!");
+                alert("يرجى كتابة اسم المخدوم!");
                 return;
             }
 
-            // حساب الـ QR Code الجديد المتوافق مع الاسم وتاريخ الميلاد المعدل
+            // حساب باركود الـ QR المتوافق مع الاسم وتاريخ الميلاد
             let bDay = "01";
             if (newDob) {
                 let parts = newDob.split(/[-/]/);
@@ -1866,9 +1909,8 @@ function restoreFullBackup(event) {
             saveSingleMemberUpdate(m.id, updatedFields, "تعديل بيانات دارس");
 
             closeEditMemberModal();
-            // إعادة فتح الملف بنفس الـ ID لعرض البيانات الجديدة مباشرة
             openProfile(m.id);
-            showToast("✅ تم تحديث بيانات الدارس بنجاح دون تكرار!");
+            showToast("✅ تم تحديث بيانات المخدوم بنجاح دون تكرار!");
         }
         // ==========================================
         // 3. دالة تسجيل الحضور الذري المقاوم للتكرار والنزاعات (تعتمد على التاريخ النشط activeSelectedDate)
@@ -2312,13 +2354,15 @@ function restoreFullBackup(event) {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td data-label="كود الخادم">${s.code || s.id}</td>
-                    <td data-label="الاسم"><strong>${s.name}</strong></td>
+                    <td data-label="الاسم"><strong>${s.name}</strong> <span style="font-size:10px; color:#636e72;">(${s.permission || s.role || 'خادم'})</span></td>
                     <td data-label="الهاتف">${s.phone}</td>
                     <td data-label="حالة اليوم">${present ? `<span style="color:green; font-weight:bold;">حاضر (${present.time})</span>` : '<span style="color:red;">لم يحضر</span>'}</td>
                     <td data-label="النسبة السنوية">${commitBadge}</td>
                     <td data-label="تكليف اليوم">${planInfo}</td>
                     <td data-label="الافتقادات"><span class="role-badge" style="background:#00b894;">${visits} افتقاد</span></td>
-                    <td data-label="إجراء" class="can-edit">${actionBtn}</td>
+                    <td data-label="تسجيل الحضور" class="can-edit">${actionBtn}</td>
+                    <td data-label="تعديل" class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل ✏️</button></td>
+                    <td data-label="حذف" class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف 🗑️</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -3250,7 +3294,7 @@ function restoreFullBackup(event) {
             let evals = member.fieldEvaluations || [];
 
             if (evals.length === 0) {
-                box.innerHTML = '<div style="text-align:center; padding:15px; color:#888; font-size:12px;">لم يخض الدارس أي نزول ميداني أو تقييمات عملية حتى الآن.</div>';
+                box.innerHTML = '<div style="text-align:center; padding:15px; color:#888; font-size:12px;">لم يخض المخدوم أي نزول ميداني أو تقييمات عملية حتى الآن.</div>';
                 return;
             }
 
@@ -3478,7 +3522,7 @@ function restoreFullBackup(event) {
         }
 
         function clearAllMembers() {
-            let pwd = prompt("⚠️ تحذير خطير: سيتم حذف جميع المخدومين والدارسين نهائياً!\nأدخل كلمة مرور الأدمن للتأكيد:");
+            let pwd = prompt("⚠️ تحذير خطير: سيتم حذف جميع المخدومين والمخدومين نهائياً!\nأدخل كلمة مرور الأدمن للتأكيد:");
             if (pwd === adminPassword || pwd === '1234567') {
                 if (confirm("هل أنت متأكد تماماً من حذف جميع المخدومين؟")) {
                     members = [];
@@ -3661,7 +3705,7 @@ function restoreFullBackup(event) {
 
         function manualMarkMemberFromInput() {
             let input = document.getElementById('manualAttendInput').value.trim();
-            if (!input) return alert("يرجى كتابة كود الامتحان أو اسم الدارس أولاً!");
+            if (!input) return alert("يرجى كتابة كود الامتحان أو اسم المخدوم أولاً!");
 
             let member = members.find(m => {
                 let mCode = m.code ? m.code.toString().trim() : "";
@@ -4150,7 +4194,7 @@ function restoreFullBackup(event) {
             checkUpcomingBirthdays();
             renderAttendanceCalendar();
             checkLocalStorageUsage();
-            showToast(`تمت إضافة الدارس بنجاح بكود امتحان: ${examCode}`);
+            showToast(`تمت إضافة المخدوم بنجاح بكود امتحان: ${examCode}`);
         });
 
         function batchTransferStage() {
@@ -4598,7 +4642,7 @@ function restoreFullBackup(event) {
             if (modal) modal.style.display = 'none';
         }
 // ==========================================
-        // دوال تعديل بيانات الدارس (Edit Member Modal)
+        // دوال تعديل بيانات المخدوم (Edit Member Modal)
         // ==========================================
 
         function openEditMemberModal() {
@@ -4620,82 +4664,7 @@ function restoreFullBackup(event) {
             document.getElementById('editMemberModal').style.display = 'none';
         }
 
-        function saveEditedMember() {
-            let m = members.find(x => x.id.toString() === currentProfileId.toString());
-            if (!m) return;
-
-            let newName = document.getElementById('edit_m_name').value.trim();
-            let newDob = document.getElementById('edit_m_dob').value;
-            if (!newName) return alert("اسم الدارس مطلوب!");
-
-            let updatedFields = {
-                code: document.getElementById('edit_m_code').value.trim(),
-                name: newName,
-                stage: document.getElementById('edit_m_stage').value,
-                gender: document.getElementById('edit_m_gender').value,
-                phone: formatWhatsAppPhone(document.getElementById('edit_m_phone').value),
-                parent_phone: formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value),
-                dob: newDob,
-                confessor: document.getElementById('edit_m_confessor').value.trim(),
-                address: document.getElementById('edit_m_address').value.trim()
-            };
-
-            let bDay = "01";
-            if (newDob) {
-                let parts = newDob.split(/[-/]/);
-                bDay = parts[2] ? parseInt(parts[2]).toString() : "01";
-            }
-            updatedFields.qrCode = `${newName}/${bDay}`;
-
-            saveSingleMemberUpdate(m.id, updatedFields, "تعديل بيانات دارس");
-            closeEditMemberModal();
-            openProfile(m.id);
-            showToast("✅ تم تحديث بيانات الدارس بنجاح!");
-        }
-        async function initFirebase() {
-            let savedConfig = localStorage.getItem('my_firebase_config');
-            let savedEmail = localStorage.getItem('cloud_auth_email');
-            let savedPass = localStorage.getItem('cloud_auth_pass');
-
-            if (!savedConfig || !savedEmail || !savedPass) {
-                let statusText = document.getElementById('cloudStatusText');
-                if (statusText) statusText.innerText = "العمل محلياً";
-                showCloudSetupModal();
-                return;
-            }
-
-            try {
-                let configObj = JSON.parse(savedConfig);
-                if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-                    firebase.initializeApp(configObj);
-                }
-
-                if (typeof firebase !== 'undefined') {
-                    if (!firebase.auth().currentUser) {
-                        await firebase.auth().signInWithEmailAndPassword(savedEmail, savedPass);
-                    }
-
-                    db = firebase.database();
-                    isFirebaseActive = true;
-
-                    let connectedRef = db.ref(".info/connected");
-                    connectedRef.on("value", snap => {
-                        const statusText = document.getElementById('cloudStatusText');
-                        const indicator = document.getElementById('cloudIndicator');
-                        if (snap.val() === true) {
-                            if (indicator) indicator.className = "cloud-status cloud-connected";
-                            let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
-                            if (Object.keys(pending).length > 0) {
-                                if (statusText) statusText.innerText = "جاري رفع المتأخرات... ⏳";
-                                pushPendingData();
-                            } else {
-                                if (statusText) statusText.innerText = "متصل سحابياً 🟢";
-                            }
-                        } else {
-                            if (indicator) indicator.className = "cloud-status cloud-offline";
-                            if (statusText) statusText.innerText = "يعمل بدون نت (أوفلاين) 🟠";
-                        }
-                    });
+        
 
                     function shouldAcceptCloudData(path) {
                         let pending = JSON.parse(localStorage.getItem('pending_sync_paths')) || {};
@@ -4914,18 +4883,9 @@ function restoreFullBackup(event) {
 
         checkInAppBrowser();
         applyServiceBranding();
-        checkSession();
-        initFirebase();
-        renderMembersList();
-        renderAttendanceTable();
-        renderLiveCardsFeed();
-        renderServantsAttendanceTable();
-        renderServantsTable();
-        renderMasterPlanTable();
-        renderDashboard();
-        renderAuditLogTable();
-        renderRolloverCandidateList();
-        renderAttendanceCalendar();
+             initFirebase();        
+             checkSession();
+        
     </script>
 </body>
 </html>
