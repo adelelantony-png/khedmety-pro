@@ -3434,26 +3434,64 @@ function restoreFullBackup(event) {
         }
 
         function cancelMemberAttendance(memberId) {
-            let m = members.find(x => x.id.toString() === memberId.toString());
-            let mName = m ? m.name : "هذا الشخص";
-            if (confirm(`إلغاء تسجيل حضور (${mName}) ليوم (${activeSelectedDate})؟`)) {
-                attendanceRecord[activeSelectedDate] = (attendanceRecord[activeSelectedDate] || []).filter(item => item.id.toString() !== memberId.toString());
-                localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
+    let m = members.find(x => x.id.toString() === memberId.toString());
+    let rec = (attendanceRecord[activeSelectedDate] || []).find(x => x.id.toString() === memberId.toString());
+    let mName = m ? m.name : (rec ? rec.name : "هذا الشخص");
 
-                let pKey = (m?.code || memberId).toString().replace(/\D/g, '');
-                if (isFirebaseActive && db) {
-                    db.ref(`attendance/${activeSelectedDate}/${pKey}`).remove().catch(() => {});
-                }
+    if (confirm(`إلغاء تسجيل حضور (${mName}) ليوم (${activeSelectedDate})؟`)) {
+        // 1. الحذف من المصفوفة المحلية وتحديث LocalStorage فوراً
+        attendanceRecord[activeSelectedDate] = (attendanceRecord[activeSelectedDate] || []).filter(item => item.id.toString() !== memberId.toString());
+        localStorage.setItem('my_church_attendance', JSON.stringify(attendanceRecord));
 
-                logActivity("إلغاء حضور مخدوم", mName, `حذف تسجيل حضور تاريخ ${activeSelectedDate}`);
-                renderAttendanceTable();
-                renderLiveCardsFeed();
-                renderMembersList();
-                renderDashboard();
-                renderAttendanceCalendar();
-                checkLocalStorageUsage();
+        // 2. الحذف النهائي من مسار السحابة
+        if (isFirebaseActive && db) {
+            let possibleKeys = new Set();
+            if (rec) {
+                if (rec.code) possibleKeys.add(rec.code.toString().replace(/\D/g, ''));
+                if (rec.id) possibleKeys.add(rec.id.toString().replace(/\D/g, ''));
+                if (rec.phone) possibleKeys.add(rec.phone.toString().replace(/\D/g, ''));
             }
+            if (m) {
+                if (m.code) possibleKeys.add(m.code.toString().replace(/\D/g, ''));
+                if (m.id) possibleKeys.add(m.id.toString().replace(/\D/g, ''));
+                if (m.phone) possibleKeys.add(m.phone.toString().replace(/\D/g, ''));
+            }
+            possibleKeys.add(memberId.toString().replace(/\D/g, ''));
+            possibleKeys.add(memberId.toString());
+
+            // حذف كافة المسارات المحتملة لهذا الشخص في هذا اليوم من السحابة
+            possibleKeys.forEach(k => {
+                if (k) {
+                    db.ref(`attendance/${activeSelectedDate}/${k}`).remove().catch(() => {});
+                }
+            });
+
+            // التأكد أيضاً من تحديث كامل عقدة اليوم في السحابة لمنع أي تعارض
+            let partitionObj = {};
+            (attendanceRecord[activeSelectedDate] || []).forEach(item => {
+                let p = (item.code || item.id || '').toString().replace(/\D/g, '');
+                if (p) partitionObj[p] = item;
+            });
+            db.ref(`attendance/${activeSelectedDate}`).set(partitionObj)
+                .then(() => updateLastSyncTimestamp())
+                .catch(() => syncToCloud('attendance', attendanceRecord));
+        } else {
+            syncToCloud('attendance', attendanceRecord);
         }
+
+        if (typeof logActivity === "function") {
+            logActivity("إلغاء حضور مخدوم", mName, `حذف حضور تاريخ ${activeSelectedDate}`);
+        }
+
+        renderAttendanceTable();
+        renderLiveCardsFeed();
+        renderMembersList();
+        renderDashboard();
+        if (typeof renderAttendanceCalendar === "function") renderAttendanceCalendar();
+        checkLocalStorageUsage();
+        showToast(`✅ تم إلغاء حضور ${mName} بنجاح`);
+    }
+}
 
         function clearEntireTodayAttendance() {
             let pwd = prompt(`⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور يوم (${activeSelectedDate}) بالكامل!\nأدخل كلمة مرور أمين الخدمة للتأكيد:`);
