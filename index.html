@@ -4711,38 +4711,55 @@ function restoreFullBackup(event) {
                     });
 
                     db.ref('members').on('value', snap => { 
-                        if (shouldAcceptCloudData('members')) { 
-                            let val = snap.val();
-                            if (!val || (Array.isArray(val) && val.length === 0)) {
-                                members = [];
-                                localStorage.removeItem('my_church_class');
-                            } else {
-                                let rawList = Array.isArray(val) ? val : Object.values(val);
-                                members = rawList.filter(Boolean).map(m => {
-                                    return {
-                                        id: m.id || Date.now(),
-                                        code: m.code || m.exam_code || "",
-                                        name: m.name || "",
-                                        phone: m.phone || "",
-                                        stage: m.stage || "سنة أولى",
-                                        gender: m.gender || "بنين",
-                                        dob: m.dob || m.birth_date || "",
-                                        parent_phone: m.parent_phone || "",
-                                        address: m.address || "",
-                                        confessor: m.confessor || "",
-                                        qrCode: m.qrCode || m.qr_code || `${m.name}/01`,
-                                        visitations: m.visitations || [],
-                                        fieldEvaluations: m.fieldEvaluations || []
-                                    };
-                                });
-                                localStorage.setItem('my_church_class', JSON.stringify(members));
-                            }
-                            renderMembersList(); 
-                            renderDashboard(); 
-                            checkUpcomingBirthdays();
-                            renderRolloverCandidateList();
-                        } 
-                    });
+    if (shouldAcceptCloudData('members')) { 
+        let val = snap.val();
+        if (!val || (Array.isArray(val) && val.length === 0)) {
+            members = [];
+            localStorage.removeItem('my_church_class');
+        } else {
+            let rawList = Array.isArray(val) ? val : Object.values(val);
+            let mapByCodeOrId = new Map();
+
+            rawList.filter(Boolean).forEach(m => {
+                let uniqueKey = (m.code && m.code.toString().trim() !== "") 
+                    ? m.code.toString().trim() 
+                    : (m.id ? m.id.toString().trim() : m.name.trim());
+                
+                let item = {
+                    id: m.id || Date.now(),
+                    code: m.code || m.exam_code || "",
+                    name: m.name || "",
+                    phone: m.phone || "",
+                    stage: m.stage || "سنة أولى",
+                    gender: m.gender || "بنين",
+                    dob: m.dob || m.birth_date || "",
+                    parent_phone: m.parent_phone || "",
+                    address: m.address || "",
+                    confessor: m.confessor || "",
+                    qrCode: m.qrCode || m.qr_code || `${m.name}/01`,
+                    visitations: m.visitations || [],
+                    fieldEvaluations: m.fieldEvaluations || []
+                };
+
+                // إذا وجدنا نفس الشخص مكرراً، ندمج البيانات ونحتفظ بالأحدث/الأكمل
+                if (mapByCodeOrId.has(uniqueKey)) {
+                    let existing = mapByCodeOrId.get(uniqueKey);
+                    // دمج الافتقادات والتقييمات إن وجدت
+                    item.visitations = [...(existing.visitations || []), ...(item.visitations || [])];
+                    item.fieldEvaluations = [...(existing.fieldEvaluations || []), ...(item.fieldEvaluations || [])];
+                }
+                mapByCodeOrId.set(uniqueKey, item);
+            });
+
+            members = Array.from(mapByCodeOrId.values());
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+        }
+        renderMembersList(); 
+        renderDashboard(); 
+        checkUpcomingBirthdays();
+        renderRolloverCandidateList();
+    } 
+});
 
                     db.ref('attendance').on('value', snap => {
                         if (shouldAcceptCloudData('attendance')) {
