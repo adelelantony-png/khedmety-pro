@@ -4526,6 +4526,61 @@ function restoreFullBackup(event) {
             const modal = document.getElementById('profileModal');
             if (modal) modal.style.display = 'none';
         }
+// ==========================================
+        // دوال تعديل بيانات الدارس (Edit Member Modal)
+        // ==========================================
+
+        function openEditMemberModal() {
+            let m = members.find(x => x.id.toString() === currentProfileId.toString());
+            if (!m) return;
+            document.getElementById('edit_m_code').value = m.code || '';
+            document.getElementById('edit_m_name').value = m.name || '';
+            document.getElementById('edit_m_stage').value = m.stage || 'سنة أولى';
+            document.getElementById('edit_m_gender').value = m.gender || 'بنين';
+            document.getElementById('edit_m_phone').value = m.phone || '';
+            document.getElementById('edit_m_parent_phone').value = m.parent_phone || '';
+            document.getElementById('edit_m_dob').value = m.dob || '';
+            document.getElementById('edit_m_confessor').value = m.confessor || '';
+            document.getElementById('edit_m_address').value = m.address || '';
+            document.getElementById('editMemberModal').style.display = 'flex';
+        }
+
+        function closeEditMemberModal() {
+            document.getElementById('editMemberModal').style.display = 'none';
+        }
+
+        function saveEditedMember() {
+            let m = members.find(x => x.id.toString() === currentProfileId.toString());
+            if (!m) return;
+
+            let newName = document.getElementById('edit_m_name').value.trim();
+            let newDob = document.getElementById('edit_m_dob').value;
+            if (!newName) return alert("اسم الدارس مطلوب!");
+
+            let updatedFields = {
+                code: document.getElementById('edit_m_code').value.trim(),
+                name: newName,
+                stage: document.getElementById('edit_m_stage').value,
+                gender: document.getElementById('edit_m_gender').value,
+                phone: formatWhatsAppPhone(document.getElementById('edit_m_phone').value),
+                parent_phone: formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value),
+                dob: newDob,
+                confessor: document.getElementById('edit_m_confessor').value.trim(),
+                address: document.getElementById('edit_m_address').value.trim()
+            };
+
+            let bDay = "01";
+            if (newDob) {
+                let parts = newDob.split(/[-/]/);
+                bDay = parts[2] ? parseInt(parts[2]).toString() : "01";
+            }
+            updatedFields.qrCode = `${newName}/${bDay}`;
+
+            saveSingleMemberUpdate(m.id, updatedFields, "تعديل بيانات دارس");
+            closeEditMemberModal();
+            openProfile(m.id);
+            showToast("✅ تم تحديث بيانات الدارس بنجاح!");
+        }
         async function initFirebase() {
             let savedConfig = localStorage.getItem('my_firebase_config');
             let savedEmail = localStorage.getItem('cloud_auth_email');
