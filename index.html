@@ -1781,23 +1781,94 @@ function restoreFullBackup(event) {
         // ==========================================
         // 2. التحديث المباشر للمخدوم الفردي (Single Member Direct Update)
         // ==========================================
+        // ==========================================
+        // تحديث مخدوم فردي معدل بدقة ومنع التكرار
+        // ==========================================
+
         function saveSingleMemberUpdate(memberId, updatedFields, actionLabel = "تعديل مخدوم") {
-            let mIndex = members.findIndex(x => x.id.toString() === memberId.toString());
+            let cleanId = memberId.toString().trim();
+            let mIndex = members.findIndex(x => x.id && x.id.toString().trim() === cleanId);
+
             if (mIndex !== -1) {
-                members[mIndex] = { ...members[mIndex], ...updatedFields };
-                localStorage.setItem('my_church_class', JSON.stringify(members));
+                // دمج التعديلات مع الحفاظ التام على ID المخدوم الأصلي وتاريخ إنشائه
+                members[mIndex] = { 
+                    ...members[mIndex], 
+                    ...updatedFields, 
+                    id: members[mIndex].id 
+                };
+            } else {
+                console.error("تعذر العثور على المخدوم لتحديثه:", memberId);
+                return;
             }
 
+            // حفظ المصفوفة المحدثة بالكامل محلياً لمنع ازدواجية العنصر
+            localStorage.setItem('my_church_class', JSON.stringify(members));
+
+            // تحديث العقدة المحددة في Firebase مباشرة
             if (isFirebaseActive && db) {
-                db.ref(`members/${memberId}`).update(updatedFields)
+                db.ref(`members/${members[mIndex].id}`).update(updatedFields)
                     .then(() => updateLastSyncTimestamp())
                     .catch(() => syncToCloud('members', members));
+            } else {
+                syncToCloud('members', members);
             }
 
-            let memberName = (mIndex !== -1) ? members[mIndex].name : memberId;
-            logActivity(actionLabel, memberName, Object.keys(updatedFields).join(', '));
+            let memberName = members[mIndex].name;
+            if (typeof logActivity === "function") {
+                logActivity(actionLabel, memberName, Object.keys(updatedFields).join(', '));
+            }
+
             renderMembersList();
             renderDashboard();
+        }
+
+        function saveEditedMember() {
+            if (!currentProfileId) return;
+
+            let mIndex = members.findIndex(x => x.id && x.id.toString().trim() === currentProfileId.toString().trim());
+            if (mIndex === -1) {
+                alert("❌ تعذر تحديد المخدوم المراد تعديله!");
+                return;
+            }
+
+            let m = members[mIndex];
+            let newName = document.getElementById('edit_m_name').value.trim();
+            let newDob = document.getElementById('edit_m_dob').value;
+            let newCode = document.getElementById('edit_m_code').value.trim();
+
+            if (!newName) {
+                alert("يرجى كتابة اسم الدارس!");
+                return;
+            }
+
+            // حساب الـ QR Code الجديد المتوافق مع الاسم وتاريخ الميلاد المعدل
+            let bDay = "01";
+            if (newDob) {
+                let parts = newDob.split(/[-/]/);
+                bDay = parts[2] ? parseInt(parts[2]).toString() : "01";
+            }
+            let updatedQr = `${newName}/${bDay}`;
+
+            let updatedFields = {
+                code: newCode,
+                name: newName,
+                stage: document.getElementById('edit_m_stage').value,
+                gender: document.getElementById('edit_m_gender').value,
+                phone: formatWhatsAppPhone(document.getElementById('edit_m_phone').value),
+                parent_phone: formatWhatsAppPhone(document.getElementById('edit_m_parent_phone').value),
+                dob: newDob,
+                confessor: document.getElementById('edit_m_confessor').value.trim(),
+                address: document.getElementById('edit_m_address').value.trim(),
+                qrCode: updatedQr
+            };
+
+            // تطبيق التعديل على نفس المخدوم
+            saveSingleMemberUpdate(m.id, updatedFields, "تعديل بيانات دارس");
+
+            closeEditMemberModal();
+            // إعادة فتح الملف بنفس الـ ID لعرض البيانات الجديدة مباشرة
+            openProfile(m.id);
+            showToast("✅ تم تحديث بيانات الدارس بنجاح دون تكرار!");
         }
         // ==========================================
         // 3. دالة تسجيل الحضور الذري المقاوم للتكرار والنزاعات (تعتمد على التاريخ النشط activeSelectedDate)
