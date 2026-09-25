@@ -59,17 +59,36 @@
         (function checkAutoSetupFromUrl() {
             let hash = window.location.hash;
             if (hash && hash.startsWith('#setup=')) {
+                // نمسح الرابط من شريط العنوان فورًا (قبل أي معالجة) حتى لا يبقى بيانات
+                // الدخول السحابية الحساسة ظاهرة في شريط العنوان أو في سجل المتصفح (History).
+                let encodedPayload = hash.replace('#setup=', '');
+                window.history.replaceState(null, null, window.location.pathname);
                 try {
-                    let encodedPayload = hash.replace('#setup=', '');
                     let jsonString = decodeURIComponent(escape(atob(encodedPayload)));
                     let payload = JSON.parse(jsonString);
                     if (payload.cfg && payload.em && payload.pw) {
-                        localStorage.setItem('my_firebase_config', JSON.stringify(payload.cfg));
-                        localStorage.setItem('cloud_auth_email', payload.em);
-                        localStorage.setItem('cloud_auth_pass', payload.pw);
-                        window.history.replaceState(null, null, window.location.pathname);
-                        alert("✅ تم ضبط وإعداد السحابة لجهازك بنجاح تام وبشكل آلي!");
-                        location.reload();
+                        // تأمين إضافي: هذا الرابط يمنح من يفتحه صلاحية وصول كاملة لقاعدة بيانات
+                        // الكنيسة السحابية بكل أسماء وهواتف وعناوين الدارسين والخدام. لذلك
+                        // لا يُطبَّق تلقائيًا وبصمت، بل يُعرض تأكيد صريح للمستخدم أولاً.
+                        let projectHint = (payload.cfg && (payload.cfg.projectId || payload.cfg.databaseURL)) || "غير معروف";
+                        let confirmMsg =
+                            "⚠️ تنبيه أمني هام\n\n" +
+                            "هذا الرابط سيقوم بضبط هذا الجهاز للاتصال بقاعدة بيانات سحابية تحتوي على:\n" +
+                            "بيانات الدارسين والخدام (أسماء، هواتف، عناوين).\n\n" +
+                            "المشروع السحابي: " + projectHint + "\n" +
+                            "البريد الإلكتروني: " + payload.em + "\n\n" +
+                            "لا تكمل إلا إذا كنت متأكدًا أن هذا الرابط جاء من أمين الخدمة مباشرة " +
+                            "ولم يتم مشاركته أو نشره في مكان عام (مثل جروب واتساب).\n\n" +
+                            "هل تريد المتابعة وربط هذا الجهاز فعلاً؟";
+                        if (window.confirm(confirmMsg)) {
+                            localStorage.setItem('my_firebase_config', JSON.stringify(payload.cfg));
+                            localStorage.setItem('cloud_auth_email', payload.em);
+                            localStorage.setItem('cloud_auth_pass', payload.pw);
+                            alert("✅ تم ضبط وإعداد السحابة لجهازك بنجاح.");
+                            location.reload();
+                        } else {
+                            alert("تم إلغاء الإعداد التلقائي. لم يتم حفظ أي بيانات دخول على هذا الجهاز.");
+                        }
                     }
                 } catch (err) { console.error("فشل استخراج بيانات الرابط التلقائي:", err); }
             }
@@ -651,7 +670,7 @@
                     <thead>
                         <tr>
                             <th>كود الخادم</th><th>الاسم</th><th>الهاتف</th><th>تاريخ الميلاد</th>
-                            <th>الصلاحية</th><th>تعديل</th><th>حذف</th>
+                            <th>الصلاحية</th><th>الحساب السحابي</th><th>تعديل</th><th>حذف</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -1073,6 +1092,22 @@
         }
 
         // ==========================================
+        // 1.5 تنقية النصوص قبل عرضها كـ HTML (حماية من XSS)
+        // تُستخدم مع أي بيانات أدخلها مستخدم (اسم، هاتف، عنوان، ملاحظات...)
+        // قبل حقنها داخل innerHTML، حتى لا يستطيع أحد كتابة اسم يحتوي على
+        // <script> أو onerror= يشتغل عند أي خادم/أدمن آخر يفتح الصفحة.
+        // ==========================================
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ==========================================
         // 2. نظام قياس التخزين المحلي
         // ==========================================
         function checkLocalStorageUsage() {
@@ -1249,6 +1284,82 @@
         });
 
         // ==========================================
+        // ==========================================
+        // 6.5 نظام حسابات Firebase Auth الفردية لكل خادم
+        // ==========================================
+        // كل خادم له إيميل ثابت مشتق تلقائيًا من كوده (مش إيميل حقيقي، مجرد معرّف)،
+        // وكلمة مروره في Firebase Auth هي نفس رقم هاتفه المستخدم أصلاً كباسورد محلي.
+        // هذا يسمح لكل خادم بأن يكون له auth.uid خاص به تعتمد عليه Firebase Rules،
+        // بدل الحساب السحابي المشترك (cloud_auth_email/pass) المستخدم فقط لتفعيل الاتصال.
+        function deriveServantAuthEmail(codeOrAdmin) {
+            let safeCode = String(codeOrAdmin || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            return `srv_${safeCode || 'unknown'}@khedmety.local`;
+        }
+
+        // محاولة تسجيل دخول Firebase Auth بحساب فردي - إضافية ولا توقف تسجيل الدخول المحلي أبداً لو فشلت.
+        // لو نجحت، ترجع الدور (role) المسجل فعلياً في Firebase (roles/{uid}) ليكون هو المصدر الرسمي للصلاحية.
+        async function tryIndividualCloudLogin(code, phone) {
+            if (!isFirebaseActive || typeof firebase === 'undefined') return null;
+            try {
+                let email = deriveServantAuthEmail(code);
+                let cred = await firebase.auth().signInWithEmailAndPassword(email, phone);
+                let uid = cred.user.uid;
+                let snap = await db.ref(`roles/${uid}`).once('value');
+                let role = snap.val();
+                return role || null;
+            } catch (err) {
+                // طبيعي جداً لو الخادم لسه معندوش حساب فردي مربوط - يفضل يشتغل بالنظام المحلي
+                console.warn("لا يوجد حساب سحابي فردي مربوط لهذا الخادم بعد:", err.code || err.message);
+                return null;
+            }
+        }
+
+        // ربط خادم موجود بحساب Firebase Auth فردي (أدمن فقط) - ينشئ الحساب ويحدد دوره في roles/{uid}
+        async function linkServantToCloudAuth(servantId) {
+            if (currentPermission !== 'admin') return alert("ربط الحسابات السحابية متاح لأمين الخدمة فقط!");
+            if (!isFirebaseActive || typeof firebase === 'undefined' || !db) {
+                return alert("❌ لازم تفعّل الربط السحابي أولاً (من نافذة إعداد السحابة) قبل ربط حسابات الخدام الفردية.");
+            }
+            let s = servants.find(x => x.id === servantId);
+            if (!s) return;
+            if (!s.phone || s.phone.length < 6) {
+                return alert("❌ رقم هاتف الخادم قصير جداً ليُستخدم ككلمة مرور آمنة في Firebase. عدّل رقم الهاتف أولاً.");
+            }
+
+            let savedEmail = localStorage.getItem(STORAGE_KEYS.CLOUD_EMAIL);
+            let savedPass = localStorage.getItem(STORAGE_KEYS.CLOUD_PASS);
+            let email = deriveServantAuthEmail(s.code || s.id);
+
+            if (!confirm(`سيتم إنشاء حساب سحابي فردي للخادم (${s.name}) بالبريد:\n${email}\nوكلمة المرور: رقم هاتفه الحالي.\n\nمتابعة؟`)) return;
+
+            try {
+                let cred = await firebase.auth().createUserWithEmailAndPassword(email, s.phone);
+                let newUid = cred.user.uid;
+
+                await db.ref(`roles/${newUid}`).set(s.permission || s.role || 'full');
+
+                // إعادة تسجيل الدخول بحساب السحابة المشترك لأن إنشاء المستخدم الجديد يبدّل الجلسة الحالية تلقائياً
+                if (savedEmail && savedPass) {
+                    await firebase.auth().signInWithEmailAndPassword(savedEmail, savedPass);
+                }
+
+                s.cloudUid = newUid;
+                localStorage.setItem(STORAGE_KEYS.SERVANTS, JSON.stringify(servants));
+                if (isFirebaseActive && db) db.ref(`servants/${s.id}`).set(s).catch(() => syncToCloud('servants', servants));
+
+                logActivity("ربط حساب سحابي فردي", s.name, `UID: ${newUid}`);
+                renderServantsTable();
+                alert(`✅ تم إنشاء وربط الحساب السحابي للخادم (${s.name}) بنجاح.`);
+            } catch (err) {
+                if (err.code === 'auth/email-already-in-use') {
+                    alert("⚠️ يوجد حساب سحابي مرتبط بهذا الخادم بالفعل. لو غيّرت رقم هاتفه، يلزم تحديث كلمة المرور يدوياً من لوحة Firebase Authentication.");
+                } else {
+                    alert("❌ فشل إنشاء الحساب السحابي: " + (err.message || err.code));
+                }
+            }
+        }
+
+        // ==========================================
         // 6. متغيرات الحالة الرئيسية
         // ==========================================
         let members = JSON.parse(localStorage.getItem(STORAGE_KEYS.MEMBERS)) || [];
@@ -1276,8 +1387,20 @@
             ignoreSummerDelay: true
         };
 
-        // كلمة مرور الأدمن: مشفرة بـ SHA-256. القيمة الافتراضية هي hash("1234567")
+        // كلمة مرور الأدمن: مشفرة بـ SHA-256.
         let adminPasswordHash = localStorage.getItem(STORAGE_KEYS.ADMIN_PWD) || '';
+
+        // ==========================================
+        // فحص كلمة مرور الأدمن (إصلاح أمني):
+        // كلمة المرور الافتراضية (1234567) تُقبل فقط طالما الأدمن لم يضبط كلمة مرور خاصة به بعد.
+        // بمجرد تعيين adminPasswordHash، تتوقف الافتراضية عن العمل نهائيًا ولا تُستخدم كـ "باب خلفي".
+        // ==========================================
+        function isAdminPasswordValid(pwdHash, rawPwd) {
+            if (adminPasswordHash) {
+                return pwdHash === adminPasswordHash;
+            }
+            return rawPwd === DEFAULT_ADMIN_PWD;
+        }
 
         let currentUser = null;
         try {
@@ -1423,11 +1546,11 @@
             auditLogs.slice(0, 100).forEach(log => {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td data-label="الوقت" dir="ltr"><strong>${log.timestamp}</strong></td>
-                    <td data-label="الخادم">${log.servant}</td>
-                    <td data-label="نوع العملية"><span class="role-badge" style="background:${log.action.includes('حذف')||log.action.includes('طرد')||log.action.includes('أرشفة') ? 'var(--danger)' : 'var(--accent)'};">${log.action}</span></td>
-                    <td data-label="الهدف"><strong>${log.target}</strong></td>
-                    <td data-label="التفاصيل">${log.details || '-'}</td>
+                    <td data-label="الوقت" dir="ltr"><strong>${escapeHtml(log.timestamp)}</strong></td>
+                    <td data-label="الخادم">${escapeHtml(log.servant)}</td>
+                    <td data-label="نوع العملية"><span class="role-badge" style="background:${log.action.includes('حذف')||log.action.includes('طرد')||log.action.includes('أرشفة') ? 'var(--danger)' : 'var(--accent)'};">${escapeHtml(log.action)}</span></td>
+                    <td data-label="الهدف"><strong>${escapeHtml(log.target)}</strong></td>
+                    <td data-label="التفاصيل">${escapeHtml(log.details) || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -1447,7 +1570,7 @@
             let pwd = prompt("أدخل كلمة مرور الأدمن لتفريغ سجل تدقيق العمليات:");
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash === adminPasswordHash || pwd === DEFAULT_ADMIN_PWD) {
+            if (isAdminPasswordValid(pwdHash, pwd)) {
                 auditLogs = [];
                 localStorage.removeItem(STORAGE_KEYS.AUDIT_LOGS);
                 if (isFirebaseActive && db) db.ref(`audit_logs/${today}`).remove().catch(() => {});
@@ -1764,10 +1887,10 @@
 
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${m.code || '-'}</strong></td>
-                    <td data-label="الاسم"><strong>${m.name}</strong></td>
-                    <td data-label="المرحلة">${m.stage || 'سنة أولى'}</td>
-                    <td data-label="التليفون">${m.phone}</td>
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${escapeHtml(m.code) || '-'}</strong></td>
+                    <td data-label="الاسم"><strong>${escapeHtml(m.name)}</strong></td>
+                    <td data-label="المرحلة">${escapeHtml(m.stage) || 'سنة أولى'}</td>
+                    <td data-label="التليفون">${escapeHtml(m.phone)}</td>
                     <td data-label="حضور الجمعة الرسمي">
                         <div style="font-weight:bold; font-size:11px;">${grad.percent}% (${grad.attended}/${grad.total})</div>
                         <div class="progress-bar-container"><div class="progress-bar" style="width:${grad.percent}%; background:${grad.qualified ? 'var(--success)' : 'var(--warning)'}"></div></div>
@@ -1810,15 +1933,15 @@
                     : '';
 
                 tr.innerHTML = `
-                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${a.code || a.id}</strong></td>
-                    <td data-label="الاسم">${a.name}</td>
-                    <td data-label="المرحلة">${a.stage || '-'}</td>
-                    <td data-label="وقت المسح" dir="ltr">${a.time} ${editTimeBtn}</td>
+                    <td data-label="كود الامتحان"><strong style="color:var(--primary); font-size:14px;">${escapeHtml(a.code) || escapeHtml(a.id)}</strong></td>
+                    <td data-label="الاسم">${escapeHtml(a.name)}</td>
+                    <td data-label="المرحلة">${escapeHtml(a.stage) || '-'}</td>
+                    <td data-label="وقت المسح" dir="ltr">${escapeHtml(a.time)} ${editTimeBtn}</td>
                     <td data-label="حضور">${status}</td>
                     <td data-label="تناول 🕊️"><input type="checkbox" ${a.communion ? 'checked' : ''} onchange="toggleSpiritualStatus('${a.id}', 'communion', this.checked)" style="width:18px; height:18px; cursor:pointer;"></td>
                     <td data-label="مشاركة 💡"><input type="checkbox" ${a.participation ? 'checked' : ''} onchange="toggleSpiritualStatus('${a.id}', 'participation', this.checked)" style="width:18px; height:18px; cursor:pointer;"></td>
                     <td data-label="النقاط ⭐"><strong style="color:var(--accent);">${a.points || 5}</strong></td>
-                    <td data-label="المسجِّل">${a.scannedBy || '-'}</td>
+                    <td data-label="المسجِّل">${escapeHtml(a.scannedBy) || '-'}</td>
                     <td data-label="إجراء" class="can-attend"><button class="btn-mini btn-danger" onclick="cancelMemberAttendance('${a.id}')">إلغاء ❌</button></td>
                 `;
                 tbody.insertBefore(tr, tbody.firstChild);
@@ -1983,7 +2106,7 @@
                 } else {
                     allVisitationsList.slice(0, 10).forEach(v => {
                         let tr = document.createElement('tr');
-                        tr.innerHTML = `<td data-label="التاريخ">${v.date}</td><td data-label="الخادم المسؤول"><strong>${v.servant}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${v.memberName}</td><td data-label="الملاحظات">${v.text}</td>`;
+                        tr.innerHTML = `<td data-label="التاريخ">${escapeHtml(v.date)}</td><td data-label="الخادم المسؤول"><strong>${escapeHtml(v.servant)}</strong></td><td data-label="المخدوم المفتقد" style="color:var(--primary); font-weight:bold;">${escapeHtml(v.memberName)}</td><td data-label="الملاحظات">${escapeHtml(v.text)}</td>`;
                         recentTbody.appendChild(tr);
                     });
                 }
@@ -2049,11 +2172,11 @@
                     let isMe = (sess.sessionId === myCurrentSessionId);
                     let tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td data-label="اسم الخادم"><strong>${sess.servantName}</strong> ${isMe ? '<span style="color:green; font-size:11px;">(أنت)</span>' : ''}</td>
-                        <td data-label="نوع الجهاز">${sess.device}</td>
-                        <td data-label="وقت الدخول" dir="ltr">${sess.loginDate} ${sess.loginTime}</td>
+                        <td data-label="اسم الخادم"><strong>${escapeHtml(sess.servantName)}</strong> ${isMe ? '<span style="color:green; font-size:11px;">(أنت)</span>' : ''}</td>
+                        <td data-label="نوع الجهاز">${escapeHtml(sess.device)}</td>
+                        <td data-label="وقت الدخول" dir="ltr">${escapeHtml(sess.loginDate)} ${escapeHtml(sess.loginTime)}</td>
                         <td data-label="الحالة"><span class="role-badge" style="background:var(--success);">متصل الآن 🟢</span></td>
-                        <td data-label="إجراء الأدمن">${isMe ? '<span style="color:#888; font-size:11px;">جلستك الحالية</span>' : `<button class="btn-mini btn-danger" onclick="terminateSession('${key}', '${sess.servantName}')">طرد الجهاز ❌</button>`}</td>
+                        <td data-label="إجراء الأدمن">${isMe ? '<span style="color:#888; font-size:11px;">جلستك الحالية</span>' : `<button class="btn-mini btn-danger" onclick="terminateSession('${key}', '${escapeHtml(sess.servantName)}')">طرد الجهاز ❌</button>`}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -2073,7 +2196,7 @@
             let pwd = prompt("أدخل كلمة مرور الأدمن لتأكيد طرد جميع الأجهزة المسجلة:");
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash === adminPasswordHash || pwd === DEFAULT_ADMIN_PWD) {
+            if (isAdminPasswordValid(pwdHash, pwd)) {
                 db.ref('active_sessions').once('value', snap => {
                     let sessions = snap.val() || {};
                     Object.keys(sessions).forEach(key => {
@@ -2164,16 +2287,19 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             if (servants.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا يوجد خدام مسجلون.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا يوجد خدام مسجلون.</td></tr>';
             }
             servants.forEach(s => {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td data-label="كود الخادم">${s.code || s.id}</td>
-                    <td data-label="الاسم"><strong>${s.name}</strong></td>
-                    <td data-label="الهاتف">${s.phone}</td>
-                    <td data-label="تاريخ الميلاد">${s.dob || '-'}</td>
-                    <td data-label="الصلاحية"><span class="role-badge" style="background:var(--accent);">${s.permission || s.role || 'خادم'}</span></td>
+                    <td data-label="كود الخادم">${escapeHtml(s.code) || escapeHtml(s.id)}</td>
+                    <td data-label="الاسم"><strong>${escapeHtml(s.name)}</strong></td>
+                    <td data-label="الهاتف">${escapeHtml(s.phone)}</td>
+                    <td data-label="تاريخ الميلاد">${escapeHtml(s.dob) || '-'}</td>
+                    <td data-label="الصلاحية"><span class="role-badge" style="background:var(--accent);">${escapeHtml(s.permission || s.role || 'خادم')}</span></td>
+                    <td data-label="الحساب السحابي">${s.cloudUid
+                        ? '<span style="color:var(--success); font-weight:bold; font-size:11px;">مربوط ✅</span>'
+                        : `<button class="btn-mini btn-purple" onclick="linkServantToCloudAuth(${s.id})">ربط سحابي 🔐</button>`}</td>
                     <td data-label="تعديل" class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل</button></td>
                     <td data-label="حذف" class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف</button></td>
                 `;
@@ -2243,7 +2369,7 @@
             let pwd = prompt("⚠️ تحذير: سيتم حذف جميع الخدام ما عدا الأدمن الرئيسي!\nأدخل كلمة مرور الأدمن:");
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash === adminPasswordHash || pwd === DEFAULT_ADMIN_PWD) {
+            if (isAdminPasswordValid(pwdHash, pwd)) {
                 if (confirm("هل أنت متأكد؟")) {
                     servants = servants.filter(s => s.role === 'admin' || s.permission === 'admin');
                     localStorage.setItem(STORAGE_KEYS.SERVANTS, JSON.stringify(servants));
@@ -2310,12 +2436,12 @@
                 let tagClass = tagClasses[item.type] || 'tag-lecture';
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td data-label="التاريخ"><strong>${item.date}</strong></td>
-                    <td data-label="النوع"><span class="plan-tag ${tagClass}">${item.type}</span></td>
-                    <td data-label="العنوان"><strong>${item.title}</strong></td>
-                    <td data-label="المكان">${item.location}</td>
-                    <td data-label="المرحلة">${item.stage}</td>
-                    <td data-label="المسؤول"><strong style="color:var(--primary);">${item.responsible}</strong></td>
+                    <td data-label="التاريخ"><strong>${escapeHtml(item.date)}</strong></td>
+                    <td data-label="النوع"><span class="plan-tag ${tagClass}">${escapeHtml(item.type)}</span></td>
+                    <td data-label="العنوان"><strong>${escapeHtml(item.title)}</strong></td>
+                    <td data-label="المكان">${escapeHtml(item.location)}</td>
+                    <td data-label="المرحلة">${escapeHtml(item.stage)}</td>
+                    <td data-label="المسؤول"><strong style="color:var(--primary);">${escapeHtml(item.responsible)}</strong></td>
                     <td data-label="إجراء" class="admin-only"><button class="btn-mini btn-danger" onclick="deleteMasterPlanEvent(${item.id})">حذف</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -2338,7 +2464,7 @@
             let pwd = prompt("أدخل كلمة مرور الأدمن لحذف خطة السنة والفعاليات بالكامل:");
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash === adminPasswordHash || pwd === DEFAULT_ADMIN_PWD) {
+            if (isAdminPasswordValid(pwdHash, pwd)) {
                 masterPlan = [];
                 saveMasterPlan();
                 logActivity("حذف خطة السنة", "تفريغ شامل", "حذف كافة الفعاليات المسجلة");
@@ -2520,8 +2646,8 @@
                 let waMsg = encodeURIComponent(`كل سنة وأنت طيب يا ${b.name} وعقبال 100 سنة مع المسيح في خدمته المباركة ❤️🎂`);
                 return `
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #ffeaa7; padding:4px 0; flex-wrap:wrap; gap:5px;">
-                        <span>🎉 <strong>${b.name}</strong> (${b.type}) - ${b.date}</span>
-                        ${cleanPhone ? `<a href="https://wa.me/${cleanPhone}?text=${waMsg}" target="_blank" class="btn-mini btn-success">تهنئة واتساب 📲</a>` : ''}
+                        <span>🎉 <strong>${escapeHtml(b.name)}</strong> (${escapeHtml(b.type)}) - ${escapeHtml(b.date)}</span>
+                        ${cleanPhone ? `<a href="https://wa.me/${encodeURIComponent(cleanPhone)}?text=${waMsg}" target="_blank" class="btn-mini btn-success">تهنئة واتساب 📲</a>` : ''}
                     </div>
                 `;
             }).join('');
@@ -2550,7 +2676,7 @@
             m.visitations.unshift(newVis);
             saveSingleMemberUpdate(m.id, { visitations: m.visitations }, "تسجيل كبسولة افتقاد");
             let vh = document.getElementById('visitationHistory');
-            if (vh) vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${newVis.date} (${newVis.by}):</strong> ${text}</div>` + vh.innerHTML;
+            if (vh) vh.innerHTML = `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${escapeHtml(newVis.date)} (${escapeHtml(newVis.by)}):</strong> ${escapeHtml(text)}</div>` + vh.innerHTML;
             renderServantsAttendanceTable();
             checkLocalStorageUsage();
             showToast("✅ تم حفظ كبسولة الافتقاد بنجاح!");
@@ -2608,13 +2734,13 @@
                 box.innerHTML += `
                     <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:8px; margin-bottom:6px; font-size:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-                            <strong style="color:var(--primary); font-size:13px;">${ev.lessonTitle} (${ev.className})</strong>
+                            <strong style="color:var(--primary); font-size:13px;">${escapeHtml(ev.lessonTitle)} (${escapeHtml(ev.className)})</strong>
                             <span class="role-badge" style="background:${badgeColor}; font-size:11px;">${ev.totalScore} / 100</span>
                         </div>
-                        <div style="color:#636e72; font-size:11px; margin:3px 0;">التاريخ: ${ev.date} | المشرف المقيم: <strong>${ev.supervisor}</strong></div>
+                        <div style="color:#636e72; font-size:11px; margin:3px 0;">التاريخ: ${escapeHtml(ev.date)} | المشرف المقيم: <strong>${escapeHtml(ev.supervisor)}</strong></div>
                         <div style="font-size:11px; color:#2d3436; background:#f1f2f6; padding:4px 6px; border-radius:4px; margin-top:4px;">
-                            تحضير: ${ev.details.prep} | أداء: ${ev.details.deliv} | وسيلة: ${ev.details.aids} | قدوة: ${ev.details.cond}
-                            ${ev.notes ? `<div style="margin-top:2px; font-style:italic;">ملاحظات: ${ev.notes}</div>` : ''}
+                            تحضير: ${escapeHtml(ev.details.prep)} | أداء: ${escapeHtml(ev.details.deliv)} | وسيلة: ${escapeHtml(ev.details.aids)} | قدوة: ${escapeHtml(ev.details.cond)}
+                            ${ev.notes ? `<div style="margin-top:2px; font-style:italic;">ملاحظات: ${escapeHtml(ev.notes)}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -2645,13 +2771,13 @@
                     name.innerText = person.name;
                     badge.innerText = "تأخير شديد";
                     badge.style.background = "var(--danger)";
-                    stats.innerHTML = `كود الامتحان: <strong>${person.code || person.id}</strong><br>تم رصد حضورك متأخراً في <strong>${new Date().toLocaleTimeString('ar-EG')}</strong><br>نسبة الحضور: <strong>${grad.percent}%</strong>`;
+                    stats.innerHTML = `كود الامتحان: <strong>${escapeHtml(person.code) || escapeHtml(person.id)}</strong><br>تم رصد حضورك متأخراً في <strong>${new Date().toLocaleTimeString('ar-EG')}</strong><br>نسبة الحضور: <strong>${grad.percent}%</strong>`;
                 } else {
                     icon.innerText = "✨";
                     name.innerText = person.name;
                     badge.innerText = `حاضر - ${person.stage || 'سنة أولى'}`;
                     badge.style.background = "var(--success)";
-                    stats.innerHTML = `كود الامتحان: <strong>${person.code || person.id}</strong><br>نورت كورس إعداد الخدام! 🎉<br>نسبة حضور الجمعة: <strong>${grad.percent}%</strong> (${grad.attended}/${grad.total} لقاء)<br>رصيد بونص: <strong>+${grad.bonus} نقطة</strong>`;
+                    stats.innerHTML = `كود الامتحان: <strong>${escapeHtml(person.code) || escapeHtml(person.id)}</strong><br>نورت كورس إعداد الخدام! 🎉<br>نسبة حضور الجمعة: <strong>${grad.percent}%</strong> (${grad.attended}/${grad.total} لقاء)<br>رصيد بونص: <strong>+${grad.bonus} نقطة</strong>`;
                 }
             }
             card.style.display = 'block';
@@ -2830,7 +2956,7 @@
             let pwd = prompt("⚠️ تحذير خطير: سيتم حذف جميع المخدومين والدارسين نهائياً!\nأدخل كلمة مرور الأدمن:");
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash === adminPasswordHash || pwd === DEFAULT_ADMIN_PWD) {
+            if (isAdminPasswordValid(pwdHash, pwd)) {
                 if (confirm("هل أنت متأكد تماماً من حذف جميع المخدومين؟")) {
                     members = [];
                     localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(members));
@@ -2905,7 +3031,7 @@
             let pwd = prompt(`⚠️ تنبيه خطير: أنت على وشك حذف سجل حضور يوم (${activeSelectedDate}) بالكامل!\nأدخل كلمة مرور أمين الخدمة للتأكيد:`);
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash !== adminPasswordHash && pwd !== DEFAULT_ADMIN_PWD) {
+            if (!isAdminPasswordValid(pwdHash, pwd)) {
                 return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
             }
 
@@ -2979,8 +3105,8 @@
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="color:var(--success); font-weight:bold; font-size:16px;">✔️</span>
                         <div>
-                            <strong style="font-size:14px; color:var(--dark);">${item.name}</strong>
-                            <div style="font-size:11px; color:#636e72;">كود: ${item.code} | ${item.isBonusEvent ? '⭐ بونص فعالية' : 'جمعة أساسي'} | وقت: ${item.time}</div>
+                            <strong style="font-size:14px; color:var(--dark);">${escapeHtml(item.name)}</strong>
+                            <div style="font-size:11px; color:#636e72;">كود: ${escapeHtml(item.code)} | ${item.isBonusEvent ? '⭐ بونص فعالية' : 'جمعة أساسي'} | وقت: ${escapeHtml(item.time)}</div>
                         </div>
                     </div>
                     <span class="live-scan-index">#${todayList.length - index}</span>
@@ -3145,7 +3271,7 @@
 
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="text-align:right;"><strong>${m.name}</strong> (${m.code || '-'})</td>
+                    <td style="text-align:right;"><strong>${escapeHtml(m.name)}</strong> (${escapeHtml(m.code) || '-'})</td>
                     <td><input type="checkbox" ${isAtt ? 'checked' : ''} onchange="toggleManualModalAttendance('${m.id}', this.checked)" style="width:18px; height:18px; cursor:pointer;"></td>
                     <td><input type="checkbox" ${isCom ? 'checked' : ''} ${!isAtt ? 'disabled' : ''} onchange="toggleSpiritualStatus('${m.id}', 'communion', this.checked)" style="width:18px; height:18px; cursor:pointer;"></td>
                     <td><input type="checkbox" ${isPart ? 'checked' : ''} ${!isAtt ? 'disabled' : ''} onchange="toggleSpiritualStatus('${m.id}', 'participation', this.checked)" style="width:18px; height:18px; cursor:pointer;"></td>
@@ -3260,7 +3386,7 @@
             if (vh) {
                 vh.innerHTML = '';
                 (m.visitations || []).forEach(v => {
-                    vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${v.date} (${v.by}):</strong> ${v.text}</div>`;
+                    vh.innerHTML += `<div style="border-bottom:1px solid #ddd; padding:4px 0;"><strong>${escapeHtml(v.date)} (${escapeHtml(v.by)}):</strong> ${escapeHtml(v.text)}</div>`;
                 });
             }
 
@@ -3283,7 +3409,7 @@
             let supSelect = document.getElementById('evalSupervisor');
             if (supSelect) {
                 supSelect.innerHTML = '<option value="">اختر الخادم المشرف المقيم...</option>';
-                servants.forEach(s => { supSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`; });
+                servants.forEach(s => { supSelect.innerHTML += `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`; });
             }
             if (typeof renderFieldEvaluationsList === 'function') renderFieldEvaluationsList(m);
 
@@ -3610,10 +3736,10 @@
             absentees.forEach(m => {
                 let rawPhone = targetType === 'parents' ? m.parent_phone : m.phone;
                 let cleanPhone = formatWhatsAppPhone(rawPhone);
-                let label = targetType === 'parents' ? `ولي أمر (${m.name})` : m.name;
+                let label = targetType === 'parents' ? `ولي أمر (${escapeHtml(m.name)})` : escapeHtml(m.name);
                 if (!cleanPhone) return;
                 let tr = document.createElement('tr');
-                tr.innerHTML = `<td data-label="الاسم">${m.name} [كود: ${m.code || m.id}]</td><td data-label="المرحلة">${m.stage || '-'}</td><td data-label="المستلم">${label} (${cleanPhone})</td><td data-label="إرسال"><a href="https://wa.me/${cleanPhone}?text=${encodeURIComponent(template.replace('[الاسم]', m.name))}" target="_blank" class="btn-mini btn-success">إرسال 📲</a></td>`;
+                tr.innerHTML = `<td data-label="الاسم">${escapeHtml(m.name)} [كود: ${escapeHtml(m.code) || escapeHtml(m.id)}]</td><td data-label="المرحلة">${escapeHtml(m.stage) || '-'}</td><td data-label="المستلم">${label} (${escapeHtml(cleanPhone)})</td><td data-label="إرسال"><a href="https://wa.me/${encodeURIComponent(cleanPhone)}?text=${encodeURIComponent(template.replace('[الاسم]', m.name))}" target="_blank" class="btn-mini btn-success">إرسال 📲</a></td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -3860,10 +3986,13 @@
 
             // محاولة كأدمن
             let pwdHash = await hashPassword(p);
-            let isAdminPwd = (pwdHash === adminPasswordHash) || (p === DEFAULT_ADMIN_PWD && !adminPasswordHash);
+            let isAdminPwd = isAdminPasswordValid(pwdHash, p);
 
             if ((u.toLowerCase() === 'admin' || u === 'الأدمن' || u === 'عادل جورج') && isAdminPwd) {
                 currentUser = { name: "عادل جورج", phone: p, role: "admin", permission: "admin", code: "admin" };
+                // محاولة إضافية لربط الجلسة بحساب Firebase Auth الفردي للأدمن (لا تكسر الدخول لو فشلت)
+                let cloudRole = await tryIndividualCloudLogin('admin', p);
+                if (cloudRole) currentUser.permission = cloudRole;
                 if (rememberMe) localStorage.setItem(STORAGE_KEYS.ACTIVE_USER, JSON.stringify(currentUser));
                 else sessionStorage.setItem(STORAGE_KEYS.ACTIVE_USER, JSON.stringify(currentUser));
                 logActivity("تسجيل دخول", currentUser.name, "أمين خدمة عام");
@@ -3876,6 +4005,9 @@
             let found = servants.find(s => s.name.trim().toLowerCase() === u.toLowerCase() && (s.phone.trim() === p || (s.code && s.code.toString() === p)));
             if (found) {
                 currentUser = found;
+                // محاولة إضافية لربط الجلسة بحساب Firebase Auth الفردي لهذا الخادم (لا تكسر الدخول لو فشلت)
+                let cloudRole = await tryIndividualCloudLogin(found.code || found.id, found.phone);
+                if (cloudRole) currentUser.permission = cloudRole;
                 if (rememberMe) localStorage.setItem(STORAGE_KEYS.ACTIVE_USER, JSON.stringify(currentUser));
                 else sessionStorage.setItem(STORAGE_KEYS.ACTIVE_USER, JSON.stringify(currentUser));
                 recordServantAttendance(found);
@@ -4048,9 +4180,9 @@
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td data-label="تخرج"><input type="checkbox" class="rollover-candidate-check" data-id="${m.id}" data-qualified="${isQualified}" ${isQualified ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer;"></td>
-                    <td data-label="كود"><strong>${m.code || m.id}</strong></td>
-                    <td data-label="الاسم"><strong>${m.name}</strong></td>
-                    <td data-label="المرحلة الحالية">${m.stage || 'سنة أولى'}</td>
+                    <td data-label="كود"><strong>${escapeHtml(m.code) || escapeHtml(m.id)}</strong></td>
+                    <td data-label="الاسم"><strong>${escapeHtml(m.name)}</strong></td>
+                    <td data-label="المرحلة الحالية">${escapeHtml(m.stage) || 'سنة أولى'}</td>
                     <td data-label="نسبة الحضور"><span style="font-weight:bold; color:${isQualified ? 'green' : 'orange'};">${grad.percent}%</span> (${grad.attended}/${grad.total} جمعة)</td>
                     <td data-label="الحالة">${isQualified ? '<span class="role-badge" style="background:var(--success);">مؤهل للتخرج 🎓</span>' : '<span class="role-badge" style="background:var(--warning);">غير مؤهل (&lt;75%)</span>'}</td>
                 `;
@@ -4090,7 +4222,7 @@
             let pwd = prompt(confirmMsg);
             if (!pwd) return;
             let pwdHash = await hashPassword(pwd);
-            if (pwdHash !== adminPasswordHash && pwd !== DEFAULT_ADMIN_PWD) return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
+            if (!isAdminPasswordValid(pwdHash, pwd)) return alert("❌ كلمة المرور غير صحيحة! تم إلغاء العملية.");
 
             showToast("جاري أرشفة السنة الخدمية وتحديث الدفعات... ⏳");
 
