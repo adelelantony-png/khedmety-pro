@@ -18,8 +18,18 @@
     <!-- محذر وصائد الأخطاء التلقائي الاستباقي -->
     <script>
         window.appErrorLogs = [];
+        window.pendingErrorReports = [];
         function displayLiveSystemError(errorMessage) {
             window.appErrorLogs.push(errorMessage);
+            // تجهيز الخطأ للإرسال لاحقاً لسجل الأخطاء المركزي على السحابة (يُقرأ فقط من الأدمن)
+            // بمجرد ما يبقى فيه اتصال بـ Firebase - حتى لو حصل الخطأ قبل اكتمال الاتصال بالسحابة.
+            window.pendingErrorReports.push({
+                id: 'err_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                message: String(errorMessage).slice(0, 500),
+                page: location.pathname,
+                userAgent: navigator.userAgent.slice(0, 200),
+                time: new Date().toISOString()
+            });
             let errBanner = document.getElementById('liveErrorLog');
             if (!errBanner) {
                 errBanner = document.createElement('div');
@@ -46,6 +56,22 @@
                 </div>`;
         }
 
+        // محاولة دورية لإرسال الأخطاء المرصودة لسجل الأخطاء المركزي في السحابة (كل 15 ثانية)
+        setInterval(function() {
+            try {
+                if (typeof isFirebaseActive === 'undefined' || !isFirebaseActive || typeof db === 'undefined' || !db) return;
+                if (!window.pendingErrorReports || window.pendingErrorReports.length === 0) return;
+                let batch = window.pendingErrorReports.splice(0, window.pendingErrorReports.length);
+                let dateKey = new Date().toISOString().slice(0, 10);
+                let updates = {};
+                batch.forEach(item => {
+                    item.servant = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.name : 'غير مسجل دخول';
+                    updates[item.id] = item;
+                });
+                db.ref(`error_logs/${dateKey}`).update(updates).catch(() => {});
+            } catch (e) { /* تجاهل: لا نريد لصائد الأخطاء نفسه أن يسبب خطأ */ }
+        }, 15000);
+
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             let file = url ? url.split('/').pop() : 'inline';
             displayLiveSystemError(`[${file}:${lineNo}] ${msg}`);
@@ -66,7 +92,10 @@
                 try {
                     let jsonString = decodeURIComponent(escape(atob(encodedPayload)));
                     let payload = JSON.parse(jsonString);
+
                     if (payload.cfg && payload.em && payload.pw) {
+                        // النوع القديم (روابط سبق توليدها بالطريقة القديمة قد تصل بهذا الشكل):
+                        // يحتوي على حساب سحابي مشترك (إيميل + باسورد) وليس حساباً فردياً.
                         // تأمين إضافي: هذا الرابط يمنح من يفتحه صلاحية وصول كاملة لقاعدة بيانات
                         // الكنيسة السحابية بكل أسماء وهواتف وعناوين الدارسين والخدام. لذلك
                         // لا يُطبَّق تلقائيًا وبصمت، بل يُعرض تأكيد صريح للمستخدم أولاً.
@@ -89,6 +118,13 @@
                         } else {
                             alert("تم إلغاء الإعداد التلقائي. لم يتم حفظ أي بيانات دخول على هذا الجهاز.");
                         }
+                    } else if (payload.cfg) {
+                        // النوع الجديد والآمن: إعدادات اتصال Firebase فقط (غير سرية)، بدون أي
+                        // حساب مشترك. الجهاز سيبقى يطلب من الخادم تسجيل الدخول العادي (اسمه وهاتفه)
+                        // وسيتم ربطه بحسابه السحابي الفردي إن وُجد تلقائياً من خلال شاشة الدخول نفسها.
+                        localStorage.setItem('my_firebase_config', JSON.stringify(payload.cfg));
+                        alert("✅ تم ضبط إعدادات الاتصال بالسحابة على هذا الجهاز.\nسجّل دخولك الآن باسمك ورقم هاتفك المعتاد.");
+                        location.reload();
                     }
                 } catch (err) { console.error("فشل استخراج بيانات الرابط التلقائي:", err); }
             }
@@ -208,6 +244,7 @@
         <h2 id="kioskName" style="margin:0 0 8px 0; color:var(--primary); font-size:20px; border:none;">...</h2>
         <div id="kioskBadge" style="display:inline-block; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px; margin-bottom:10px; color:white;">...</div>
         <div id="kioskStats" style="font-size:13px; color:#2d3436; margin-top:8px; line-height:1.5;">...</div>
+        <div id="kioskReflectionBox" style="margin-top:10px;"></div>
     </div>
 
     <div id="pendingSyncBadge" onclick="pushPendingData()">
@@ -297,15 +334,52 @@
         <div class="tabs">
             <div class="tab-btn active" onclick="switchTab('dashTab', this)">الرئيسية 📊</div>
             <div class="tab-btn" onclick="switchTab('planTab', this)">خطة السنة 🗓️</div>
+            <div class="tab-btn" onclick="switchTab('materialsTab', this)">مكتبة المواد 📚</div>
             <div class="tab-btn can-attend" onclick="switchTab('attendanceTab', this)">تسجيل الحضور 📷</div>
             <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">سجل الخدام 📋</div>
             <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
             <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
             <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
             <div class="tab-btn admin-only" onclick="switchTab('rolloverTab', this)">أرشفة وتخريج 🎓</div>
+            <div class="tab-btn admin-only" onclick="switchTab('reflectionsTab', this)">التقييم الروحي 🙏</div>
             <div class="tab-btn admin-only" onclick="switchTab('auditTab', this)">سجل العمليات 🛡️</div>
             <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
             <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير والنسخ الاحتياطي 📁</div>
+        </div>
+
+        <!-- مكتبة المواد -->
+        <div id="materialsTab" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>📚 مكتبة مواد الكورس</h2>
+            </div>
+            <div class="admin-only" style="background:#fdfefe; border:2px dashed var(--primary); padding:15px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin-top:0; color:var(--primary);">➕ إضافة مادة جديدة</h4>
+                <div class="form-group"><label>عنوان المادة:</label><input type="text" id="mat_title" placeholder="مثال: محاضرة (١) - أسرار الكنيسة"></div>
+                <div class="form-group">
+                    <label>النوع:</label>
+                    <select id="mat_type">
+                        <option value="محاضرة">🎥 محاضرة / فيديو</option>
+                        <option value="ملزمة">📄 ملزمة / PDF</option>
+                        <option value="رابط">🔗 رابط خارجي</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>الرابط (Google Drive / YouTube / أي رابط):</label><input type="url" id="mat_url" placeholder="https://..."></div>
+                <div class="form-group"><label>ملاحظات (اختياري):</label><input type="text" id="mat_notes" placeholder="وصف مختصر"></div>
+                <button class="btn-primary" onclick="addCourseMaterial()">إضافة للمكتبة 📚</button>
+            </div>
+            <div id="materialsListContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+
+        <!-- التقييم الروحي (أدمن فقط) -->
+        <div id="reflectionsTab" class="tab-content admin-only">
+            <h2>🙏 التقييم الذاتي الروحي للدارسين</h2>
+            <p style="font-size:12px; color:#636e72;">تقييمات اختيارية يسجّلها الدارس بنفسه لحظة تسجيل حضوره (من كارت الترحيب)، لأغراض الرعاية والمتابعة الروحية فقط - وليست للتقييم الأكاديمي.</p>
+            <div class="table-responsive">
+                <table class="adaptive-card-table">
+                    <thead><tr><th>التاريخ</th><th>الاسم</th><th>التقييم</th><th>الانطباع</th></tr></thead>
+                    <tbody id="reflectionsTbody"><tr><td colspan="4" style="color:#888;">لا توجد بيانات بعد.</td></tr></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 1. الرئيسية -->
@@ -755,6 +829,22 @@
                     </tbody>
                 </table>
             </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:25px;">
+                <h2>🐞 سجل أخطاء النظام (Error Monitoring)</h2>
+                <button class="btn-mini btn-primary" onclick="loadErrorLogsFromCloud()" style="width:auto; padding:6px 12px; margin:0;">🔄 تحديث</button>
+            </div>
+            <p style="font-size:12px; color:#636e72; margin-top:2px;">أخطاء تقنية حصلت فعليًا عند الخدام أثناء استخدام التطبيق (آخر 7 أيام):</p>
+            <div class="table-responsive" style="max-height:350px; overflow-y:auto; border:1px solid #dfe6e9; border-radius:8px;">
+                <table class="adaptive-card-table">
+                    <thead style="position:sticky; top:0; background:var(--danger); color:white;">
+                        <tr><th>الوقت</th><th>الخادم</th><th>تفاصيل الخطأ</th></tr>
+                    </thead>
+                    <tbody id="errorLogsTbody">
+                        <tr><td colspan="3" style="color:#888;">دوس "تحديث" لعرض الأخطاء المرصودة.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 10. الإعدادات -->
@@ -769,11 +859,11 @@
                 <div class="form-group"><label>📅 تاريخ نهاية الخدمة (السنة):</label><input type="date" id="setServiceEnd"></div>
             </div>
             <div class="admin-only" style="background:#e8f4fd; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
-                <h4 style="margin:0 0 6px 0; color:var(--primary); font-size:15px;">🔗 إرسال رابط التهيئة التلقائي للخادم</h4>
+                <h4 style="margin:0 0 6px 0; color:var(--primary); font-size:15px;">🔗 إرسال رابط تفعيل السحابة للخادم</h4>
                 <p style="font-size:12px; color:#555; margin:0 0 10px 0; line-height:1.5;">
-                    ⚠️ <strong>ملاحظة أمنية:</strong> الرابط يحتوي كود Firebase مشفراً بـ Base64. لا ترسله في قنوات عامة، وفعّل خيارات Firebase Security Rules.
+                    ✅ <strong>آمن الآن:</strong> الرابط يحتوي فقط على إعدادات الاتصال بمشروع Firebase (غير سرية)، ولا يحتوي على أي إيميل أو كلمة مرور مشتركة. كل خادم سيظل يسجّل دخوله باسمه ورقم هاتفه المعتاد، ويُربط تلقائيًا بحسابه السحابي الفردي إن كان قد تم ربطه مسبقًا من تبويب "إدارة الخدام".
                 </p>
-                <button class="btn-primary" onclick="shareAutoSetupWhatsAppLink()" style="margin:0; padding:12px; font-size:13px;">📲 إرسال رابط التفعيل التلقائي عبر WhatsApp</button>
+                <button class="btn-primary" onclick="shareAutoSetupWhatsAppLink()" style="margin:0; padding:12px; font-size:13px;">📲 إرسال رابط التفعيل عبر WhatsApp</button>
             </div>
             <div style="background:#eaf2f8; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -885,6 +975,11 @@
                         <input type="file" id="restoreBackupFileInput" accept=".json" onchange="restoreFullBackup(event)" style="display:none;">
                     </label>
                 </div>
+                <div style="margin-top:15px; border-top:1px dashed #dfe6e9; padding-top:12px;">
+                    <h4 style="margin:0 0 6px 0; font-size:14px; color:var(--primary);">🕘 نسخ احتياطية تلقائية صامتة (آخر 7 أيام)</h4>
+                    <p style="font-size:11px; color:#636e72; margin:0 0 8px 0;">يأخذ التطبيق نسخة تلقائية صامتة يوميًا بدون أي إجراء منك، تحسبًا لأي حذف أو خطأ. اضغط لتنزيل أي نسخة منها كملف احتياطي:</p>
+                    <div id="autoBackupsList" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -915,7 +1010,8 @@
                 <div class="progress-bar-container"><div id="p_grad_progress" class="progress-bar"></div></div>
             </div>
             <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:8px;">✔️ تسجيل حضور يدوي لهذا الدارس</button>
-            <button class="btn-warning can-edit" id="btn_profile_edit" style="margin-bottom:12px;" onclick="openEditMemberModal()">✏️ تعديل بيانات هذا الدارس</button>
+            <button class="btn-warning can-edit" id="btn_profile_edit" style="margin-bottom:8px;" onclick="openEditMemberModal()">✏️ تعديل بيانات هذا الدارس</button>
+            <button class="btn-mini admin-only" style="width:100%; background:#dfe6e9; color:#2d3436; margin-bottom:12px; padding:8px;" onclick="showVersionHistoryModal('member', currentProfileId, document.getElementById('p_name').innerText)">🕘 سجل تعديلات هذا الدارس</button>
             <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
                 <button id="tabBtn_attendance" onclick="switchProfileTab('p_attendance_log', this)" style="flex:1; margin:0; padding:8px 4px; background:var(--primary); color:white; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">سجل الحضور 🗓️</button>
                 <button id="tabBtn_visitations" onclick="switchProfileTab('p_visitations_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">الافتقادات 💊</button>
@@ -1366,6 +1462,8 @@
         let attendanceRecord = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || {};
         let servantsAttendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVANTS_ATTENDANCE)) || {};
         let masterPlan = JSON.parse(localStorage.getItem(STORAGE_KEYS.MASTER_PLAN)) || [];
+        let courseMaterials = JSON.parse(localStorage.getItem('khedmety_course_materials')) || [];
+        let selfReflections = JSON.parse(localStorage.getItem('khedmety_self_reflections')) || [];
         let auditLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) || [];
 
         let servants = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVANTS)) || [
@@ -1519,6 +1617,42 @@
             renderAuditLogTable();
         }
 
+        // جلب سجل أخطاء النظام المرصودة من كل الأجهزة (آخر 7 أيام) - أدمن فقط
+        async function loadErrorLogsFromCloud() {
+            let tbody = document.getElementById('errorLogsTbody');
+            if (!tbody) return;
+            if (currentPermission !== 'admin') return;
+            if (!isFirebaseActive || !db) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color:#888;">السحابة غير مفعّلة على هذا الجهاز.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '<tr><td colspan="3" style="color:#888;">جاري التحميل...</td></tr>';
+            try {
+                let allErrors = [];
+                for (let i = 0; i < 7; i++) {
+                    let d = new Date();
+                    d.setDate(d.getDate() - i);
+                    let dateKey = d.toISOString().slice(0, 10);
+                    let snap = await db.ref(`error_logs/${dateKey}`).once('value');
+                    let val = snap.val();
+                    if (val) Object.values(val).forEach(e => allErrors.push(e));
+                }
+                allErrors.sort((a, b) => new Date(b.time) - new Date(a.time));
+                if (allErrors.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="color:#888;">لا توجد أخطاء مسجلة في آخر 7 أيام. ✅</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                allErrors.slice(0, 100).forEach(e => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `<td data-label="الوقت" dir="ltr" style="font-size:11px;">${escapeHtml(new Date(e.time).toLocaleString('ar-EG'))}</td><td data-label="الخادم">${escapeHtml(e.servant)}</td><td data-label="التفاصيل" style="font-size:11px; direction:ltr; text-align:left;">${escapeHtml(e.message)}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color:red;">فشل تحميل سجل الأخطاء.</td></tr>';
+            }
+        }
+
         function flushAuditLogBatch() {
             if (!isFirebaseActive || !db || auditLogBatch.length === 0) {
                 auditLogBatch = [];
@@ -1584,6 +1718,109 @@
         // ==========================================
         // 9. تحديث مخدوم فردي (بدون تكرار)
         // ==========================================
+        // ==========================================
+        // سجل تغييرات لكل سجل (Version History) - يحفظ نسخة من البيانات قبل كل تعديل
+        // ==========================================
+        const VERSION_HISTORY_KEY = 'khedmety_version_history';
+        const MAX_VERSIONS_PER_ENTITY = 5;
+
+        function saveVersionSnapshot(entityType, entityId, entityName, oldSnapshot) {
+            try {
+                let all = [];
+                try { all = JSON.parse(localStorage.getItem(VERSION_HISTORY_KEY)) || []; } catch (e) { all = []; }
+
+                let versionEntry = {
+                    id: 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    entityType, entityId: entityId.toString(), entityName,
+                    snapshot: oldSnapshot,
+                    changedBy: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.name : 'غير معروف',
+                    time: new Date().toISOString()
+                };
+                all.push(versionEntry);
+
+                // الاحتفاظ بآخر 5 نسخ فقط لكل سجل (عشان محدودية المساحة)
+                let sameEntity = all.filter(v => v.entityType === entityType && v.entityId === entityId.toString());
+                if (sameEntity.length > MAX_VERSIONS_PER_ENTITY) {
+                    let toRemoveCount = sameEntity.length - MAX_VERSIONS_PER_ENTITY;
+                    let removedIds = sameEntity.slice(0, toRemoveCount).map(v => v.id);
+                    all = all.filter(v => !removedIds.includes(v.id));
+                }
+                // وأيضاً حد أقصى عام لعدد كل السجلات المحفوظة محلياً
+                if (all.length > 1000) all = all.slice(all.length - 1000);
+
+                localStorage.setItem(VERSION_HISTORY_KEY, JSON.stringify(all));
+
+                if (isFirebaseActive && db) {
+                    db.ref(`version_history/${entityType}/${entityId}/${versionEntry.id}`).set(versionEntry).catch(() => {});
+                }
+            } catch (e) { console.warn("فشل حفظ نسخة سجل التعديلات:", e); }
+        }
+
+        function getVersionHistory(entityType, entityId) {
+            let all = [];
+            try { all = JSON.parse(localStorage.getItem(VERSION_HISTORY_KEY)) || []; } catch (e) { all = []; }
+            return all.filter(v => v.entityType === entityType && v.entityId === entityId.toString())
+                       .sort((a, b) => new Date(b.time) - new Date(a.time));
+        }
+
+        function showVersionHistoryModal(entityType, entityId, entityName) {
+            let versions = getVersionHistory(entityType, entityId);
+            let bodyHtml;
+            if (versions.length === 0) {
+                bodyHtml = '<p style="color:#888; font-size:13px;">لا يوجد سجل تعديلات سابقة محفوظ لهذا السجل على هذا الجهاز.</p>';
+            } else {
+                bodyHtml = versions.map(v => `
+                    <div style="border:1px solid #dfe6e9; border-radius:8px; padding:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#636e72;">
+                            <span>📅 ${escapeHtml(new Date(v.time).toLocaleString('ar-EG'))} — بواسطة: <strong>${escapeHtml(v.changedBy)}</strong></span>
+                            <button class="btn-mini btn-warning" style="width:auto; padding:4px 10px; margin:0;" onclick="restoreVersionSnapshot('${v.id}')">استرجاع هذه النسخة ↩️</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            let modalHtml = `
+                <div id="versionHistoryModal" class="modal" style="display:flex;">
+                    <div class="modal-content" style="max-width:500px;">
+                        <span class="close-btn" onclick="document.getElementById('versionHistoryModal').remove()">&times;</span>
+                        <h3 style="margin-top:0;">🕘 سجل تعديلات: ${escapeHtml(entityName)}</h3>
+                        <div style="max-height:60vh; overflow-y:auto;">${bodyHtml}</div>
+                    </div>
+                </div>`;
+            let existing = document.getElementById('versionHistoryModal');
+            if (existing) existing.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function restoreVersionSnapshot(versionId) {
+            let all = [];
+            try { all = JSON.parse(localStorage.getItem(VERSION_HISTORY_KEY)) || []; } catch (e) { all = []; }
+            let v = all.find(x => x.id === versionId);
+            if (!v) return alert("تعذر العثور على هذه النسخة.");
+            if (!confirm(`هل تريد استرجاع بيانات "${v.entityName}" كما كانت في ${new Date(v.time).toLocaleString('ar-EG')}؟ سيتم استبدال البيانات الحالية.`)) return;
+
+            if (v.entityType === 'member') {
+                saveSingleMemberUpdate(v.entityId, v.snapshot, "استرجاع نسخة سابقة");
+                let modal = document.getElementById('versionHistoryModal');
+                if (modal) modal.remove();
+                openProfile(v.entityId);
+            } else if (v.entityType === 'servant') {
+                let idx = servants.findIndex(s => s.id.toString() === v.entityId.toString());
+                if (idx !== -1) {
+                    servants[idx] = Object.assign({}, v.snapshot, { id: servants[idx].id });
+                } else {
+                    // الخادم كان محذوفاً بالكامل - نعيد إضافته من النسخة المحفوظة
+                    servants.push(Object.assign({}, v.snapshot));
+                }
+                localStorage.setItem(STORAGE_KEYS.SERVANTS, JSON.stringify(servants));
+                syncToCloud('servants', servants);
+                logActivity("استرجاع نسخة سابقة", v.snapshot.name || v.entityName, "خادم");
+                renderServantsTable();
+                let modal = document.getElementById('versionHistoryModal');
+                if (modal) modal.remove();
+            }
+            showToast("✅ تم استرجاع النسخة السابقة بنجاح.");
+        }
+
         function saveSingleMemberUpdate(memberId, updatedFields, actionLabel = "تعديل مخدوم") {
             let cleanId = memberId.toString().trim();
             let mIndex = members.findIndex(x => x.id && x.id.toString().trim() === cleanId);
@@ -1592,6 +1829,9 @@
                 console.error("تعذر العثور على المخدوم لتحديثه:", memberId);
                 return;
             }
+
+            // حفظ نسخة من البيانات قبل التعديل (سجل التعديلات - يشمل حتى عمليات الاسترجاع نفسها لإمكانية التراجع عنها لاحقاً)
+            saveVersionSnapshot('member', members[mIndex].id, members[mIndex].name, Object.assign({}, members[mIndex]));
 
             members[mIndex] = Object.assign({}, members[mIndex], updatedFields, { id: members[mIndex].id });
             localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(members));
@@ -2060,7 +2300,7 @@
             if (elTotalVis) elTotalVis.innerText = allVisitationsList.length;
 
             if (servants.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا يوجد خدام مسجلون.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">لا يوجد خدام مسجلون.</td></tr>';
             }
 
             servants.forEach(s => {
@@ -2217,17 +2457,20 @@
         // ==========================================
         function shareAutoSetupWhatsAppLink() {
             let savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
-            let savedEmail = localStorage.getItem(STORAGE_KEYS.CLOUD_EMAIL);
-            let savedPass = localStorage.getItem(STORAGE_KEYS.CLOUD_PASS);
 
-            if (!savedConfig || !savedEmail || !savedPass) {
+            if (!savedConfig) {
                 return alert("⚠️ يرجى حفظ وتأمين السحابة على جهازك أولاً من نافذة الإعدادات قبل توليد الرابط!");
             }
 
-            let payload = { cfg: JSON.parse(savedConfig), em: savedEmail, pw: savedPass };
+            // ملاحظة أمنية: هذا الرابط يحتوي فقط على إعدادات الاتصال بمشروع Firebase (cfg)،
+            // وهي بيانات غير سرية أصلاً (تظهر في كود أي تطبيق Firebase عادي).
+            // لا يحتوي على أي إيميل أو كلمة مرور للحساب السحابي المشترك.
+            // كل خادم يفتح هذا الرابط سيظل مطالباً بتسجيل الدخول بشاشة الدخول العادية (اسمه وهاتفه)،
+            // وحينها فقط يتم ربطه تلقائياً بحسابه السحابي الفردي إن كان قد رُبط من قبل من تبويب "إدارة الخدام".
+            let payload = { cfg: JSON.parse(savedConfig) };
             let encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
             let fullSetupUrl = `${window.location.origin}${window.location.pathname}#setup=${encodedData}`;
-            let msg = `سلام ونعمة يا خادم،\nاضغط على الرابط التالي لتفعيل وربط تطبيق "خدمتي برو" بالسحابة على هاتفك تلقائياً وبضغطة واحدة:\n\n⚠️ هذا الرابط يحتوي على بيانات حساسة. لا تشاركه مع أي شخص غير موثوق.\n\n${fullSetupUrl}`;
+            let msg = `سلام ونعمة يا خادم،\nاضغط على الرابط التالي لتفعيل تطبيق "خدمتي برو" على هاتفك، ثم سجّل دخولك باسمك ورقم هاتفك المعتاد:\n\n${fullSetupUrl}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -2287,7 +2530,7 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             if (servants.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا يوجد خدام مسجلون.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">لا يوجد خدام مسجلون.</td></tr>';
             }
             servants.forEach(s => {
                 let tr = document.createElement('tr');
@@ -2301,6 +2544,7 @@
                         ? '<span style="color:var(--success); font-weight:bold; font-size:11px;">مربوط ✅</span>'
                         : `<button class="btn-mini btn-purple" onclick="linkServantToCloudAuth(${s.id})">ربط سحابي 🔐</button>`}</td>
                     <td data-label="تعديل" class="admin-only"><button class="btn-mini btn-warning" onclick="editServant(${s.id})">تعديل</button></td>
+                    <td data-label="السجل" class="admin-only"><button class="btn-mini" style="background:#dfe6e9; color:#2d3436;" onclick="showVersionHistoryModal('servant', ${s.id}, '${escapeHtml(s.name)}')">🕘</button></td>
                     <td data-label="حذف" class="admin-only"><button class="btn-mini btn-danger" onclick="deleteServant(${s.id})">حذف</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -2341,10 +2585,12 @@
         function editServant(id) {
             let s = servants.find(x => x.id === id);
             if (!s) return;
+            let oldSnapshot = Object.assign({}, s);
             let newName = prompt("تعديل اسم الخادم:", s.name);
             if (newName) s.name = newName.trim();
             let newPhone = prompt("تعديل رقم الهاتف:", s.phone);
             if (newPhone) s.phone = newPhone.trim();
+            saveVersionSnapshot('servant', s.id, oldSnapshot.name, oldSnapshot);
             localStorage.setItem(STORAGE_KEYS.SERVANTS, JSON.stringify(servants));
             syncToCloud('servants', servants);
             logActivity("تعديل خادم", s.name, `هاتف: ${s.phone}`);
@@ -2356,6 +2602,7 @@
             let s = servants.find(x => x.id === id);
             let sName = s ? s.name : id;
             if (confirm("هل أنت متأكد من حذف هذا الخادم؟")) {
+                if (s) saveVersionSnapshot('servant', s.id, s.name, Object.assign({}, s));
                 servants = servants.filter(s => s.id !== id);
                 localStorage.setItem(STORAGE_KEYS.SERVANTS, JSON.stringify(servants));
                 syncToCloud('servants', servants);
@@ -2398,6 +2645,111 @@
         // ==========================================
         // 21. خطة السنة
         // ==========================================
+        // ==========================================
+        // مكتبة مواد الكورس
+        // ==========================================
+        function addCourseMaterial() {
+            if (currentPermission !== 'admin' && currentPermission !== 'developer' && currentPermission !== 'full') {
+                return alert("إضافة مواد للمكتبة متاح لخدام الكورس فقط.");
+            }
+            let title = document.getElementById('mat_title').value.trim();
+            let type = document.getElementById('mat_type').value;
+            let url = document.getElementById('mat_url').value.trim();
+            let notes = document.getElementById('mat_notes').value.trim();
+            if (!title || !url) return alert("العنوان والرابط مطلوبان!");
+
+            let material = {
+                id: 'mat_' + Date.now(),
+                title, type, url, notes,
+                addedBy: currentUser ? currentUser.name : 'غير معروف',
+                date: new Date().toISOString()
+            };
+            courseMaterials.push(material);
+            localStorage.setItem('khedmety_course_materials', JSON.stringify(courseMaterials));
+            syncToCloud('course_materials', courseMaterials);
+            logActivity("إضافة مادة للمكتبة", title, type);
+
+            document.getElementById('mat_title').value = '';
+            document.getElementById('mat_url').value = '';
+            document.getElementById('mat_notes').value = '';
+            renderMaterialsList();
+            showToast("✅ تمت إضافة المادة للمكتبة.");
+        }
+
+        function deleteCourseMaterial(id) {
+            if (currentPermission !== 'admin' && currentPermission !== 'developer') return;
+            if (!confirm("حذف هذه المادة من المكتبة؟")) return;
+            let mat = courseMaterials.find(m => m.id === id);
+            courseMaterials = courseMaterials.filter(m => m.id !== id);
+            localStorage.setItem('khedmety_course_materials', JSON.stringify(courseMaterials));
+            syncToCloud('course_materials', courseMaterials);
+            if (mat) logActivity("حذف مادة من المكتبة", mat.title);
+            renderMaterialsList();
+        }
+
+        function renderMaterialsList() {
+            let container = document.getElementById('materialsListContainer');
+            if (!container) return;
+            if (courseMaterials.length === 0) {
+                container.innerHTML = '<p style="color:#888; text-align:center;">لا توجد مواد مضافة بعد.</p>';
+                return;
+            }
+            let typeIcons = { 'محاضرة': '🎥', 'ملزمة': '📄', 'رابط': '🔗' };
+            container.innerHTML = courseMaterials.slice().reverse().map(m => `
+                <div style="border:1px solid #dfe6e9; border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <div>
+                        <strong style="font-size:14px;">${typeIcons[m.type] || '📎'} ${escapeHtml(m.title)}</strong>
+                        <div style="font-size:11px; color:#636e72; margin-top:3px;">${escapeHtml(m.notes) || ''}</div>
+                        <div style="font-size:10px; color:#b2bec3; margin-top:3px;">أضافها: ${escapeHtml(m.addedBy)} - ${escapeHtml(new Date(m.date).toLocaleDateString('ar-EG'))}</div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" class="btn-mini btn-success" style="width:auto; padding:6px 14px; margin:0;">فتح ↗️</a>
+                        <button class="btn-mini btn-danger admin-only" style="width:auto; padding:6px 10px; margin:0;" onclick="deleteCourseMaterial('${m.id}')">حذف</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // التقييم الذاتي الروحي (يُسجَّل من الدارس نفسه لحظة الحضور)
+        // ==========================================
+        function submitSelfReflection(memberId, memberName, rating) {
+            let entry = {
+                id: 'ref_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                memberId: memberId.toString(),
+                memberName,
+                rating,
+                note: '',
+                date: new Date().toISOString()
+            };
+            selfReflections.push(entry);
+            localStorage.setItem('khedmety_self_reflections', JSON.stringify(selfReflections));
+            syncToCloud('self_reflections', selfReflections);
+
+            let box = document.getElementById('kioskReflectionBox');
+            if (box) {
+                box.innerHTML = `<div style="text-align:center; color:var(--success); font-weight:bold; padding:8px;">🙏 شكراً لمشاركتك، ربنا يبارك حياتك الروحية.</div>`;
+            }
+        }
+
+        function renderReflectionsTable() {
+            let tbody = document.getElementById('reflectionsTbody');
+            if (!tbody) return;
+            if (selfReflections.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:#888;">لا توجد بيانات بعد.</td></tr>';
+                return;
+            }
+            let stars = { 1: '⭐', 2: '⭐⭐', 3: '⭐⭐⭐', 4: '⭐⭐⭐⭐', 5: '⭐⭐⭐⭐⭐' };
+            tbody.innerHTML = selfReflections.slice().reverse().slice(0, 200).map(r => `
+                <tr>
+                    <td data-label="التاريخ">${escapeHtml(new Date(r.date).toLocaleDateString('ar-EG'))}</td>
+                    <td data-label="الاسم"><strong>${escapeHtml(r.memberName)}</strong></td>
+                    <td data-label="التقييم">${stars[r.rating] || r.rating}</td>
+                    <td data-label="الانطباع">${escapeHtml(r.note) || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
         function addMasterPlanEvent() {
             let type = document.getElementById('planType').value;
             let date = document.getElementById('planDate').value;
@@ -2756,7 +3108,9 @@
             const name = document.getElementById('kioskName');
             const badge = document.getElementById('kioskBadge');
             const stats = document.getElementById('kioskStats');
+            const reflectionBox = document.getElementById('kioskReflectionBox');
             if (!card) return;
+            if (reflectionBox) reflectionBox.innerHTML = '';
 
             if (type === 'servant') {
                 icon.innerText = "👔";
@@ -2779,9 +3133,21 @@
                     badge.style.background = "var(--success)";
                     stats.innerHTML = `كود الامتحان: <strong>${escapeHtml(person.code) || escapeHtml(person.id)}</strong><br>نورت كورس إعداد الخدام! 🎉<br>نسبة حضور الجمعة: <strong>${grad.percent}%</strong> (${grad.attended}/${grad.total} لقاء)<br>رصيد بونص: <strong>+${grad.bonus} نقطة</strong>`;
                 }
+                // تقييم ذاتي روحي اختياري - يدوسه الدارس بنفسه في نفس لحظة تسجيل حضوره
+                if (reflectionBox) {
+                    let starsRow = [1,2,3,4,5].map(n =>
+                        `<span onclick="submitSelfReflection('${person.id}', '${escapeHtml(person.name).replace(/'/g, "\\'")}', ${n})" style="cursor:pointer; font-size:26px; padding:0 2px;" title="${n} من 5">⭐</span>`
+                    ).join('');
+                    reflectionBox.innerHTML = `
+                        <div style="border-top:1px dashed #dfe6e9; padding-top:8px; margin-top:6px;">
+                            <div style="font-size:12px; color:#636e72; margin-bottom:5px;">🙏 إزاي حاسس روحيًا النهاردة؟ (اختياري - دوس على عدد النجوم)</div>
+                            <div style="text-align:center;">${starsRow}</div>
+                        </div>`;
+                }
             }
             card.style.display = 'block';
-            setTimeout(() => { card.style.display = 'none'; }, 2500);
+            let hideDelay = (type === 'member' && !isAbsent) ? 9000 : 2500;
+            setTimeout(() => { card.style.display = 'none'; }, hideDelay);
         }
 
         // ==========================================
@@ -3671,6 +4037,22 @@
                         }
                     });
 
+                    db.ref('course_materials').on('value', snap => {
+                        if (shouldAcceptCloudData('course_materials')) {
+                            courseMaterials = snap.exists() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : [];
+                            localStorage.setItem('khedmety_course_materials', JSON.stringify(courseMaterials));
+                            renderMaterialsList();
+                        }
+                    });
+
+                    db.ref('self_reflections').on('value', snap => {
+                        if (shouldAcceptCloudData('self_reflections')) {
+                            selfReflections = snap.exists() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : [];
+                            localStorage.setItem('khedmety_self_reflections', JSON.stringify(selfReflections));
+                            renderReflectionsTable();
+                        }
+                    });
+
                     db.ref(`audit_logs/${today}`).on('value', snap => {
                         let val = snap.val();
                         if (val) {
@@ -3702,7 +4084,9 @@
             if (tabId === 'auditTab') renderAuditLogTable();
             if (tabId === 'rolloverTab') renderRolloverCandidateList();
             if (tabId === 'dashTab') { renderDashboard(); checkUpcomingBirthdays(); checkUpcomingMasterPlanEvents(); }
-            if (tabId === 'settingsTab') updateCloudUsageUI();
+            if (tabId === 'settingsTab') { updateCloudUsageUI(); renderAutoBackupsList(); }
+            if (tabId === 'materialsTab') renderMaterialsList();
+            if (tabId === 'reflectionsTab') renderReflectionsTable();
             if (tabId === 'broadcastTab') renderBroadcastList('parents');
             if (tabId === 'dataTab') checkLocalStorageUsage();
         }
@@ -3759,9 +4143,19 @@
 
             let newPwd = document.getElementById('setAdminPassword').value.trim();
             if (newPwd) {
+                // حد أدنى لقوة كلمة المرور: 6 أحرف على الأقل، ومينفعش تبقى رقمية بسيطة متكررة أو متسلسلة
+                let isWeak = newPwd.length < 6
+                    || /^(\d)\1+$/.test(newPwd)
+                    || ['123456', '1234567', '12345678', 'password', 'admin', '000000', 'qwerty'].includes(newPwd.toLowerCase());
+                if (isWeak) {
+                    alert("⚠️ كلمة المرور ضعيفة جداً! يجب ألا تقل عن 6 أحرف، وألا تكون رقماً متكرراً أو كلمة مرور شائعة (مثل 123456). لم يتم حفظ باقي الإعدادات، عدّل كلمة المرور وحاول مجدداً.");
+                    return;
+                }
                 hashPassword(newPwd).then(hash => {
                     adminPasswordHash = hash;
                     localStorage.setItem(STORAGE_KEYS.ADMIN_PWD, hash);
+                    document.getElementById('setAdminPassword').value = '';
+                    showToast("✅ تم تحديث كلمة مرور أمين الخدمة بنجاح.");
                 });
             }
 
@@ -3870,6 +4264,8 @@
                 else if (path === 'servants') localData = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVANTS));
                 else if (path === 'master_plan') localData = JSON.parse(localStorage.getItem(STORAGE_KEYS.MASTER_PLAN));
                 else if (path === 'settings') localData = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
+                else if (path === 'course_materials') localData = JSON.parse(localStorage.getItem('khedmety_course_materials'));
+                else if (path === 'self_reflections') localData = JSON.parse(localStorage.getItem('khedmety_self_reflections'));
 
                 if (localData !== null) {
                     db.ref(path).set(localData).then(() => {
@@ -3972,11 +4368,47 @@
         // ==========================================
         // 42. تسجيل الدخول
         // ==========================================
+        // ==========================================
+        // حماية من محاولات تخمين كلمة المرور (Brute-force protection)
+        // ==========================================
+        const LOGIN_FAIL_KEY = 'khedmety_login_fail_count';
+        const LOGIN_LOCK_KEY = 'khedmety_login_lock_until';
+
+        function getLoginLockRemainingMs() {
+            let lockUntil = parseInt(localStorage.getItem(LOGIN_LOCK_KEY) || '0');
+            let remaining = lockUntil - Date.now();
+            return remaining > 0 ? remaining : 0;
+        }
+
+        function recordFailedLoginAttempt() {
+            let count = parseInt(localStorage.getItem(LOGIN_FAIL_KEY) || '0') + 1;
+            localStorage.setItem(LOGIN_FAIL_KEY, count.toString());
+            if (count % 5 === 0) {
+                // قفل تصاعدي: 2 دقيقة بعد أول 5 محاولات، يتضاعف كل 5 محاولات إضافية (حد أقصى 30 دقيقة)
+                let lockMinutes = Math.min(2 * Math.pow(2, Math.floor(count / 5) - 1), 30);
+                let lockUntil = Date.now() + (lockMinutes * 60 * 1000);
+                localStorage.setItem(LOGIN_LOCK_KEY, lockUntil.toString());
+            }
+        }
+
+        function resetLoginAttempts() {
+            localStorage.removeItem(LOGIN_FAIL_KEY);
+            localStorage.removeItem(LOGIN_LOCK_KEY);
+        }
+
         async function attemptLogin() {
             let u = document.getElementById('loginUsername').value.trim();
             let p = document.getElementById('loginPassword').value.trim();
             let rememberMe = document.getElementById('rememberMeCheck').checked;
             let err = document.getElementById('loginError');
+
+            let remainingLockMs = getLoginLockRemainingMs();
+            if (remainingLockMs > 0) {
+                let mins = Math.ceil(remainingLockMs / 60000);
+                err.innerText = `🔒 تم إيقاف الدخول مؤقتاً بسبب محاولات فاشلة متكررة. حاول مرة أخرى بعد ${mins} دقيقة تقريباً.`;
+                err.style.display = 'block';
+                return;
+            }
 
             if (!u || !p) {
                 err.innerText = "يرجى كتابة اسم المستخدم وكلمة المرور";
@@ -3989,7 +4421,8 @@
             let isAdminPwd = isAdminPasswordValid(pwdHash, p);
 
             if ((u.toLowerCase() === 'admin' || u === 'الأدمن' || u === 'عادل جورج') && isAdminPwd) {
-                currentUser = { name: "عادل جورج", phone: p, role: "admin", permission: "admin", code: "admin" };
+                resetLoginAttempts();
+                currentUser = { name: "عادل جورج", phone: p, role: "admin", permission: "admin", code: "admin", loginTimestamp: Date.now() };
                 // محاولة إضافية لربط الجلسة بحساب Firebase Auth الفردي للأدمن (لا تكسر الدخول لو فشلت)
                 let cloudRole = await tryIndividualCloudLogin('admin', p);
                 if (cloudRole) currentUser.permission = cloudRole;
@@ -4004,7 +4437,9 @@
             // محاولة كخادم عادي
             let found = servants.find(s => s.name.trim().toLowerCase() === u.toLowerCase() && (s.phone.trim() === p || (s.code && s.code.toString() === p)));
             if (found) {
+                resetLoginAttempts();
                 currentUser = found;
+                currentUser.loginTimestamp = Date.now();
                 // محاولة إضافية لربط الجلسة بحساب Firebase Auth الفردي لهذا الخادم (لا تكسر الدخول لو فشلت)
                 let cloudRole = await tryIndividualCloudLogin(found.code || found.id, found.phone);
                 if (cloudRole) currentUser.permission = cloudRole;
@@ -4015,6 +4450,7 @@
                 err.style.display = 'none';
                 checkSession();
             } else {
+                recordFailedLoginAttempt();
                 err.innerText = "بيانات الدخول غير صحيحة!";
                 err.style.display = 'block';
             }
@@ -4054,7 +4490,17 @@
             }
         }
 
+        // مدة صلاحية الجلسة قبل ما تنتهي تلقائيًا وتطلب تسجيل دخول جديد (30 يوم)
+        const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
         function checkSession() {
+            // فحص انتهاء صلاحية الجلسة (لو فيه loginTimestamp قديم جداً، ننهي الجلسة تلقائياً)
+            if (currentUser && currentUser.loginTimestamp && (Date.now() - currentUser.loginTimestamp > SESSION_MAX_AGE_MS)) {
+                currentUser = null;
+                localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+                sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+            }
+
             if (currentUser) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
@@ -4480,12 +4926,93 @@
         }
 
         // ==========================================
+        // نسخ احتياطي تلقائي مجدول (صامت، بدون تنزيل ملفات)
+        // ==========================================
+        const AUTO_BACKUP_LIST_KEY = 'khedmety_auto_backups';
+        const AUTO_BACKUP_LAST_DATE_KEY = 'khedmety_last_auto_backup_date';
+
+        function buildBackupSnapshot() {
+            return {
+                version: "2.18",
+                exportDate: new Date().toISOString(),
+                churchName: settings.churchName || "",
+                serviceName: settings.serviceName || "",
+                members: members || [],
+                servants: servants || [],
+                attendanceRecord: attendanceRecord || {},
+                servantsAttendance: servantsAttendance || {},
+                masterPlan: masterPlan || [],
+                auditLogs: auditLogs || [],
+                settings: settings || {}
+            };
+        }
+
+        function maybeRunAutoBackup() {
+            try {
+                let todayKey = new Date().toISOString().slice(0, 10);
+                let lastRun = localStorage.getItem(AUTO_BACKUP_LAST_DATE_KEY);
+                if (lastRun === todayKey) return; // اتعمل نسخة احتياطية النهاردة بالفعل
+
+                let snapshot = buildBackupSnapshot();
+
+                // 1) نسخة محلية صامتة (لا تحتاج اتصال إنترنت) - آخر 7 أيام فقط للحفاظ على المساحة
+                let list = [];
+                try { list = JSON.parse(localStorage.getItem(AUTO_BACKUP_LIST_KEY)) || []; } catch (e) { list = []; }
+                list.push({ date: todayKey, data: snapshot });
+                if (list.length > 7) list = list.slice(list.length - 7);
+                localStorage.setItem(AUTO_BACKUP_LIST_KEY, JSON.stringify(list));
+                localStorage.setItem(AUTO_BACKUP_LAST_DATE_KEY, todayKey);
+
+                // 2) نسخة سحابية إضافية (أدمن فقط) كحماية إضافية لو الجهاز نفسه ضاع أو اتمسح
+                if (isFirebaseActive && db && currentPermission === 'admin') {
+                    db.ref(`auto_backups/${todayKey}`).set(snapshot).catch(() => {});
+                }
+            } catch (e) { console.warn("فشل تشغيل النسخ الاحتياطي التلقائي:", e); }
+        }
+
+        // عرض قائمة النسخ الاحتياطية التلقائية المحفوظة محلياً والسماح باسترجاع واحدة منها
+        function listAutoBackups() {
+            let list = [];
+            try { list = JSON.parse(localStorage.getItem(AUTO_BACKUP_LIST_KEY)) || []; } catch (e) { list = []; }
+            return list;
+        }
+
+        function downloadAutoBackupByDate(dateKey) {
+            let list = listAutoBackups();
+            let entry = list.find(b => b.date === dateKey);
+            if (!entry) return alert("لم يتم العثور على نسخة احتياطية بهذا التاريخ.");
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(entry.data, null, 2));
+            let a = document.createElement('a');
+            a.setAttribute("href", dataStr);
+            a.setAttribute("download", `نسخة_احتياطية_تلقائية_${dateKey}.json`);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function renderAutoBackupsList() {
+            let container = document.getElementById('autoBackupsList');
+            if (!container) return;
+            let list = listAutoBackups().slice().reverse();
+            if (list.length === 0) {
+                container.innerHTML = '<span style="font-size:11px; color:#888;">لا توجد نسخ تلقائية بعد (تُنشأ تلقائياً أول ما تفتح التطبيق كل يوم).</span>';
+                return;
+            }
+            container.innerHTML = list.map(b =>
+                `<button class="btn-mini" style="background:#dfe6e9; color:#2d3436;" onclick="downloadAutoBackupByDate('${b.date}')">${escapeHtml(b.date)} 📥</button>`
+            ).join('');
+        }
+
+        // ==========================================
         // 50. التشغيل الأولي
         // ==========================================
         checkInAppBrowser();
         applyServiceBranding();
         checkSession();
         initFirebase();
+        maybeRunAutoBackup();
+        renderMaterialsList();
+
         renderMembersList();
         renderAttendanceTable();
         renderLiveCardsFeed();
