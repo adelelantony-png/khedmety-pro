@@ -169,6 +169,1271 @@
             <div class="tab-btn can-attend" onclick="switchTab('attendanceTab', this)">تسجيل الحضور 📷</div>
             <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">سجل الخدام 📋</div>
             <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
+            <!-- تم تغيير اسم التبويب من واتساب جماعي إلى متابعة الافتقاد -->
+            <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">متابعة الافتقاد 🗺️</div>
+            <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
+            <div class="tab-btn admin-only" onclick="switchTab('rolloverTab', this)">أرشفة وتخريج 🎓</div>
+            <div class="tab-btn admin-only" onclick="switchTab('reflectionsTab', this)">التقييم الروحي 🙏</div>
+            <div class="tab-btn admin-only" onclick="switchTab('auditTab', this)">سجل العمليات 🛡️</div>
+            <div class="tab-btn admin-only" onclick="switchTab('settingsTab', this)">الإعدادات 🔒</div>
+            <div class="tab-btn" onclick="switchTab('dataTab', this)">التقارير 📁</div>
+        </div>
+
+        <!-- مكتبة المواد -->
+        <div id="materialsTab" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>📚 مكتبة مواد الكورس</h2>
+            </div>
+            <div class="admin-only" style="background:#fdfefe; border:2px dashed var(--primary); padding:15px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin-top:0; color:var(--primary);">➕ إضافة مادة جديدة</h4>
+                <div class="form-group"><label>عنوان المادة:</label><input type="text" id="mat_title" placeholder="مثال: محاضرة (١) - أسرار الكنيسة"></div>
+                <div class="form-group">
+                    <label>النوع:</label>
+                    <select id="mat_type">
+                        <option value="محاضرة">🎥 محاضرة / فيديو</option>
+                        <option value="ملزمة">📄 ملزمة / PDF</option>
+                        <option value="رابط">🔗 رابط خارجي</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>الرابط (Google Drive / YouTube / أي رابط):</label><input type="url" id="mat_url" placeholder="https://..."></div>
+                <div class="form-group"><label>ملاحظات (اختياري):</label><input type="text" id="mat_notes" placeholder="وصف مختصر"></div>
+                <button class="btn-primary" onclick="addCourseMaterial()">إضافة للمكتبة 📚</button>
+            </div>
+            <div id="materialsListContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+
+        <!-- التقييم الروحي (أدمن فقط) -->
+        <div id="reflectionsTab" class="tab-content admin-only">
+            <h2>🙏 التقييم الذاتي الروحي للدارسين</h2>
+            <div class="table-responsive">
+                <table class="adaptive-card-table">
+                    <thead><tr><th>التاريخ</th><th>الاسم</th><th>التقييم</th><th>الانطباع</th></tr></thead>
+                    <tbody id="reflectionsTbody"><tr><td colspan="4" style="color:#888;">لا توجد بيانات بعد.</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 1. الرئيسية -->
+        <div id="dashTab" class="tab-content active">
+            <div id="myNextEventBanner" style="display:none; background:#e8f4fd; border:1px solid #74b9ff; color:#0984e3; padding:12px; border-radius:8px; margin-bottom:12px;">
+                <h4 style="margin:0 0 4px 0;">🔔 تذكير بتكليفك القادم هذا الأسبوع:</h4>
+                <div id="myNextEventDetails" style="font-size:13px; font-weight:bold;"></div>
+            </div>
+            <div style="background:#f1f2f6; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:5px;">
+                    <h4 style="margin:0; color:var(--primary); font-size:14px;">📅 محطات قادمة في خطة السنة:</h4>
+                    <button class="btn-mini btn-primary" onclick="switchTab('planTab', document.querySelectorAll('.tab-btn')[1])">عرض الأجندة كاملة</button>
+                </div>
+                <div id="upcomingPlanEventsList" style="font-size:13px;">جاري فحص الخطة السنوية...</div>
+            </div>
+            <div style="background:#fff9e6; border:1px solid #ffeaa7; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin:0 0 8px 0; color:#d35400; font-size:14px;">🎂 مناسبات وأعياد ميلاد هذا الأسبوع:</h4>
+                <div id="birthdayAlertList" style="font-size:13px;">جاري فحص التواريخ...</div>
+            </div>
+            <h2>لوحة التحكم والمتابعة</h2>
+            <h4 style="margin:10px 0 5px 0; color:var(--primary);">👥 إحصائيات المخدومين والدارسين:</h4>
+            <div class="stat-grid">
+                <div class="stat-card"><div>إجمالي المخدومين</div><div class="num" id="statTotalMembers">0</div></div>
+                <div class="stat-card"><div>حضور اليوم</div><div class="num" id="statTodayMembersCount">0</div></div>
+                <div class="stat-card"><div>نسبة الحضور</div><div class="num" id="statMembersPercent">0%</div></div>
+                <div class="stat-card"><div>المتناولون 🕊️</div><div class="num" id="statTodayCommunion" style="color:var(--success);">0</div></div>
+                <div class="stat-card"><div>المؤهلون للتخرج</div><div class="num" id="statQualifiedGraduates" style="color:var(--purple);">0</div></div>
+            </div>
+            <h4 style="margin:15px 0 5px 0; color:#2c3e50;">👔 إحصائيات الخدام والمحاضرين:</h4>
+            <div class="stat-grid">
+                <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statTotalServantsDash">0</div></div>
+                <div class="stat-card"><div>حضور اليوم</div><div class="num" id="statTodayServantsCount" style="color:var(--success);">0</div></div>
+                <div class="stat-card"><div>نسبة حضور الخدام</div><div class="num" id="statServantsPercent" style="color:var(--success);">0%</div></div>
+            </div>
+            <div style="background:#fff; border:1px solid #dfe6e9; border-radius:10px; padding:15px; margin-bottom:15px; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:5px;">
+                    <h4 style="margin:0; color:var(--primary); font-size:14px;">🔥 الخريطة الحرارية ومؤشر الانقطاع</h4>
+                    <span id="attritionCountBadge" class="role-badge" style="background:var(--danger); font-size:11px;">0 معرض للتسرب</span>
+                </div>
+                <div id="heatmapContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; margin-top:10px;"></div>
+            </div>
+            <h3>⚠️ رادار المنقطعين (غياب لقائي جمعة متتاليين)</h3>
+            <div id="absentAlertList" style="background:#fff3cd; padding:10px; border-radius:6px; color:#856404; font-size:13px;">جاري الفحص...</div>
+        </div>
+
+        <!-- 2. خطة السنة -->
+        <div id="planTab" class="tab-content">
+            <h2>خطة السنة والأجندة السنوية الشاملة 🗓️</h2>
+
+            <!-- محرك التوليد المتتابع للمواد الـ 7 -->
+            <div class="admin-only" style="background:#f3f0ff; border:2px solid var(--purple); padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h3 style="margin-top:0; border:none; color:var(--purple); font-size:16px;">⚡ محرك التوزيع المتتابع التلقائي للمواد الـ 7 (Sequential Blocks)</h3>
+                <p style="font-size:12px; color:#555; margin-bottom:12px; line-height:1.5;">
+                    يقوم هذا المحرك برص المواد الـ 7 المتتابعة مادة تلو الأخرى بالترتيب، وإدراج أسابيع الكويزات، وتخطي أسابيع امتحانات الجامعة تلقائياً دون تشتيت الدارسين.
+                </p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>المرحلة المستهدفة:</label>
+                        <select id="autoStage">
+                            <option value="سنة أولى">سنة أولى إعداد خدام (7 مواد أساسية)</option>
+                            <option value="سنة ثانية">سنة ثانية إعداد خدام (7 مواد متقدمة)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>تاريخ أول جمعة لبدء الكورس:</label>
+                        <input type="date" id="autoStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label>نظام تدريس البلوك:</label>
+                        <select id="autoMode">
+                            <option value="single">مادة واحدة تلو الأخرى (متتابع 100%)</option>
+                            <option value="double">مادتان معاً في نفس الفترة (مكثف)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display:flex; flex-direction:row; align-items:center; gap:8px; margin-top:auto;">
+                        <input type="checkbox" id="autoIncludeQuiz" checked style="width:20px; height:20px; margin:0;">
+                        <label for="autoIncludeQuiz" style="font-weight:bold; font-size:12px; margin:0; cursor:pointer;">إدراج جمعة كويز / ورشة ختامية لكل مادة</label>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>أسابيع توقف امتحانات الجامعة (اكتب تواريخ جمعات مفصولة بفاصلة مثل: 2027-01-08, 2027-01-15):</label>
+                    <input type="text" id="autoExamBreaks" placeholder="2027-01-08, 2027-01-15, 2027-01-22">
+                </div>
+                <button class="btn-purple" onclick="runSequentialSyllabusGenerator()" style="margin-top:10px; padding:12px; font-size:14px;">🚀 توليد وتسكين خطة المواد الـ 7 تلقائياً في الجدول</button>
+            </div>
+
+            <div class="admin-only" style="background:#eaf2f8; border:1px solid #b8d5e5; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin:0 0 8px 0; color:var(--primary);">📥 إدارة خطة السنة عبر Excel:</h4>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn-primary btn-mini" onclick="downloadMasterPlanTemplate()" style="flex:1; padding:8px;">📄 تحميل نموذج الخطة فارغ</button>
+                    <button class="btn-success btn-mini" onclick="exportMasterPlanToExcel()" style="flex:1; padding:8px;">📊 تصدير الخطة السنوية بالكامل</button>
+                </div>
+                <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="file" id="importMasterPlanFile" accept=".csv, .xlsx, .xls" style="padding:6px; font-size:12px; flex:1; min-width:180px;">
+                    <button class="btn-warning btn-mini" onclick="importMasterPlanFromExcel()" style="width:180px; padding:8px;">📥 استيراد الخطة من Excel</button>
+                </div>
+            </div>
+
+            <div class="admin-only" style="background:#f8f9fa; border:1px solid #dfe6e9; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin:0 0 10px 0; color:var(--primary);">➕ إدراج فعالية جديدة في خطة السنة:</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>نوع الفعالية:</label>
+                        <select id="planType">
+                            <option value="محاضرة">محاضرة دراسية</option>
+                            <option value="امتحان / ورشة">امتحان / كويز مادة</option>
+                            <option value="توقف امتحانات">توقف لامتحانات الجامعة</option>
+                            <option value="رحلة">رحلة ترفيهية / دير (بونص ⭐)</option>
+                            <option value="مؤتمر">مؤتمر روحي (بونص ⭐)</option>
+                            <option value="يوم خلوة">يوم خلوة وصلاة (بونص ⭐)</option>
+                            <option value="يوم رياضي">يوم رياضي / مهرجان (بونص ⭐)</option>
+                            <option value="حفل تخرج">حفل تخرج واجتياز الدورة</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>تاريخ الفعالية:</label><input type="date" id="planDate" required></div>
+                    <div class="form-group"><label>عنوان الفعالية / الموضوع:</label><input type="text" id="planTitle" placeholder="مثال: مؤتمر العقيدة..." required></div>
+                    <div class="form-group"><label>المكان / الملاحظات:</label><input type="text" id="planLocation" placeholder="مثال: قاعة الكنيسة..."></div>
+                    <div class="form-group">
+                        <label>المرحلة المستهدفة:</label>
+                        <select id="planStage">
+                            <option value="عام لكل الخدمة">عام لكل الخدمة والدارسين</option>
+                            <option value="سنة أولى">سنة أولى إعداد خدام</option>
+                            <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
+                            <option value="الخدام فقط">اجتماع الخدام فقط</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>الخادم المسؤول / المحاضر:</label>
+                        <select id="planResponsibleServant"><option value="">اختر الخادم المسؤول...</option></select>
+                    </div>
+                </div>
+                <button class="btn-success" onclick="addMasterPlanEvent()">حفظ وإدراج في خطة السنة 🚀</button>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+                <h3>جدول أحداث ومحطات السنة مرتبة زمنياً</h3>
+                <button class="btn-danger admin-only" onclick="clearAllMasterPlan()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الفعاليات</button>
+            </div>
+            <div class="table-responsive">
+                <table id="masterPlanTable" class="adaptive-card-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th><th>النوع</th><th>عنوان الفعالية</th>
+                            <th>المكان</th><th>المرحلة</th><th>المسؤول / المحاضر</th>
+                            <th class="admin-only">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. تسجيل الحضور -->
+        <div id="attendanceTab" class="tab-content">
+            <div class="admin-only" style="background:#fff; border:1px solid #dfe6e9; border-radius:12px; padding:15px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                    <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">📅 تقويم وأرشيف اجتماعات الحضور</h3>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button class="btn-mini btn-primary" onclick="changeCalendarMonth(-1)" style="padding:4px 8px; margin:0;">◀ السابق</button>
+                        <span id="calendarCurrentMonthLabel" style="font-weight:bold; font-size:13px; color:var(--dark); min-width:110px; text-align:center;">أكتوبر 2026</span>
+                        <button class="btn-mini btn-primary" onclick="changeCalendarMonth(1)" style="padding:4px 8px; margin:0;">التالي ▶</button>
+                        <button class="btn-mini btn-success" onclick="selectAttendanceDate(today)" style="padding:4px 8px; margin:0;">اليوم الحالي ⏱️</button>
+                    </div>
+                </div>
+                <div id="attendanceCalendarGrid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; text-align:center;"></div>
+            </div>
+            <div class="can-attend">
+                <div class="live-scanner-container">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                        <h3 style="margin:0; border:none;">📷 الماسح الضوئي الذكي (Live Scanner)</h3>
+                        <div style="display:flex; gap:6px;">
+                            <button id="startCameraBtn" class="btn-success btn-mini" onclick="startCamera()">فتح الكاميرا 📹</button>
+                            <button id="stopCameraBtn" class="btn-danger btn-mini" style="display:none;" onclick="stopCamera()">إغلاق ⏹️</button>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <select id="cameraSelectionDropdown" style="padding:6px; font-size:12px;">
+                            <option value="">تحديد الكاميرا الخلفية تلقائياً...</option>
+                        </select>
+                    </div>
+                    <div id="reader"></div>
+                    <div class="live-stream-header">
+                        <span>قائمة مسح اليوم (<span id="liveScanDate"></span>)</span>
+                        <span>إجمالي الحاضرين: <strong id="liveScanCount" style="color:var(--accent);">0</strong></span>
+                    </div>
+                    <div id="liveCardsFeed" class="live-cards-feed">
+                        <div style="text-align:center; color:#888; padding:15px; font-size:12px;">وجّه الكاميرا نحو باركود الكارنيه لبدء الرصد المباشر...</div>
+                    </div>
+                </div>
+                <div style="background:#fff; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-top:15px;">
+                    <label style="font-size:13px; font-weight:bold;">بحث وتسجيل سريع في اليوم المحدد (<span id="searchActiveDateBadge"></span>):</label>
+                    <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                        <input type="text" id="manualAttendInput" placeholder="أدخل كود الامتحان أو الاسم..." style="flex:1; min-width:180px; margin:0;" onkeypress="if(event.key==='Enter') manualMarkMemberFromInput()">
+                        <button class="btn-primary" onclick="manualMarkMemberFromInput()" style="width:auto; margin:0; padding:10px 18px;">تسجيل ✔️</button>
+                    </div>
+                </div>
+                <div style="margin-top:15px;">
+                    <button class="btn-purple" onclick="openManualAttendanceModal()" style="padding:14px; font-size:15px;">👥 تسجيل حضور يدوي من قائمة الأسماء (حضور - تناول 🕊️ - مشاركة 💡 - نقاط ⭐)</button>
+                </div>
+            </div>
+            <div style="background:#eaf2f8; padding:12px; border-radius:8px; margin-top:20px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #b8d5e5; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">سجل الحضور لتاريخ: (<span id="todayDate"></span>)</h3>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn-danger admin-only" onclick="clearEntireTodayAttendance()" style="padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف كشف هذا اليوم بالكامل</button>
+                    <span style="background:var(--primary); color:white; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:14px;">
+                        العدد: <span id="todayAttendanceCount" style="font-size:16px;">0</span>
+                    </span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="attendanceTable" class="adaptive-card-table">
+                    <thead>
+                        <tr>
+                            <th>كود الامتحان</th><th>الاسم</th><th>المرحلة</th><th>المادة / المحاضرة المشروحة</th><th>وقت المسح</th>
+                            <th>حضور</th><th>تناول 🕊️</th><th>مشاركة 💡</th><th>النقاط ⭐</th>
+                            <th>المسجِّل</th><th class="can-attend">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. سجل الخدام -->
+        <div id="servantsAttendanceTab" class="tab-content">
+            <h2>متابعة التزام ونشاط خدام الاجتماع</h2>
+            <div class="stat-grid">
+                <div class="stat-card"><div>إجمالي الخدام</div><div class="num" id="statServantsCount">0</div></div>
+                <div class="stat-card"><div>حضور الخدام اليوم</div><div class="num" id="statServantsToday">0</div></div>
+                <div class="stat-card"><div>إجمالي الافتقادات المسجلة</div><div class="num" id="statTotalVisitations">0</div></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+                <h3>جدول التزام الخدام السنوي واليومي</h3>
+                <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الخدام</button>
+            </div>
+            <div class="table-responsive">
+                <table id="servantsAttendanceTable" class="adaptive-card-table">
+                    <thead>
+                        <tr>
+                            <th>كود الخادم</th><th>الاسم</th><th>الهاتف</th><th>حالة اليوم</th>
+                            <th>نسبة الالتزام السنوية</th><th>تكليف اليوم بالخطة</th>
+                            <th>إجمالي الافتقادات</th><th class="can-edit">تسجيل / إلغاء حضور</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. الدارسين والمخدومين -->
+        <div id="membersTab" class="tab-content">
+            <div class="can-edit">
+                <h2>إضافة دارس جديد</h2>
+                <form id="addForm">
+                    <div class="form-grid">
+                        <div class="form-group"><input type="text" id="m_code" placeholder="كود الامتحان (مثلاً: 664)" required></div>
+                        <div class="form-group"><input type="text" id="m_name" placeholder="الاسم الرباعي" required></div>
+                        <div class="form-group">
+                            <select id="m_gender" required>
+                                <option value="بنين" selected>بنين (ولد)</option>
+                                <option value="بنات">بنات</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <select id="m_stage" required>
+                                <option value="سنة أولى" selected>سنة أولى إعداد خدام</option>
+                                <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
+                                <option value="خريجين">خريجين / تم التخرج</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><input type="text" id="m_phone" placeholder="رقم التليفون" required></div>
+                        <div class="form-group"><input type="text" id="m_parent_phone" placeholder="تليفون ولي الأمر"></div>
+                        <div class="form-group"><input type="text" id="m_address" placeholder="العنوان"></div>
+                        <div class="form-group"><input type="date" id="m_dob" placeholder="تاريخ الميلاد" required></div>
+                        <div class="form-group"><input type="text" id="m_confessor" placeholder="أب الاعتراف"></div>
+                        <div class="form-group"><input type="text" id="m_other" placeholder="ملاحظات أخرى"></div>
+                    </div>
+                    <button type="submit" class="btn-primary">حفظ في المنظومة</button>
+                </form>
+            </div>
+            <div style="background:#eaf2f8; border:1px solid #d4e6f1; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin:0 0 8px 0; color:var(--primary);">🎓 تصفيات الدفعات وجاهزية التخرج (حضور الجمعة فقط):</h4>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+                    <label style="font-size:13px; font-weight:bold;">المرحلة:</label>
+                    <select id="stageFilterSelect" onchange="renderMembersList()" style="width:auto; flex:1; min-width:140px; padding:6px;">
+                        <option value="all">كل المراحل</option>
+                        <option value="سنة أولى">سنة أولى إعداد خدام</option>
+                        <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
+                        <option value="خريجين">خريجين / تم التخرج</option>
+                    </select>
+                    <label style="font-size:13px; font-weight:bold;">تصفية التخرج:</label>
+                    <select id="gradFilterSelect" onchange="renderMembersList()" style="width:auto; flex:1; min-width:140px; padding:6px;">
+                        <option value="all">الكل</option>
+                        <option value="qualified">المؤهلون للتخرج فقط (≥75% أيام الجمعة)</option>
+                        <option value="unqualified">غير المؤهلين للتخرج (&lt;75%)</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+                <h2>قائمة المسجلين ومؤشر التخرج والبونص</h2>
+                <button class="btn-danger admin-only" onclick="clearAllMembers()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع المخدومين</button>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="searchBox" placeholder="🔍 بحث بكود الامتحان، الاسم، أو الهاتف..." onkeyup="renderMembersList()" style="margin:0; flex:1; min-width:200px;">
+                <button class="btn-purple" onclick="openQrSearchModal()" style="width:auto; margin:0; padding:10px 14px; white-space:nowrap; font-size:13px;">📷 مسح كود الكارنيه</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="membersTable" class="adaptive-card-table">
+                    <thead>
+                        <tr>
+                            <th>كود الامتحان</th><th>الاسم</th><th>المرحلة</th><th>التليفون</th>
+                            <th>حضور الجمعة الرسمي</th><th>نقاط بونص ⭐</th><th>أهلية التخرج</th>
+                            <th>تسجيل حضور</th><th>الملف</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. نظام الافتقاد الذكي (محل التبويب القديم) -->
+        <div id="broadcastTab" class="tab-content">
+            <h2>نظام توزيع الافتقاد الذكي 🗺️</h2>
+            <p style="font-size:13px; color:#555; line-height:1.6; margin-top:0;">
+                يقوم النظام تلقائياً بفرز الدارسين الغائبين وتجميعهم حسب المناطق الجغرافية، ثم توزيعهم على الخدام الحاضرين اليوم وتوليد رسالة تفويض فورية على واتساب لكل خادم بأسماء من سيفتقدهم.
+            </p>
+            
+            <div style="background:#f3f0ff; border:2px solid var(--purple); padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h4 style="margin:0 0 10px 0; color:var(--purple);">1️⃣ إعداد معايير الافتقاد والمنقطعين:</h4>
+                <div class="form-grid" style="gap:8px;">
+                    <div class="form-group">
+                        <label>تاريخ الغياب المراد حصره:</label>
+                        <input type="date" id="visitationTargetDate">
+                    </div>
+                    <div class="form-group">
+                        <label>نوع رسالة الافتقاد:</label>
+                        <select id="visitationMsgType">
+                            <option value="general">غياب عام عن لقاء اليوم</option>
+                            <option value="spiritual">غياب ومتابعة روحية (سر اعتراف)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <button class="btn-purple" onclick="generateSmartVisitationRoutes()" style="margin:0; padding:12px; font-size:14px;">🚀 فرز الغائبين وتوليد كشوف الافتقاد جغرافياً</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="visitationResultsContainer" style="display:none;">
+                <h3 style="margin-top:20px; color:var(--primary); border-bottom:1px solid #ccc; padding-bottom:8px;">2️⃣ كشوف الافتقاد الموزعة على الخدام:</h3>
+                <div id="visitationRoutesList" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;"></div>
+            </div>
+        </div>
+
+        <!-- 7. إدارة الخدام -->
+        <div id="servantsTab" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>إدارة حسابات الخدام والصلاحيات (سري لأمين الخدمة)</h2>
+                <button class="btn-danger admin-only" onclick="clearAllServants()" style="width:auto; padding:6px 12px; font-size:12px; margin:0;">🗑️ حذف جميع الخدام</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group"><input type="text" id="newServantCode" placeholder="كود الخادم (مثال: 102)"></div>
+                <div class="form-group"><input type="text" id="newServantName" placeholder="اسم الخادم الرباعي"></div>
+                <div class="form-group"><input type="text" id="newServantPhone" placeholder="رقم الهاتف (كلمة المرور)"></div>
+                <div class="form-group"><input type="date" id="newServantDob" placeholder="تاريخ الميلاد للتهنئة"></div>
+                <div class="form-group">
+                    <select id="newServantPermission">
+                        <option value="full">خادم متكامل (حضور وافتقاد وتعديل)</option>
+                        <option value="scanner_only">مسح الحضور بالكاميرا فقط</option>
+                        <option value="attend_only">تسجيل حضور بالكاميرا فقط</option>
+                        <option value="view_only">مشاهدة واطلاع فقط</option>
+                        <option value="developer">خادم ومطور نظام</option>
+                        <option value="admin">أمين خدمة (أدمن كامل)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-success" onclick="addServantManual()">حفظ الخادم</button>
+            <h3 style="margin-top:25px;">قائمة الخدام والصلاحيات</h3>
+            <div class="table-responsive">
+                <table id="servantsTable" class="adaptive-card-table">
+                    <thead>
+                        <tr>
+                            <th>كود الخادم</th><th>الاسم</th><th>الهاتف</th><th>تاريخ الميلاد</th>
+                            <th>الصلاحية</th><th>الحساب السحابي</th><th>تعديل</th><th>حذف</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 8. أرشفة نهاية الدورة -->
+        <div id="rolloverTab" class="tab-content admin-only">
+            <h2>🎓 أرشفة نهاية الدورة وبدء سنة جديدة (Rollover)</h2>
+            <p style="font-size:13px; color:#555; line-height:1.6;">
+                تتيح لك هذه اللوحة تحديد خريجي الدورة المنتهية، ترحيل دارسي سنة أولى إلى سنة ثانية، أرشفة بيانات السنة المنتهية سحابياً، وبدء دورة جديدة:
+            </p>
+            <div style="background:#eaf2f8; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h4 style="margin:0 0 10px 0; color:var(--primary);">1️⃣ تحديد أفراد ومجموعات التخرج (نقل إلى خريجين):</h4>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                    <div style="font-size:12px; font-weight:bold;">
+                        عرض مرحلة: 
+                        <select id="rolloverStageFilter" onchange="renderRolloverCandidateList()" style="width:auto; padding:4px 8px;">
+                            <option value="سنة ثانية">سنة ثانية (المرشحون للتخرج)</option>
+                            <option value="all">كل المراحل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn-mini btn-primary" onclick="selectAllRollover(true)" style="width:auto; padding:5px 10px;">تحديد المؤهلين فقط (≥75%)</button>
+                        <button class="btn-mini btn-purple" onclick="selectAllRollover('all')" style="width:auto; padding:5px 10px;">تحديد الكل</button>
+                        <button class="btn-mini" onclick="selectAllRollover(false)" style="width:auto; padding:5px 10px; background:#b2bec3; color:#2d3436;">إلغاء التحديد</button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:280px; overflow-y:auto; background:#fff; border:1px solid #dfe6e9; border-radius:8px;">
+                    <table id="rolloverCandidatesTable" class="adaptive-card-table" style="margin:0;">
+                        <thead style="position:sticky; top:0; background:var(--primary); color:white;">
+                            <tr>
+                                <th style="width:40px;">تخرج</th><th>كود</th><th>الاسم</th>
+                                <th>المرحلة الحالية</th><th>نسبة حضور الجمعة</th><th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rolloverCandidatesTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div style="background:#fff9e6; border:1px solid #ffeaa7; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h4 style="margin:0 0 8px 0; color:#d35400;">2️⃣ خيارات الترحيل والأرشفة السحابية:</h4>
+                <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="rolloverAutoPromoteYear1" checked style="width:20px; height:20px; margin:0;">
+                        <span><strong>ترقية تلقائية لدارسي سنة أولى:</strong> تحويل كل دارسي (سنة أولى) إلى (سنة ثانية) تلقائياً.</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="rolloverResetAttendance" checked style="width:20px; height:20px; margin:0;">
+                        <span><strong>تصفير سجل الحضور للسنة الجديدة:</strong> تفريغ حضور الأسابيع السابقة بعد حفظ الأرشيف سحابياً.</span>
+                    </label>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:5px;">
+                        <label style="font-weight:bold;">مسمى الأرشيف للسنة المنتهية:</label>
+                        <input type="text" id="rolloverArchiveLabel" placeholder="مثال: دورة_2025_2026" style="flex:1; min-width:200px; padding:6px;">
+                    </div>
+                </div>
+            </div>
+            <button class="btn-danger" onclick="executeAcademicRollover()" style="padding:15px; font-size:15px; margin:0;">🚀 تنفيذ التخريج، الأرشفة، وبدء السنة الجديدة رسمياً</button>
+        </div>
+
+        <!-- 9. سجل التدقيق -->
+        <div id="auditTab" class="tab-content admin-only">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>سجل النشاط والتدقيق الأمني (Audit Log) 🛡️</h2>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-mini btn-primary" onclick="exportAuditLogToExcel()" style="width:auto; padding:6px 12px; margin:0;">📊 تصدير السجل Excel</button>
+                    <button class="btn-mini btn-danger" onclick="clearAuditLogs()" style="width:auto; padding:6px 12px; margin:0;">🗑️ تفريغ سجل اليوم</button>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height:450px; overflow-y:auto; border:1px solid #dfe6e9; border-radius:8px;">
+                <table id="auditTable" class="adaptive-card-table">
+                    <thead style="position:sticky; top:0; background:var(--primary); color:white;">
+                        <tr>
+                            <th>الوقت</th><th>الخادم المنفذ</th><th>نوع العملية</th>
+                            <th>المخدوم / الهدف</th><th>التفاصيل والملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableTbody">
+                        <tr><td colspan="5" style="color:#888;">جاري تحميل سجل النشاطات...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 10. الإعدادات -->
+        <div id="settingsTab" class="tab-content">
+            <h2>إعدادات المنظومة وتخصيص الخدمة</h2>
+            <h3>اسم الكنيسة والخدمة والنطاق السنوي</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>اسم الكنيسة / الإيبارشية:</label><input type="text" id="setChurchName"></div>
+                <div class="form-group"><label>اسم الخدمة / الأسرة:</label><input type="text" id="setServiceName"></div>
+                <div class="form-group"><label>رقم واتساب أمين الخدمة:</label><input type="text" id="setAdminWhatsApp" placeholder="مثال: 201200000000"></div>
+                <div class="form-group"><label>📅 تاريخ بداية الخدمة (السنة):</label><input type="date" id="setServiceStart"></div>
+                <div class="form-group"><label>📅 تاريخ نهاية الخدمة (السنة):</label><input type="date" id="setServiceEnd"></div>
+            </div>
+            <div class="admin-only" style="background:#e8f4fd; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
+                <h4 style="margin:0 0 6px 0; color:var(--primary); font-size:15px;">🔗 إرسال رابط تفعيل السحابة للخادم</h4>
+                <button class="btn-primary" onclick="shareAutoSetupWhatsAppLink()" style="margin:0; padding:12px; font-size:13px;">📲 إرسال رابط التفعيل عبر WhatsApp</button>
+            </div>
+            <div style="background:#eaf2f8; border:2px solid #74b9ff; padding:15px; border-radius:10px; margin:15px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h3 style="margin:0; border:none; color:var(--primary); font-size:15px;">☁️ رادار استهلاك سحابة Firebase</h3>
+                    <button class="btn-mini btn-success" onclick="sendCloudUsageWhatsAppReport()" style="padding:6px 12px;">📲 إرسال تقرير الاستهلاك لواتساب</button>
+                </div>
+                <div class="stat-grid" style="margin-bottom:10px;">
+                    <div class="stat-card" style="background:#fff;"><div style="font-size:11px; color:#636e72;">حجم البيانات التقديري</div><div class="num" id="cloudEstSizeText" style="font-size:18px;">0 KB</div></div>
+                    <div class="stat-card" style="background:#fff;"><div style="font-size:11px; color:#636e72;">حركات الشهر الحالي</div><div class="num" id="cloudMonthlyAttText" style="font-size:18px; color:var(--purple);">0</div></div>
+                    <div class="stat-card" style="background:#fff;"><div style="font-size:11px; color:#636e72;">حالة الأمان السحابي</div><div id="cloudSafetyStatusText" style="font-weight:bold; color:var(--success); margin-top:5px; font-size:13px;">🟢 آمن ومثالي</div></div>
+                </div>
+                <div style="font-size:11px; font-weight:bold; margin-bottom:4px;">نسبة استهلاك سعة 1GB السحابية: <span id="cloudUsagePercentText">0.01%</span></div>
+                <div class="progress-bar-container" style="height:8px;"><div id="cloudUsageProgressBar" class="progress-bar" style="width:1%; background:var(--success);"></div></div>
+            </div>
+            <div class="admin-only" style="background:#fff; border:1px solid #dfe6e9; padding:15px; border-radius:10px; margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                    <h3 style="margin:0; border:none; color:var(--primary); font-size:16px;">📱 الأجهزة المتصلة حالياً</h3>
+                    <button class="btn-mini btn-danger" onclick="terminateAllSessions()" style="width:auto; padding:6px 12px; margin:0;">🚨 طرد جميع الخدام المتصلين</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="activeSessionsTable" class="adaptive-card-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الخادم</th><th>نوع الجهاز</th><th>وقت الدخول</th>
+                                <th>الحالة</th><th>إجراء الأدمن</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeSessionsTbody">
+                            <tr><td colspan="5" style="color:#888;">جاري فحص الجلسات المتصلة...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <h3>مواعيد الاجتماع الأساسي (يوم الجمعة) ونظام الصيف</h3>
+            <div class="form-grid">
+                <div class="form-group"><label><strong>الموعد الأساسي (يوم الجمعة):</strong></label><input type="time" id="setStartTime"></div>
+                <div class="form-group"><label>سماح التأخير للاجتماع الأساسي (دقائق):</label><input type="number" id="setAllowed"></div>
+                <div class="form-group"><label>اعتباره غائباً بعد (دقائق):</label><input type="number" id="setAbsentAfter"></div>
+                <div class="form-group"><label>كلمة مرور أمين الخدمة العام:</label><input type="password" id="setAdminPassword" placeholder="اتركها فارغة لعدم التغيير"></div>
+            </div>
+            <h3>مفاتيح وتأمين الربط السحابي (Firebase)</h3>
+            <textarea id="firebaseConfigInput" rows="4" placeholder='{ "apiKey": "...", "databaseURL": "...", ... }'></textarea>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:8px;">
+                <input type="email" id="settingsCloudEmail" placeholder="البريد السحابي المعتمد" autocomplete="off">
+                <input type="password" id="settingsCloudPassword" placeholder="كلمة مرور السحابة" autocomplete="off">
+            </div>
+            <button class="btn-primary" onclick="saveFirebaseConfig()" style="margin-top:8px;">حفظ وتأمين الاتصال بالسحابة ☁️</button>
+            <button class="btn-success" onclick="saveGeneralSettings()" style="margin-top:6px;">حفظ جميع الإعدادات 💾</button>
+        </div>
+
+        <!-- 11. التقارير والنسخ الاحتياطي -->
+        <div id="dataTab" class="tab-content">
+            <h2>التقارير واستيراد البيانات</h2>
+            <button class="btn-success" onclick="exportAttendance(false)" style="font-size:16px; padding:15px; margin-bottom:20px;">📥 تحميل التقرير الشامل للحضور والبونص (Excel)</button>
+            <div style="background:#edf2f7; padding:12px; border-radius:8px; margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn-primary" onclick="downloadTemplate('members')" style="flex:1;">📄 نموذج المخدومين</button>
+                <button class="btn-primary" onclick="downloadTemplate('servants')" style="flex:1;">📄 نموذج الخدام</button>
+            </div>
+            <div class="admin-only" style="margin-top:20px;">
+                <h3>استيراد بيانات المخدومين (من شيت نموذجي)</h3>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
+                    <input type="file" id="importFile" accept=".csv, .xlsx, .xls" style="flex:1; min-width:200px;">
+                    <button class="btn-primary" onclick="importMembers()" style="width:auto; margin:0; padding:10px 15px;">استيراد من Excel</button>
+                </div>
+            </div>
+            <div style="background:#fff; border:1px solid #dfe6e9; padding:12px; border-radius:8px; margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; margin-bottom:6px; flex-wrap:wrap; gap:5px;">
+                    <span>سعة التخزين المحلي المستخدمة بالمتصفح:</span>
+                    <span id="storageUsageText">جاري الفحص...</span>
+                </div>
+                <div class="progress-bar-container"><div id="storageUsageBar" class="progress-bar" style="width:0%; background:var(--success);"></div></div>
+            </div>
+            <div class="admin-only" style="background:#fdfefe; border:2px dashed var(--primary); padding:15px; border-radius:8px; margin-top:20px;">
+                <h3 style="margin-top:0; border:none; color:var(--primary);">💾 النسخ الاحتياطي الشامل (One-Click Backup & Restore)</h3>
+                <div style="display:flex; gap:10px; flex-wrap:margin-top:10px;">
+                    <button class="btn-purple" onclick="downloadFullBackup()" style="flex:1; padding:10px; margin:0;">💾 تحميل نسخة احتياطية كاملة (JSON)</button>
+                    <label class="btn-warning" style="flex:1; padding:10px; margin:0; text-align:center; cursor:pointer; border-radius:6px; box-sizing:border-box;">
+                        🔄 استعادة نسخة سابقة من ملف
+                        <input type="file" id="restoreBackupFileInput" accept=".json" onchange="restoreFullBackup(event)" style="display:none;">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نوافذ Profile و Modal (كما هي في نسختك) -->
+    <!-- ... تم الاحتفاظ بباقي الـ Modals لعدم الإطالة ولأنها لم تتغير ... -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeProfile()">&times;</span>
+            <div style="text-align:center; margin-bottom:10px;">
+                <h3 id="p_name" style="margin:5px 0 0 0; border:none; color:var(--primary);"></h3>
+                <div style="background:#e17055; color:white; display:inline-block; padding:3px 10px; border-radius:4px; font-weight:bold; font-size:13px; margin-top:4px;">
+                    كود الامتحان: <span id="p_exam_code"></span> | <span id="p_stage"></span> | <span id="p_gender"></span>
+                </div>
+            </div>
+            <div class="info-row" style="border:none;">
+                <span class="info-label">الهاتف:</span>
+                <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                    <span id="p_phone"></span> 
+                    <a id="btn_wa" target="_blank" class="btn-mini btn-success" style="padding:4px 8px; margin:0;">واتساب 💬</a>
+                    <a id="btn_spiritual_wa" target="_blank" class="btn-mini btn-purple" style="padding:4px 8px; margin:0;">افتقاد روحي 🕊️</a>
+                </div>
+            </div>
+            <div style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:8px; margin:10px 0;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; flex-wrap:wrap; gap:5px;">
+                    <span>مؤشر الحضور السنوي الرسمي (أيام الجمعة):</span>
+                    <span id="p_grad_status"></span>
+                </div>
+                <div class="progress-bar-container"><div id="p_grad_progress" class="progress-bar"></div></div>
+            </div>
+            <button class="btn-success can-attend" id="btn_profile_manual_attend" style="margin-bottom:8px;">✔️ تسجيل حضور يدوي لهذا الدارس</button>
+            <button class="btn-warning can-edit" id="btn_profile_edit" style="margin-bottom:8px;" onclick="openEditMemberModal()">✏️ تعديل بيانات هذا الدارس</button>
+            <button class="btn-mini admin-only" style="width:100%; background:#dfe6e9; color:#2d3436; margin-bottom:12px; padding:8px;" onclick="showVersionHistoryModal('member', currentProfileId, document.getElementById('p_name').innerText)">🕘 سجل تعديلات هذا الدارس</button>
+            <div style="display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
+                <button id="tabBtn_attendance" onclick="switchProfileTab('p_attendance_log', this)" style="flex:1; margin:0; padding:8px 4px; background:var(--primary); color:white; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">سجل الحضور 🗓️</button>
+                <button id="tabBtn_curriculum" onclick="switchProfileTab('p_curriculum_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">المواد الـ 7 📖</button>
+                <button id="tabBtn_visitations" onclick="switchProfileTab('p_visitations_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">الافتقادات 💊</button>
+                <button id="tabBtn_field" onclick="switchProfileTab('p_field_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">التربية العملية 🎯</button>
+                <button id="tabBtn_info" onclick="switchProfileTab('p_info_tab', this)" style="flex:1; margin:0; padding:8px 4px; background:#dfe6e9; color:#333; border-radius:6px; font-size:12px; font-weight:bold; border:none; cursor:pointer; min-width:70px;">البيانات 👤</button>
+            </div>
+            
+            <div id="p_attendance_log" class="profile-tab-content" style="display:block;">
+                <div style="max-height:180px; overflow-y:auto; border:1px solid #eee; border-radius:6px;" class="table-responsive">
+                    <table style="margin:0; width:100%; border-collapse:collapse; font-size:12px;" class="adaptive-card-table">
+                        <thead style="position:sticky; top:0; background:var(--primary); color:white;">
+                            <tr><th style="padding:8px;">التاريخ</th><th style="padding:8px;">المادة / المحاضرة</th><th style="padding:8px;">وقت المسح</th><th style="padding:8px;">الحالة</th></tr>
+                        </thead>
+                        <tbody id="p_attendance_tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- تبويب متابعة المواد الـ 7 في البروفايل -->
+            <div id="p_curriculum_tab" class="profile-tab-content">
+                <h4 style="margin:0 0 8px 0; color:var(--primary); font-size:13px;">📚 متابعة اجتياز المواد الـ 7 الأساسية:</h4>
+                <div id="p_curriculum_cards" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;">
+                    <div style="color:#888; font-size:12px;">جاري حساب نسب المواد...</div>
+                </div>
+            </div>
+
+            <div id="p_visitations_tab" class="profile-tab-content">
+                <div class="can-edit">
+                    <h4 style="margin:0 0 5px 0; color:var(--primary);">💊 كبسولة الافتقاد السريع:</h4>
+                    <div style="margin-bottom:8px;">
+                        <span class="capsule-btn" onclick="quickCapsuleVisit('📞 مكالمة تليفونية واطمئنان')">📞 مكالمة اطمئنان</span>
+                        <span class="capsule-btn" onclick="quickCapsuleVisit('🏠 زيارة منزلية مباركة')">🏠 زيارة منزلية</span>
+                        <span class="capsule-btn" onclick="quickCapsuleVisit('📚 اعتذار لظروف امتحانات')">📚 ظروف امتحانات</span>
+                        <span class="capsule-btn" onclick="quickCapsuleVisit('🩺 اعتذار لظروف صحية/مرض')">🩺 ظروف صحية</span>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-bottom:8px; flex-wrap:wrap;">
+                        <input type="text" id="visitationNote" placeholder="أو اكتب تفاصيل إضافية..." style="flex:1; min-width:180px; margin:0;">
+                        <button class="btn-success" style="width:75px; margin:0; padding:6px;" onclick="addManualVisitationNote()">حفظ</button>
+                    </div>
+                </div>
+                <div id="visitationHistory" style="max-height:110px; overflow-y:auto; background:#f9f9f9; padding:6px; font-size:12px; border-radius:4px;"></div>
+            </div>
+            <div id="p_field_tab" class="profile-tab-content">
+                <div class="can-edit" style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:10px;">
+                    <h4 style="margin:0 0 8px 0; color:var(--primary); font-size:13px;">➕ تقييم نزول ميداني وإلقاء درس:</h4>
+                    <div class="form-grid" style="gap:6px; margin-bottom:6px;">
+                        <input type="date" id="evalDate">
+                        <input type="text" id="evalClass" placeholder="المرحلة (مثال: خامسة ابتدائي)">
+                        <input type="text" id="evalLessonTitle" placeholder="عنوان الدرس المشروح">
+                        <select id="evalSupervisor"><option value="">اختر الخادم المشرف المقيم...</option></select>
+                    </div>
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:4px; color:#2c3e50;">الدرجات (من 25 درجة لكل معيار):</div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; margin-bottom:6px; font-size:11px;">
+                        <div>تحضير الدرس: <input type="number" id="scorePrep" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                        <div>الأداء والتوصيل: <input type="number" id="scoreDelivery" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                        <div>وسيلة الإيضاح: <input type="number" id="scoreAids" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                        <div>القدوة والانضباط: <input type="number" id="scoreConduct" min="0" max="25" placeholder="0 - 25" style="padding:4px;"></div>
+                    </div>
+                    <input type="text" id="evalNotes" placeholder="ملاحظات وتوجيهات روحية..." style="margin-bottom:6px;">
+                    <button class="btn-success" onclick="saveFieldEvaluation()" style="padding:8px; margin:0; font-size:12px;">حفظ تقييم النزول الميداني 🚀</button>
+                </div>
+                <h4 style="margin:6px 0 4px 0; color:var(--primary); font-size:13px;">📋 تقييمات الدروس الميدانية السابقة:</h4>
+                <div id="fieldEvaluationHistory" style="max-height:150px; overflow-y:auto;"></div>
+            </div>
+            <div id="p_info_tab" class="profile-tab-content">
+                <div class="info-row"><span class="info-label">ولي الأمر:</span><span id="p_parent_phone"></span></div>
+                <div class="info-row"><span class="info-label">العنوان:</span><span id="p_address"></span></div>
+                <div class="info-row"><span class="info-label">تاريخ الميلاد:</span><span id="p_dob"></span></div>
+                <div class="info-row"><span class="info-label">أب الاعتراف:</span><span id="p_confessor"></span></div>
+            </div>
+            <div style="text-align:center; margin:15px 0;">
+                <div id="profileQrWrapper" style="display:inline-block; background:#ffffff; padding:10px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);"></div>
+                <div id="profileQrText" style="font-size:11px; color:#636e72; margin-top:5px; direction:ltr; font-family:monospace;"></div>
+            </div>
+            <button class="btn-danger admin-only" id="btn_delete_member" style="padding:8px;">حذف هذا المخدوم نهائياً</button>
+        </div>
+    </div>
+
+    <!-- نافذة تعديل بيانات الدارس -->
+    <div id="editMemberModal" class="modal" style="z-index:4500;">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="close-btn" onclick="closeEditMemberModal()">&times;</span>
+            <h3 style="margin-top:0; color:var(--primary); border:none;">✏️ تعديل بيانات الدارس</h3>
+            <div class="form-grid">
+                <div><label>كود الامتحان:</label><input type="text" id="edit_m_code"></div>
+                <div><label>الاسم الرباعي:</label><input type="text" id="edit_m_name"></div>
+                <div>
+                    <label>المرحلة:</label>
+                    <select id="edit_m_stage">
+                        <option value="سنة أولى">سنة أولى إعداد خدام</option>
+                        <option value="سنة ثانية">سنة ثانية إعداد خدام</option>
+                        <option value="خريجين">خريجين / تم التخرج</option>
+                    </select>
+                </div>
+                <div>
+                    <label>النوع:</label>
+                    <select id="edit_m_gender"><option value="بنين">بنين</option><option value="بنات">بنات</option></select>
+                </div>
+                <div><label>رقم التليفون:</label><input type="text" id="edit_m_phone"></div>
+                <div><label>تليفون ولي الأمر:</label><input type="text" id="edit_m_parent_phone"></div>
+                <div><label>تاريخ الميلاد:</label><input type="date" id="edit_m_dob"></div>
+                <div><label>أب الاعتراف:</label><input type="text" id="edit_m_confessor"></div>
+                <div style="grid-column:1/-1;"><label>العنوان:</label><input type="text" id="edit_m_address"></div>
+            </div>
+            <button class="btn-success" onclick="saveEditedMember()">حفظ التعديلات 💾</button>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        const CURRICULUM_MATRIX = {
+            "سنة أولى": [
+                { code: "SUB101", title: "مقدمة ودراسات في العهد الجديد", weeks: 4, axis: "دراسات كتابية", minPassAtt: 75 },
+                { code: "SUB102", title: "مقدمة الطقس والصلوات الكنسية", weeks: 3, axis: "طقسي", minPassAtt: 75 },
+                { code: "SUB103", title: "علم العقيدة الأرثوذكسية (١)", weeks: 4, axis: "عقيدي", minPassAtt: 75 },
+                { code: "SUB104", title: "تاريخ الكنيسة وعصر الآباء", weeks: 3, axis: "سير وتاريخ كنسي", minPassAtt: 75 },
+                { code: "SUB105", title: "مدخل العهد القديم وتاريخ الخلاص", weeks: 4, axis: "دراسات كتابية", minPassAtt: 75 },
+                { code: "SUB106", title: "سيكولوجية النمو والمخدومين", weeks: 3, axis: "حياتي ونفسي", minPassAtt: 75 },
+                { code: "SUB107", title: "طرق التدريس والتربية العملية", weeks: 3, axis: "تربية عملية", minPassAtt: 75 }
+            ],
+            "سنة ثانية": [
+                { code: "SUB201", title: "اللاهوت العقيدي والدفاعيات والمعاصر", weeks: 4, axis: "عقيدي ومعاصر", minPassAtt: 75 },
+                { code: "SUB202", title: "التسبحة والطقس المتقدم والأسرار", weeks: 4, axis: "طقسي", minPassAtt: 75 },
+                { code: "SUB203", title: "تفسير أسفار نبوية وشعرية", weeks: 4, axis: "دراسات كتابية", minPassAtt: 75 },
+                { code: "SUB204", title: "الرسائل وبولسيات متقدمة", weeks: 4, axis: "دراسات كتابية", minPassAtt: 75 },
+                { code: "SUB205", title: "اللاهوت الرعوي والافتقاد الميداني", weeks: 3, axis: "رعوي وتطبيقي", minPassAtt: 75 },
+                { code: "SUB206", title: "تاريخ وبدع ومجامع مسكونية", weeks: 3, axis: "سير وتاريخ كنسي", minPassAtt: 75 },
+                { code: "SUB207", title: "إدارة الفصل وقيادة الخدمة الكنسية", weeks: 3, axis: "ثقافي وإداري", minPassAtt: 75 }
+            ]
+        };
+
+        const STORAGE_KEYS = {
+            MEMBERS: 'my_church_class', SERVANTS: 'my_church_servants', ATTENDANCE: 'my_church_attendance',
+            SERVANTS_ATTENDANCE: 'my_church_servants_attendance', MASTER_PLAN: 'my_church_master_plan',
+            AUDIT_LOGS: 'my_church_audit_logs', SETTINGS: 'my_church_settings', ADMIN_PWD: 'my_church_admin_pwd',
+            ACTIVE_USER: 'my_church_active_user', ACTIVE_SESSION_ID: 'my_active_session_id', FB_CONFIG: 'my_firebase_config',
+            CLOUD_EMAIL: 'cloud_auth_email', CLOUD_PASS: 'cloud_auth_pass', PENDING_SYNC: 'pending_sync_paths'
+        };
+
+        const DEFAULT_ADMIN_PWD = '1234567';
+        const MAX_LOCAL_STORAGE_BYTES = 5 * 1024 * 1024;
+        let db = null; let isFirebaseActive = false; let firebaseConfigLoaded = null;
+
+        let myCurrentSessionId = localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION_ID) || ('sess_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_SESSION_ID, myCurrentSessionId);
+
+        async function hashPassword(password) {
+            if (!password) return '';
+            try {
+                const encoder = new TextEncoder(); const data = encoder.encode(password);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                let hash = 0; for (let i = 0; i < password.length; i++) { hash = ((hash << 5) - hash) + password.charCodeAt(i); hash |= 0; }
+                return 'fb_' + Math.abs(hash).toString(16);
+            }
+        }
+
+        function escapeHtml(str) { return str == null ? '' : String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+        function formatWhatsAppPhone(rawPhone) {
+            if (!rawPhone) return ""; let digits = rawPhone.toString().replace(/\D/g, '');
+            if (digits.startsWith('01') && digits.length === 11) return '2' + digits;
+            if (digits.startsWith('201') && digits.length === 12) return digits;
+            if (digits.startsWith('1') && digits.length === 10) return '20' + digits; return digits;
+        }
+
+        let audioCtx = null;
+        function playBeepSound(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                if (type === 'success') {
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime); gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, audioCtx.currentTime); gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+                }
+            } catch (e) {}
+        }
+
+        function showToast(msg, isError = false) {
+            let toast = document.getElementById('toastMessage'); if (!toast) return;
+            toast.innerText = msg; toast.style.background = isError ? "var(--danger)" : (msg.includes('تأخير') ? "var(--warning)" : "var(--success)");
+            toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+
+        let members = JSON.parse(localStorage.getItem(STORAGE_KEYS.MEMBERS)) || [];
+        let attendanceRecord = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || {};
+        let servantsAttendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVANTS_ATTENDANCE)) || {};
+        let masterPlan = JSON.parse(localStorage.getItem(STORAGE_KEYS.MASTER_PLAN)) || [];
+        let auditLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) || [];
+        let servants = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVANTS)) || [{ id: 1001, name: "عادل جورج", phone: "1234567", dob: "1995-05-15", code: "admin", role: "admin", permission: "admin", roleType: "أمين خدمة" }];
+        let settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS)) || { churchName: "كنيسة الملاك والروماني بالمطرية", serviceName: "اجتماع القديس بولس الرسول لإعداد الخدام", adminWhatsApp: "201200000000", serviceStart: "2026-09-01", serviceEnd: "2027-07-01", startTime: "13:00", allowedDelay: 15, absentAfter: 75, summerActive: false, summerDay: "0", summerStartTime: "18:00", ignoreSummerDelay: true };
+
+        let adminPasswordHash = localStorage.getItem(STORAGE_KEYS.ADMIN_PWD) || '';
+        function isAdminPasswordValid(pwdHash, rawPwd) { if (adminPasswordHash) return pwdHash === adminPasswordHash; return rawPwd === DEFAULT_ADMIN_PWD; }
+
+        let currentUser = null; try { currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE_USER) || sessionStorage.getItem(STORAGE_KEYS.ACTIVE_USER)); } catch (e) { currentUser = null; }
+        let currentRole = currentUser ? currentUser.role : 'servant';
+        let currentPermission = currentUser ? (currentUser.permission || 'full') : 'view_only';
+        let currentProfileId = null;
+
+        let today = new Date().toLocaleDateString('en-CA');
+        let activeSelectedDate = today; let calendarDisplayDate = new Date();
+        document.getElementById('liveScanDate') && (document.getElementById('liveScanDate').innerText = today);
+        if (!attendanceRecord[today]) attendanceRecord[today] = []; if (!servantsAttendance[today]) servantsAttendance[today] = [];
+
+        function isFridaySession(dateStr) { return new Date(dateStr).getDay() === 5; }
+
+        // =======================================================
+        // دالة توزيع الافتقاد الذكي الجديدة بالكامل (Smart Routing)
+        // =======================================================
+        function generateSmartVisitationRoutes() {
+            let targetDate = document.getElementById('visitationTargetDate').value;
+            let msgType = document.getElementById('visitationMsgType').value;
+
+            if (!targetDate) return alert("يرجى اختيار تاريخ الغياب الذي سيتم بناء كشوف الافتقاد عليه!");
+
+            // 1. تحديد الحاضرين في هذا اليوم
+            let attendedIds = (attendanceRecord[targetDate] || []).filter(a => !a.isAbsentDueToDelay).map(a => a.id.toString());
+            
+            // 2. فلترة الدارسين الغائبين
+            let absentees = members.filter(m => !attendedIds.includes(m.id.toString()));
+
+            if (absentees.length === 0) {
+                alert(`رائع! جميع الدارسين كانوا حاضرين يوم (${targetDate}). لا توجد كشوف افتقاد.`);
+                return;
+            }
+
+            // 3. تجميع الغائبين بناءً على المنطقة (Address)
+            let areasMap = {};
+            absentees.forEach(member => {
+                // إذا لم يوجد عنوان نضعه في فئة "غير محدد"
+                let rawAddr = (member.address || "").trim();
+                // استخراج أول كلمة أو كلمتين لتمثيل المنطقة بشكل تقريبي، أو استخدام العنوان كامل لو كان قصيراً
+                let areaKey = rawAddr ? rawAddr.split(' ').slice(0, 2).join(' ') : "غير محدد عنوانه";
+                
+                if (!areasMap[areaKey]) areasMap[areaKey] = [];
+                areasMap[areaKey].push(member);
+            });
+
+            // تحويل المناطق إلى مصفوفة لسهولة التوزيع
+            let areasList = Object.keys(areasMap).map(key => ({
+                areaName: key,
+                members: areasMap[key]
+            }));
+
+            // 4. إحضار الخدام الحاضرين "اليوم" ليكونوا مسؤولين عن الافتقاد
+            let activeServantsToday = (servantsAttendance[today] || []).map(sa => {
+                let sObj = servants.find(s => s.id.toString() === sa.id.toString());
+                return sObj || null;
+            }).filter(Boolean);
+
+            if (activeServantsToday.length === 0) {
+                // لو مفيش خدام سجلوا حضور النهاردة، نوزع على كل خدام المنظومة كبديل
+                activeServantsToday = servants.filter(s => s.permission !== 'view_only' && s.permission !== 'scanner_only');
+            }
+
+            if (activeServantsToday.length === 0) return alert("لا يوجد خدام متاحين لتوزيع الافتقاد عليهم!");
+
+            // 5. توزيع المناطق الجغرافية على الخدام المتاحين (Round Robin Allocation)
+            let assignments = {};
+            activeServantsToday.forEach(s => assignments[s.id] = { servant: s, assignedMembers: [] });
+
+            let servantIndex = 0;
+            areasList.forEach(areaObj => {
+                // كل المخدومين في نفس المنطقة يروحوا لنفس الخادم عشان يوفر مشاوير
+                let chosenServant = activeServantsToday[servantIndex % activeServantsToday.length];
+                assignments[chosenServant.id].assignedMembers.push(...areaObj.members);
+                servantIndex++;
+            });
+
+            // 6. عرض النتائج وبناء كروت واتساب لكل خادم
+            let routesContainer = document.getElementById('visitationRoutesList');
+            routesContainer.innerHTML = '';
+            
+            let templateText = msgType === 'spiritual' 
+                ? "سلام ونعمة يا [الاسم]، بنطمن عليك وعلى مواظبتك في سر الاعتراف والتناول وقانونك الروحي، محتاجك دايماً شعلة نار في الخدمة ❤️🕊️"
+                : `سلام ونعمة يا [الاسم]، افتقدناك جداً لعدم حضورك اجتماع يوم (${targetDate})، نتمنى تكون بخير ونراك الأسبوع القادم ❤️`;
+
+            let hasAssignments = false;
+
+            Object.values(assignments).forEach(route => {
+                if (route.assignedMembers.length === 0) return;
+                hasAssignments = true;
+
+                let servantPhone = formatWhatsAppPhone(route.servant.phone);
+                
+                // تجهيز الرسالة المجمعة التي سترسل للخادم
+                let whatsappReportToServant = `*تكليف افتقاد كورس الخدام - منطقة جغرافية 🗺️*\n`;
+                whatsappReportToServant += `الخادم المسؤول: *${route.servant.name}*\n`;
+                whatsappReportToServant += `عدد المخدومين: ${route.assignedMembers.length}\n\n`;
+
+                let tableHtml = `<table class="adaptive-card-table" style="margin-top:10px; font-size:12px;">
+                                 <thead style="background:#6c5ce7;"><tr><th>المخدوم</th><th>المرحلة</th><th>العنوان / المنطقة</th><th>الهاتف</th></tr></thead><tbody>`;
+
+                route.assignedMembers.forEach(m => {
+                    let mPhoneClean = formatWhatsAppPhone(m.phone);
+                    let waLinkForMember = mPhoneClean ? `https://wa.me/${mPhoneClean}?text=${encodeURIComponent(templateText.replace('[الاسم]', m.name))}` : '#';
+                    
+                    whatsappReportToServant += `👤 *${m.name}* (${m.stage || 'سنة أولى'})\n`;
+                    whatsappReportToServant += `📍 العنوان: ${m.address || 'غير مسجل'}\n`;
+                    whatsappReportToServant += `📱 هاتف: ${m.phone || 'غير مسجل'}\n`;
+                    whatsappReportToServant += `💬 رسالة الواتس الجاهزة:\nhttps://wa.me/${mPhoneClean}?text=${encodeURIComponent(templateText.replace('[الاسم]', m.name))}\n`;
+                    whatsappReportToServant += `-----------------------\n`;
+
+                    tableHtml += `
+                        <tr>
+                            <td data-label="المخدوم"><strong>${escapeHtml(m.name)}</strong></td>
+                            <td data-label="المرحلة">${escapeHtml(m.stage)}</td>
+                            <td data-label="العنوان">${escapeHtml(m.address) || '-'}</td>
+                            <td data-label="تواصل"><a href="${waLinkForMember}" target="_blank" class="btn-mini btn-success">مراسلة مباشرة 💬</a></td>
+                        </tr>
+                    `;
+                });
+                
+                tableHtml += `</tbody></table>`;
+
+                let sendToServantLink = servantPhone ? `https://wa.me/${servantPhone}?text=${encodeURIComponent(whatsappReportToServant)}` : '#';
+
+                let cardHtml = `
+                    <div style="background:#fff; border:1px solid #dfe6e9; border-left:4px solid var(--purple); border-radius:8px; padding:12px; box-shadow:0 2px 5px rgba(0,0,0,0.03);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <strong style="font-size:15px; color:var(--dark);">👔 الخادم: ${escapeHtml(route.servant.name)}</strong>
+                                <div style="font-size:12px; color:#636e72; margin-top:4px;">مُكلّف بافتقاد (${route.assignedMembers.length}) مخدومين في مناطقه الجغرافية المحددة.</div>
+                            </div>
+                            <a href="${sendToServantLink}" target="_blank" class="btn-mini btn-purple" style="padding:8px 12px; font-size:12px;">إرسال التكليف للخادم (WhatsApp) 📤</a>
+                        </div>
+                        ${tableHtml}
+                    </div>
+                `;
+                routesContainer.innerHTML += cardHtml;
+            });
+
+            if (!hasAssignments) {
+                routesContainer.innerHTML = '<div class="empty-state">لم يتم تعيين أي افتقادات لعدم وجود بيانات.</div>';
+            }
+
+            document.getElementById('visitationResultsContainer').style.display = 'block';
+            logActivity("توليد كشوف افتقاد", "فرز الغائبين", `فرز غياب يوم ${targetDate}`);
+            showToast("✅ تم توليد وتوزيع الافتقادات جغرافياً بنجاح!");
+        }
+
+        // ==========================================
+        // باقي الدوال (الحضور، الكويزات، البروفايل، الخ...) لم تتغير. 
+        // ==========================================
+        function buildSequentialSyllabus({ stage = "سنة أولى", startDateStr, mode = "single", includeQuiz = true, examBreaks = [] }) {
+            let subjects = CURRICULUM_MATRIX[stage] || CURRICULUM_MATRIX["سنة أولى"];
+            let newEvents = [];
+            let curDate = new Date(startDateStr);
+            while (curDate.getDay() !== 5) curDate.setDate(curDate.getDate() + 1);
+
+            function getNextFriday(d) {
+                let nxt = new Date(d);
+                nxt.setDate(nxt.getDate() + 7);
+                let iso = nxt.toISOString().slice(0, 10);
+                if (examBreaks.includes(iso)) {
+                    newEvents.push({ id: Date.now() + Math.floor(Math.random()*10000), type: "توقف امتحانات", date: iso, title: "⏸️ إجازة جمعة - امتحانات الجامعة", location: "إجازة", stage: stage, responsible: "لجنة التنسيق" });
+                    return getNextFriday(nxt);
+                }
+                return nxt;
+            }
+
+            subjects.forEach((sub) => {
+                for (let w = 1; w <= sub.weeks; w++) {
+                    newEvents.push({ id: Date.now() + Math.floor(Math.random()*10000), type: "محاضرة", date: curDate.toISOString().slice(0, 10), title: `[${sub.title}] - لقاء (${w} من ${sub.weeks})`, subjectCode: sub.code, subjectTitle: sub.title, axis: sub.axis, location: "قاعة إعداد الخدام", stage: stage, responsible: "خادم المادة" });
+                    curDate = getNextFriday(curDate);
+                }
+                if (includeQuiz) {
+                    newEvents.push({ id: Date.now() + Math.floor(Math.random()*10000), type: "امتحان / ورشة", date: curDate.toISOString().slice(0, 10), title: `📝 كويز وتقييم استيعاب مادة: ${sub.title}`, subjectCode: sub.code, subjectTitle: sub.title, location: "قاعة الكورس", stage: stage, responsible: "أمين الخدمة" });
+                    curDate = getNextFriday(curDate);
+                }
+            });
+            return newEvents;
+        }
+
+        function runSequentialSyllabusGenerator() {
+            if (currentPermission !== 'admin') return alert("توليد المناهج متاح لأمين الخدمة فقط!");
+            let stage = document.getElementById('autoStage').value;
+            let startDateStr = document.getElementById('autoStartDate').value;
+            let includeQuiz = document.getElementById('autoIncludeQuiz').checked;
+            let rawBreaks = document.getElementById('autoExamBreaks').value;
+            if (!startDateStr) return alert("يرجى اختيار تاريخ أول جمعة لبدء الكورس!");
+            let examBreaks = rawBreaks ? rawBreaks.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            if (confirm(`سيتم توليد خطة المنهج المتتابع لمرحلة (${stage}). هل تريد المتابعة؟`)) {
+                let generatedEvents = buildSequentialSyllabus({ stage, startDateStr, mode: "single", includeQuiz, examBreaks });
+                masterPlan = masterPlan.filter(ev => ev.stage !== stage);
+                masterPlan = masterPlan.concat(generatedEvents);
+                saveMasterPlan(); renderMasterPlanTable(); checkUpcomingMasterPlanEvents();
+                logActivity("توليد منهج متتابع", stage, `توليد ${generatedEvents.length} محاضرة`);
+                alert(`✅ تم توليد وتسكين (${generatedEvents.length}) لقاء في خطة السنة بنجاح!`);
+            }
+        }
+
+        function getMemberSubjectProgress(memberId, stage) {
+            let subjects = CURRICULUM_MATRIX[stage] || CURRICULUM_MATRIX["سنة أولى"];
+            return subjects.map(sub => {
+                let totalSubLectures = masterPlan.filter(p => p.subjectCode === sub.code && p.type === "محاضرة");
+                let attendedCount = 0;
+                totalSubLectures.forEach(lec => {
+                    let dayList = attendanceRecord[lec.date] || [];
+                    if (dayList.some(a => a.id.toString() === memberId.toString() && !a.isAbsentDueToDelay)) attendedCount++;
+                });
+                let pct = totalSubLectures.length > 0 ? Math.round((attendedCount / totalSubLectures.length) * 100) : 0;
+                return { code: sub.code, title: sub.title, axis: sub.axis, attended: attendedCount, total: totalSubLectures.length, percent: pct, passed: totalSubLectures.length > 0 ? (pct >= sub.minPassAtt) : false };
+            });
+        }
+
+        function renderMemberCurriculumTab(member) {
+            const container = document.getElementById('p_curriculum_cards');
+            if (!container) return;
+            container.innerHTML = '';
+            let progressList = getMemberSubjectProgress(member.id, member.stage || "سنة أولى");
+            if (progressList.length === 0) { container.innerHTML = '<div style="color:#888;">لا توجد مواد مسجلة.</div>'; return; }
+
+            progressList.forEach(item => {
+                let badgeColor = item.total === 0 ? '#b2bec3' : (item.passed ? 'var(--success)' : (item.attended > 0 ? 'var(--warning)' : 'var(--danger)'));
+                let badgeStatus = item.total === 0 ? 'لم تُجدول بعد' : (item.passed ? 'تم الاجتياز ✅' : (item.attended > 0 ? 'قيد المتابعة ⏳' : 'غياب تام ⚠️'));
+                let card = document.createElement('div');
+                card.style.cssText = "background:#fff; border:1px solid #dfe6e9; border-radius:8px; padding:10px; box-shadow:0 1px 3px rgba(0,0,0,0.03);";
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
+                        <strong style="color:var(--primary); font-size:13px;">${escapeHtml(item.title)}</strong>
+                        <span class="role-badge" style="background:${badgeColor}; font-size:10px;">${badgeStatus}</span>
+                    </div>
+                    <div style="font-size:11px; color:#636e72; margin-bottom:4px;">
+                        المحور: ${escapeHtml(item.axis)} | الحضور: <strong>${item.attended} من ${item.total}</strong> لقاء (${item.percent}%)
+                    </div>
+                    <div class="progress-bar-container" style="height:8px;">
+                        <div class="progress-bar" style="width:${item.percent}%; background:${badgeColor};"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // التشغيل الأولي StartUp
+        // ==========================================
+        checkInAppBrowser();
+        applyServiceBranding();
+        checkSession();
+        initFirebase();
+        maybeRunAutoBackup();
+        renderMaterialsList();
+
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>خدمتي برو الذكي - كورس إعداد الخدام</title>
+    <meta name="theme-color" content="#1e3799">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+    
+    <style>
+        :root { --primary: #1e3799; --accent: #0984e3; --success: #00b894; --danger: #d63031; --warning: #e17055; --purple: #6c5ce7; --dark: #2d3436; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f2f6; margin: 0; padding: clamp(6px, 2vw, 15px); color: var(--dark); -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1040px; width: 100%; margin: auto; background: white; padding: clamp(10px, 3vw, 20px); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2, h3 { color: var(--primary); margin-top: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: clamp(16px, 4vw, 20px); }
+        .header-title { text-align: center; margin-bottom: 12px; }
+        .header-title h1 { margin: 0; font-size: clamp(18px, 4.5vw, 22px); color: var(--primary); }
+        .header-title p { margin: 3px 0 0 0; color: #636e72; font-size: clamp(11px, 3vw, 13px); font-weight: bold; }
+        .role-bar { display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: clamp(11px, 2.5vw, 13px); flex-wrap: wrap; gap: 6px; }
+        .role-badge { background: var(--accent); padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+        .cloud-status { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dfe6e9; margin-left: 5px; transition: 0.3s; }
+        .cloud-connected { background: #55efc4; box-shadow: 0 0 6px #55efc4; }
+        .cloud-offline { background: #e17055; box-shadow: 0 0 6px #e17055; }
+        .cloud-health-badge { background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tab-btn { flex: 1 1 calc(33% - 5px); padding: 10px 6px; background: #dfe6e9; color: #333; text-align: center; border-radius: 8px; cursor: pointer; font-weight: bold; min-width: 80px; font-size: clamp(11px, 2.5vw, 13px); transition: 0.2s; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: #f8f9fa; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
+        .stat-card .num { font-size: clamp(18px, 4vw, 24px); font-weight: bold; color: var(--accent); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: var(--dark); min-height: 22px; display: flex; align-items: center; }
+        input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-size: 14px; font-family: inherit; }
+        button { width: 100%; padding: 12px; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 6px; transition: 0.2s; }
+        .btn-primary { background: var(--accent); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--warning); }
+        .btn-purple { background: var(--purple); }
+        .btn-mini { padding: 5px 10px; border-radius: 4px; color: white; font-size: 11px; text-decoration: none; display: inline-block; cursor: pointer; font-weight: bold; border: none; }
+        .capsule-btn { display: inline-block; background: #dfe6e9; color: #2d3436; border-radius: 20px; padding: 6px 12px; font-size: 12px; margin: 3px; cursor: pointer; border: 1px solid #b2bec3; font-weight: bold; }
+        .capsule-btn:hover, .capsule-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .progress-bar-container { background: #e2e8f0; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; margin-top: 4px; }
+        .progress-bar { height: 100%; border-radius: 10px; transition: width 0.4s; }
+        .plan-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
+        .tag-lecture { background: #0984e3; }
+        .tag-trip { background: #00b894; }
+        .tag-camp { background: #6c5ce7; }
+        .tag-retreat { background: #e17055; }
+        .tag-grad { background: #d63031; }
+        .tag-quiz { background: #fdcb6e; color: #2d3436; }
+        .tag-exam-break { background: #b2bec3; color: #2d3436; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: clamp(11px, 2.5vw, 13px); white-space: nowrap; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
+        th { background: var(--primary); color: white; }
+        .empty-state { color: #888; padding: 15px; text-align: center; font-size: 12px; }
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            .adaptive-card-table thead { display: none; }
+            .adaptive-card-table, .adaptive-card-table tbody, .adaptive-card-table tr, .adaptive-card-table td { display: block; width: 100%; white-space: normal !important; }
+            .adaptive-card-table tr { background: #fff; margin-bottom: 12px; border: 1px solid #dcdde1; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); padding: 8px; }
+            .adaptive-card-table td { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 6px 10px; border: none; border-bottom: 1px solid #f1f2f6; font-size: 13px; }
+            .adaptive-card-table td:last-child { border-bottom: none; }
+            .adaptive-card-table td::before { content: attr(data-label); font-weight: bold; color: var(--primary); text-align: right; margin-left: 10px; }
+        }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
+        .modal-content { background: #fff; width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; position: relative; box-sizing: border-box; }
+        .close-btn { position: absolute; left: 15px; top: 15px; font-size: 24px; cursor: pointer; color: #888; font-weight: bold; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; gap: 5px; flex-wrap: wrap; }
+        .info-label { color: #7f8c8d; font-weight: bold; }
+        .profile-tab-content { display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #reader { width: 100%; max-width: 320px; min-height: 250px; margin: auto; border: 2px dashed var(--accent); border-radius: 8px; overflow: hidden; background: #000; }
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 15px; }
+        .login-card { background: white; padding: clamp(15px, 4vw, 30px); border-radius: 12px; width: 100%; max-width: 380px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #toastMessage { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--success); color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: bold; font-size: 15px; z-index: 9999; opacity: 0; visibility: hidden; transition: 0.3s; text-align: center; width: 90%; max-width: 300px; }
+        #toastMessage.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+        #pendingSyncBadge { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--warning); color: white; padding: 10px 18px; border-radius: 30px; box-shadow: 0 4px 15px rgba(225, 112, 85, 0.4); z-index: 5000; display: none; font-weight: bold; font-size: 13px; align-items: center; gap: 8px; cursor: pointer; width: 90%; max-width: 350px; justify-content: center; }
+        #dangerSyncWarningBar { display: none; background: #d63031; color: white; text-align: center; padding: 8px 12px; font-size: 12px; font-weight: bold; position: sticky; top: 0; z-index: 9998; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        #kioskCard { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffffff; border-radius: 18px; box-shadow: 0 15px 40px rgba(0,0,0,0.35); padding: 20px; text-align: center; z-index: 99999; width: 90%; max-width: 380px; border: 3px solid var(--accent); animation: popIn 0.3s ease-out; }
+        @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        .live-scanner-container { background: #fff; border-radius: 16px; border: 2px solid #dcdde1; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); margin-top: 10px; }
+        .live-stream-header { display: flex; justify-content: space-between; align-items: center; background: #eaf2f8; padding: 8px 14px; border-radius: 8px; margin-top: 15px; font-weight: bold; color: var(--primary); }
+        .live-cards-feed { max-height: 280px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+        .live-scan-card { display: flex; justify-content: space-between; align-items: center; background: #fdfefe; border: 1px solid #dfe6e9; border-left: 5px solid var(--success); padding: 10px 14px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); animation: slideInDown 0.3s ease-out; }
+        @keyframes slideInDown { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } }
+        .live-scan-index { background: #edf2f7; color: var(--primary); font-weight: bold; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <div id="dangerSyncWarningBar">⚠️ تنبيه أمني: توجد حركات حضور لم تُرفع للسحابة بعد! برجاء عدم إغلاق الصفحة لحين عودة النت ومزامنتها.</div>
+
+    <div id="toastMessage">تم تسجيل الحضور بنجاح</div>
+
+    <div id="kioskCard">
+        <div id="kioskIcon" style="font-size:45px; margin-bottom:10px;">👋</div>
+        <h2 id="kioskName" style="margin:0 0 8px 0; color:var(--primary); font-size:20px; border:none;">...</h2>
+        <div id="kioskBadge" style="display:inline-block; padding:4px 12px; border-radius:20px; font-weight:bold; font-size:12px; margin-bottom:10px; color:white;">...</div>
+        <div id="kioskStats" style="font-size:13px; color:#2d3436; margin-top:8px; line-height:1.5;">...</div>
+        <div id="kioskReflectionBox" style="margin-top:10px;"></div>
+    </div>
+
+    <div id="pendingSyncBadge" onclick="pushPendingData()">
+        <span>🔄</span> <span id="pendingSyncText">يوجد تعديلات بانتظار الإنترنت</span>
+    </div>
+
+    <!-- شاشة تسجيل الدخول -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <h2 id="loginChurchDisplay" style="margin-top:0; border:none; color:var(--primary);">كنيسة الملاك والروماني بالمطرية</h2>
+            <p id="loginServiceDisplay" style="font-size:12px; color:#636e72; margin-bottom:18px;">اجتماع القديس بولس الرسول لإعداد الخدام</p>
+            <input type="text" id="loginUsername" placeholder="اسم الخادم (أو admin)" style="margin-bottom:12px;" autocomplete="off">
+            <input type="password" id="loginPassword" placeholder="كلمة المرور أو رقم الهاتف" style="margin-bottom:12px;" autocomplete="off">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; text-align:right; font-size:13px;">
+                <input type="checkbox" id="rememberMeCheck" checked style="width:18px; height:18px; margin:0;">
+                <label for="rememberMeCheck" style="cursor:pointer; font-weight:bold; color:#2d3436;">تذكرني والبقاء مسجل الدخول دائماً</label>
+            </div>
+            <button class="btn-primary" onclick="attemptLogin()">تسجيل الدخول</button>
+            <div id="loginError" style="color:red; font-size:12px; margin-top:10px; display:none;">بيانات الدخول غير صحيحة!</div>
+            <div style="margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px;">
+                <button type="button" onclick="location.reload(true)" style="background: none; border: none; color: #7f8c8d; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;">🔄 تحديث التطبيق</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp" style="display:none;">
+        <div class="header-title">
+            <h1 id="appChurchName">كنيسة الملاك والروماني بالمطرية</h1>
+            <p id="appServiceName">اجتماع القديس بولس الرسول لإعداد الخدام</p>
+        </div>
+
+        <div class="role-bar">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <div>
+                    <span id="cloudIndicator" class="cloud-status"></span>
+                    <span id="cloudStatusText">جاري الاتصال...</span>
+                </div>
+                <div id="cloudLastSyncBadge" class="cloud-health-badge" style="display:none;">
+                    ⏱️ <span id="cloudLastSyncTime">لم يتم الرفع بعد</span>
+                </div>
+            </div>
+            <div>
+                المستخدم: <strong id="loggedInUserName">...</strong> 
+                (<span id="currentRoleBadge" class="role-badge">خادم</span>)
+                <a href="#" onclick="logout()" style="color:#ff7675; margin-right:8px; text-decoration:none; font-weight:bold;">[خروج]</a>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <button class="btn-mini btn-success" onclick="exportTodaySessionToWhatsApp()" style="flex:1; padding:8px;">📲 إرسال كود طوارئ اليوم لأمين الخدمة (WhatsApp)</button>
+            <button class="btn-mini btn-purple admin-only" onclick="importFromEmergencyCode()" style="flex:1; padding:8px;">📥 استيراد ودمج كود طوارئ الحضور</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab-btn active" onclick="switchTab('dashTab', this)">الرئيسية 📊</div>
+            <div class="tab-btn" onclick="switchTab('planTab', this)">خطة السنة 🗓️</div>
+            <div class="tab-btn" onclick="switchTab('materialsTab', this)">مكتبة المواد 📚</div>
+            <div class="tab-btn can-attend" onclick="switchTab('attendanceTab', this)">تسجيل الحضور 📷</div>
+            <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">سجل الخدام 📋</div>
+            <div class="tab-btn" onclick="switchTab('membersTab', this)">الدارسين والمخدومين 👥</div>
             <div class="tab-btn admin-or-servant" onclick="switchTab('broadcastTab', this)">واتساب جماعي 📲</div>
             <div class="tab-btn admin-only" onclick="switchTab('servantsTab', this)">إدارة الخدام ⚙️</div>
             <div class="tab-btn admin-only" onclick="switchTab('rolloverTab', this)">أرشفة وتخريج 🎓</div>
