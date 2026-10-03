@@ -182,6 +182,7 @@
         .tag-camp { background: #6c5ce7; }
         .tag-retreat { background: #e17055; }
         .tag-grad { background: #d63031; }
+        .tag-exam { background: #e67e22; }
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: clamp(11px, 2.5vw, 13px); white-space: nowrap; }
         th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
@@ -334,6 +335,7 @@
         <div class="tabs">
             <div class="tab-btn active" onclick="switchTab('dashTab', this)">الرئيسية 📊</div>
             <div class="tab-btn" onclick="switchTab('planTab', this)">خطة السنة 🗓️</div>
+            <div class="tab-btn" onclick="switchTab('coursesTab', this)">المواد والامتحانات 🎓</div>
             <div class="tab-btn" onclick="switchTab('materialsTab', this)">مكتبة المواد 📚</div>
             <div class="tab-btn can-attend" onclick="switchTab('attendanceTab', this)">تسجيل الحضور 📷</div>
             <div class="tab-btn" onclick="switchTab('servantsAttendanceTab', this)">سجل الخدام 📋</div>
@@ -348,6 +350,8 @@
         </div>
 
         <!-- مكتبة المواد -->
+        <div id="coursesTab" class="tab-content"></div>
+
         <div id="materialsTab" class="tab-content">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <h2>📚 مكتبة مواد الكورس</h2>
@@ -451,6 +455,7 @@
                             <option value="مؤتمر">مؤتمر روحي (بونص ⭐)</option>
                             <option value="يوم خلوة">يوم خلوة وصلاة (بونص ⭐)</option>
                             <option value="يوم رياضي">يوم رياضي / مهرجان (بونص ⭐)</option>
+                            <option value="امتحان">امتحان / كويز 📝</option>
                             <option value="حفل تخرج">حفل تخرج واجتياز الدورة</option>
                         </select>
                     </div>
@@ -1244,7 +1249,8 @@
                 servantsAttendance: servantsAttendance || {},
                 masterPlan: masterPlan || [],
                 auditLogs: auditLogs || [],
-                settings: settings || {}
+                settings: settings || {},
+                coursesModule: (window.CoursesModule ? CoursesModule.exportState() : null)
             };
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
             let downloadAnchor = document.createElement('a');
@@ -1275,6 +1281,10 @@
                         masterPlan = imported.masterPlan || [];
                         auditLogs = imported.auditLogs || [];
                         settings = Object.assign({}, settings, imported.settings || {});
+                        if (imported.coursesModule && window.CoursesModule) {
+                            CoursesModule.importState(imported.coursesModule);
+                            syncToCloud('courses_module', imported.coursesModule);
+                        }
 
                         localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(members));
                         localStorage.setItem(STORAGE_KEYS.SERVANTS, JSON.stringify(servants));
@@ -1554,12 +1564,22 @@
             });
 
             let percent = Math.round((fridayAttended / totalFridays) * 100);
+            let examInfo = { required: false, ok: true, result: 'none' };
+            try {
+                if (window.CoursesModule) {
+                    let mm = members.find(x => x.id.toString() === memberId.toString());
+                    examInfo = CoursesModule.graduationInfo(String(memberId), mm ? mm.stage : 'سنة أولى');
+                }
+            } catch (e) {}
             return {
                 percent: Math.min(100, percent),
-                qualified: percent >= 75,
+                qualified: percent >= 75 && examInfo.ok,
                 attended: fridayAttended,
                 total: totalFridays,
-                bonus: bonusPoints
+                bonus: bonusPoints,
+                examsRequired: examInfo.required,
+                examsOk: examInfo.ok,
+                examsResult: examInfo.result
             };
         }
 
@@ -2782,7 +2802,7 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا توجد فعاليات مسجلة في الخطة حالياً.</td></tr>';
                 return;
             }
-            const tagClasses = { 'محاضرة': 'tag-lecture', 'رحلة': 'tag-trip', 'مؤتمر': 'tag-camp', 'يوم خلوة': 'tag-retreat', 'يوم رياضي': 'tag-trip', 'حفل تخرج': 'tag-grad' };
+            const tagClasses = { 'محاضرة': 'tag-lecture', 'رحلة': 'tag-trip', 'مؤتمر': 'tag-camp', 'يوم خلوة': 'tag-retreat', 'يوم رياضي': 'tag-trip', 'حفل تخرج': 'tag-grad', 'امتحان': 'tag-exam' };
 
             list.forEach(item => {
                 let tagClass = tagClasses[item.type] || 'tag-lecture';
@@ -4053,6 +4073,10 @@
                         }
                     });
 
+                    db.ref('courses_module').on('value', snap => {
+                        if (shouldAcceptCloudData('courses_module') && window.CoursesModule) CoursesModule.applyCloud(snap.val());
+                    });
+
                     db.ref(`audit_logs/${today}`).on('value', snap => {
                         let val = snap.val();
                         if (val) {
@@ -4080,6 +4104,7 @@
             if (tabId !== 'attendanceTab') stopCamera();
             if (tabId === 'servantsAttendanceTab') renderServantsAttendanceTable();
             if (tabId === 'planTab') renderMasterPlanTable();
+            if (tabId === 'coursesTab' && window.CoursesModule) CoursesModule.render();
             if (tabId === 'servantsTab') renderServantsTable();
             if (tabId === 'auditTab') renderAuditLogTable();
             if (tabId === 'rolloverTab') renderRolloverCandidateList();
@@ -4266,6 +4291,7 @@
                 else if (path === 'settings') localData = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
                 else if (path === 'course_materials') localData = JSON.parse(localStorage.getItem('khedmety_course_materials'));
                 else if (path === 'self_reflections') localData = JSON.parse(localStorage.getItem('khedmety_self_reflections'));
+                else if (path === 'courses_module') localData = JSON.parse(localStorage.getItem('khedmety_courses_module'));
 
                 if (localData !== null) {
                     db.ref(path).set(localData).then(() => {
@@ -4629,7 +4655,7 @@
                     <td data-label="كود"><strong>${escapeHtml(m.code) || escapeHtml(m.id)}</strong></td>
                     <td data-label="الاسم"><strong>${escapeHtml(m.name)}</strong></td>
                     <td data-label="المرحلة الحالية">${escapeHtml(m.stage) || 'سنة أولى'}</td>
-                    <td data-label="نسبة الحضور"><span style="font-weight:bold; color:${isQualified ? 'green' : 'orange'};">${grad.percent}%</span> (${grad.attended}/${grad.total} جمعة)</td>
+                    <td data-label="نسبة الحضور"><span style="font-weight:bold; color:${isQualified ? 'green' : 'orange'};">${grad.percent}%</span> (${grad.attended}/${grad.total} جمعة)${grad.examsRequired ? (grad.examsOk ? ' — الامتحانات ✅' : ' — الامتحانات ❌') : ''}</td>
                     <td data-label="الحالة">${isQualified ? '<span class="role-badge" style="background:var(--success);">مؤهل للتخرج 🎓</span>' : '<span class="role-badge" style="background:var(--warning);">غير مؤهل (&lt;75%)</span>'}</td>
                 `;
                 tbody.appendChild(tr);
@@ -5023,6 +5049,377 @@
         renderAuditLogTable();
         renderRolloverCandidateList();
         renderAttendanceCalendar();
+    </script>
+    <script>
+// ==========================================
+// 51. المواد والكتل والامتحانات (دراسة متتابعة)
+// ==========================================
+(function () {
+  'use strict';
+  var LS_KEY = 'khedmety_courses_module';
+  var STAGES = { 1: 'سنة أولى', 2: 'سنة ثانية' };
+  var ui = { view: 'courses', year: 1, examBlock: null };
+
+  function defaults() {
+    return { courses: [], blocks: [], grades: {},
+      settings: { start: { 1: '', 2: '' }, weekday: 5, pattern: '2,2,3', skip: '', max: 100, passPct: 50, requireExams: false },
+      updatedAt: 0 };
+  }
+  function norm(v) {
+    var d = defaults(); v = v || {};
+    d.courses = (Array.isArray(v.courses) ? v.courses : Object.values(v.courses || {})).filter(Boolean);
+    d.blocks = (Array.isArray(v.blocks) ? v.blocks : Object.values(v.blocks || {})).filter(Boolean).map(function (b) {
+      b.courseIds = Array.isArray(b.courseIds) ? b.courseIds : Object.values(b.courseIds || {}); return b; });
+    d.grades = v.grades || {};
+    var s = v.settings || {};
+    d.settings = Object.assign(d.settings, s);
+    d.settings.start = Object.assign({ 1: '', 2: '' }, s.start || {});
+    d.updatedAt = v.updatedAt || 0;
+    return d;
+  }
+  var state;
+  try { state = norm(JSON.parse(localStorage.getItem(LS_KEY))); } catch (e) { state = defaults(); }
+
+  function save() {
+    state.updatedAt = Date.now();
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    try {
+      if (isFirebaseActive && db) {
+        db.ref('courses_module').set(state).catch(function () { syncToCloud('courses_module', state); });
+      } else { syncToCloud('courses_module', state); }
+    } catch (e) {}
+  }
+  function canEdit() { return currentPermission === 'admin' || currentPermission === 'developer' || currentPermission === 'full'; }
+  function esc(s) { return (typeof escapeHtml === 'function') ? escapeHtml(String(s == null ? '' : s)) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function uid(p) { return p + '_' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36); }
+  function parseDate(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12); }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function coursesOf(y) { return state.courses.filter(function (c) { return c.year === y; }); }
+  function blocksOf(y) { return state.blocks.filter(function (b) { return b.year === y; }); }
+  function courseById(id) { return state.courses.filter(function (c) { return c.id === id; })[0]; }
+  function yearOfStage(st) { return (st || 'سنة أولى') === 'سنة ثانية' ? 2 : 1; }
+
+  function membersOfYear(y) {
+    return (members || []).filter(function (m) { return yearOfStage(m.stage) === y; })
+      .map(function (m) { return { id: String(m.id), code: m.code || m.id, name: m.name || '' }; });
+  }
+
+  /* ---------- الكتل والخطة ---------- */
+  function rebuildBlocks(y) {
+    var sizes = String(state.settings.pattern || '2').split(/[,\s،]+/).map(Number).filter(function (n) { return n > 0; });
+    if (!sizes.length) sizes = [2];
+    var list = coursesOf(y), i = 0, k = 0, out = [];
+    while (i < list.length) {
+      var n = sizes[Math.min(k, sizes.length - 1)];
+      out.push({ id: uid('blk'), year: y, courseIds: list.slice(i, i + n).map(function (c) { return c.id; }) });
+      i += n; k++;
+    }
+    state.blocks = state.blocks.filter(function (b) { return b.year !== y; }).concat(out);
+  }
+  function schedule(y) {
+    var s = state.settings;
+    if (!s.start[y]) return [];
+    var skip = {};
+    String(s.skip || '').split(/[\s,،]+/).filter(Boolean).forEach(function (x) { skip[x] = 1; });
+    var d = parseDate(s.start[y]);
+    while (d.getDay() !== Number(s.weekday)) d.setDate(d.getDate() + 1);
+    function next() { var x; do { x = iso(d); d.setDate(d.getDate() + 7); } while (skip[x]); return x; }
+    var rows = [];
+    blocksOf(y).forEach(function (b, bi) {
+      var cs = b.courseIds.map(courseById).filter(Boolean);
+      cs.forEach(function (c) {
+        for (var i = 1; i <= c.weeks; i++) rows.push({ date: next(), type: 'محاضرة', title: c.name + ' (' + i + '/' + c.weeks + ')', stage: STAGES[y], who: c.lecturer || '' });
+      });
+      if (cs.length) rows.push({ date: next(), type: 'امتحان', title: 'امتحان الكتلة ' + (bi + 1) + ': ' + cs.map(function (c) { return c.name; }).join(' + '), stage: STAGES[y], who: '' });
+    });
+    return rows;
+  }
+  function blockLabel(b, i) {
+    return 'الكتلة ' + (i + 1) + ': ' + b.courseIds.map(function (id) { var c = courseById(id); return c ? c.name : '؟'; }).join(' + ');
+  }
+
+  /* ---------- الدرجات والنتائج ---------- */
+  function passMark() { return (Number(state.settings.max) || 100) * (Number(state.settings.passPct) || 50) / 100; }
+  function statusOf(blockId, mid) {
+    var g = (state.grades[blockId] || {})[mid];
+    if (g === undefined || g === null || g === '') return 'none';
+    return Number(g) >= passMark() ? 'pass' : 'fail';
+  }
+  function yearResult(y, mid) {
+    var bl = blocksOf(y);
+    if (!bl.length) return 'none';
+    var res = bl.map(function (b) { return statusOf(b.id, String(mid)); });
+    if (res.indexOf('fail') > -1) return 'fail';
+    if (res.indexOf('none') > -1) return 'pending';
+    return 'pass';
+  }
+  // يُستدعى من calculateGraduationStatus
+  function graduationInfo(mid, stage) {
+    var y = yearOfStage(stage), r = yearResult(y, mid);
+    var required = !!state.settings.requireExams && blocksOf(y).length > 0;
+    return { required: required, result: r, ok: !required || r === 'pass' };
+  }
+
+  /* ---------- الواجهة ---------- */
+  function nav() {
+    var items = [['courses', 'المواد 📚'], ['plan', 'الكتل والخطة 🗓️'], ['grades', 'الدرجات ✍️'], ['results', 'النتائج 🏅']];
+    return '<div style="margin-bottom:10px;">' + items.map(function (it) {
+      return '<span class="capsule-btn ' + (ui.view === it[0] ? 'active' : '') + '" onclick="CM.go(\'' + it[0] + '\')">' + it[1] + '</span>';
+    }).join('') + '</div>' +
+      '<div style="margin-bottom:10px;"><label style="font-weight:bold;font-size:13px;">الفرقة: </label>' +
+      '<select style="width:auto;display:inline-block;" onchange="CM.setYear(this.value)">' +
+      '<option value="1"' + (ui.year === 1 ? ' selected' : '') + '>سنة أولى</option>' +
+      '<option value="2"' + (ui.year === 2 ? ' selected' : '') + '>سنة ثانية</option></select></div>';
+  }
+  function progressBanner() {
+    var todayIso = iso(new Date()), rows = schedule(ui.year);
+    if (!rows.length) return '';
+    var up = rows.filter(function (r) { return r.date >= todayIso; })[0];
+    if (!up) return '<div style="background:#e8f8f5;border:1px solid #55efc4;padding:10px;border-radius:8px;margin-bottom:10px;font-size:13px;">✅ انتهت كل محطات خطة ' + STAGES[ui.year] + '.</div>';
+    var ex = rows.filter(function (r) { return r.date >= todayIso && r.type === 'امتحان'; })[0];
+    return '<div style="background:#e8f4fd;border:1px solid #74b9ff;padding:10px;border-radius:8px;margin-bottom:10px;font-size:13px;line-height:1.7;">' +
+      '<strong>المحطة القادمة:</strong> ' + esc(up.date) + ' — ' + esc(up.title) + (up.who ? ' (' + esc(up.who) + ')' : '') +
+      (ex ? '<br><strong>أقرب امتحان:</strong> ' + esc(ex.date) + ' — ' + esc(ex.title) : '') + '</div>';
+  }
+
+  function viewCourses() {
+    var y = ui.year, list = coursesOf(y), ed = canEdit(), h = '';
+    if (ed) {
+      h += '<div style="background:#fdfefe;border:2px dashed var(--primary);padding:12px;border-radius:8px;margin-bottom:12px;">' +
+        '<h4 style="margin:0 0 8px 0;color:var(--primary);">➕ إضافة مادة إلى ' + STAGES[y] + '</h4>' +
+        '<div class="form-grid">' +
+        '<div class="form-group"><label>اسم المادة</label><input id="cm_name" type="text" placeholder="مثال: العقيدة"></div>' +
+        '<div class="form-group"><label>المحاضر</label><input id="cm_lect" type="text" placeholder="اسم الخادم"></div>' +
+        '<div class="form-group"><label>عدد الأسابيع</label><input id="cm_weeks" type="number" min="1" value="4"></div></div>' +
+        '<button class="btn-success" onclick="CM.addCourse()">حفظ المادة</button>' +
+        '<details style="margin-top:6px;"><summary style="font-size:12px;cursor:pointer;">إضافة عدة مواد دفعة واحدة (اسم في كل سطر)</summary>' +
+        '<textarea id="cm_bulk" rows="4" placeholder="العقيدة&#10;الطقوس&#10;الكتاب المقدس"></textarea>' +
+        '<button class="btn-primary" onclick="CM.addBulk()" style="margin-top:6px;">إضافة الكل (٤ أسابيع لكل مادة)</button></details></div>';
+    }
+    if (!list.length) return h + '<div class="empty-state">لا توجد مواد لـ' + STAGES[y] + ' بعد. المطلوب ٧ مواد.</div>';
+    h += '<div style="font-size:12px;color:#636e72;margin-bottom:6px;">عدد المواد: ' + list.length + ' من ٧ — الترتيب هنا هو ترتيب الدراسة.</div>' +
+      '<div class="table-responsive"><table class="adaptive-card-table"><thead><tr><th>#</th><th>المادة</th><th>المحاضر</th><th>الأسابيع</th>' + (ed ? '<th>إجراء</th>' : '') + '</tr></thead><tbody>';
+    list.forEach(function (c, i) {
+      h += '<tr><td data-label="#">' + (i + 1) + '</td><td data-label="المادة">' + esc(c.name) + '</td><td data-label="المحاضر">' + esc(c.lecturer || '—') + '</td><td data-label="الأسابيع">' + c.weeks + '</td>' +
+        (ed ? '<td data-label="إجراء"><button class="btn-mini btn-primary" onclick="CM.move(\'' + c.id + '\',-1)">▲</button> ' +
+          '<button class="btn-mini btn-primary" onclick="CM.move(\'' + c.id + '\',1)">▼</button> ' +
+          '<button class="btn-mini btn-warning" onclick="CM.editCourse(\'' + c.id + '\')">تعديل</button> ' +
+          '<button class="btn-mini btn-danger" onclick="CM.delCourse(\'' + c.id + '\')">حذف</button></td>' : '') + '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function viewPlan() {
+    var y = ui.year, s = state.settings, bl = blocksOf(y), ed = canEdit();
+    var days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    var h = '';
+    if (ed) {
+      h += '<div style="background:#f8f9fa;border:1px solid #dfe6e9;padding:12px;border-radius:8px;margin-bottom:12px;"><div class="form-grid">' +
+        '<div class="form-group"><label>تاريخ بداية الدراسة (' + STAGES[y] + ')</label><input id="cm_start" type="date" value="' + esc(s.start[y]) + '"></div>' +
+        '<div class="form-group"><label>يوم الاجتماع</label><select id="cm_weekday">' +
+        days.map(function (d, i) { return '<option value="' + i + '"' + (Number(s.weekday) === i ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>' +
+        '<div class="form-group"><label>عدد مواد كل كتلة (يتكرر الأخير)</label><input id="cm_pattern" type="text" value="' + esc(s.pattern) + '" placeholder="2,2,3"></div>' +
+        '<div class="form-group"><label>تواريخ توقف (امتحانات الجامعة) YYYY-MM-DD</label><input id="cm_skip" type="text" value="' + esc(s.skip) + '" placeholder="2027-01-08, 2027-01-15"></div></div>' +
+        '<label style="display:flex;gap:6px;align-items:center;font-size:13px;margin:6px 0;"><input type="checkbox" id="cm_req" style="width:auto;" ' + (s.requireExams ? 'checked' : '') + '> اشتراط اجتياز الامتحانات للتخرج (مع حضور ≥٧٥٪)</label>' +
+        '<button class="btn-primary" onclick="CM.savePlanSettings(true)">تقسيم المواد إلى كتل وتوليد الخطة 🚀</button> ' +
+        '<button class="btn-success" onclick="CM.savePlanSettings(false)">حفظ الإعدادات فقط</button></div>';
+    }
+    if (!bl.length) return h + '<div class="empty-state">أضف المواد أولاً ثم اضغط "تقسيم المواد إلى كتل".</div>';
+    h += '<h4 style="color:var(--primary);margin:8px 0;">الكتل</h4>' + bl.map(function (b, i) {
+      return '<div style="background:#fff;border:1px solid #dfe6e9;border-right:4px solid var(--purple);padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:13px;">' + esc(blockLabel(b, i)) + '</div>';
+    }).join('');
+    var rows = schedule(y);
+    if (rows.length) {
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap;"><h4 style="color:var(--primary);margin:0;">الجدول المتتابع (' + rows.length + ' محطة)</h4><div>' +
+        (ed ? '<button class="btn-mini btn-primary" onclick="CM.pushToPlan()">➕ إضافة للخطة السنوية</button> ' : '') +
+        '<button class="btn-mini btn-success" onclick="CM.exportPlan()">📊 Excel</button></div></div>' +
+        '<div class="table-responsive"><table class="adaptive-card-table"><thead><tr><th>التاريخ</th><th>النوع</th><th>العنوان</th><th>المحاضر</th></tr></thead><tbody>' +
+        rows.map(function (r) {
+          return '<tr' + (r.type === 'امتحان' ? ' style="background:#fff3cd;font-weight:bold;"' : '') + '><td data-label="التاريخ">' + esc(r.date) + '</td><td data-label="النوع">' + esc(r.type) + '</td><td data-label="العنوان">' + esc(r.title) + '</td><td data-label="المحاضر">' + esc(r.who || '—') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+    return h;
+  }
+
+  function viewGrades() {
+    var y = ui.year, bl = blocksOf(y), ed = canEdit();
+    if (!bl.length) return '<div class="empty-state">لا توجد كتل بعد. ولّد الخطة أولاً من تبويب "الكتل والخطة".</div>';
+    if (!ui.examBlock || !bl.some(function (b) { return b.id === ui.examBlock; })) ui.examBlock = bl[0].id;
+    var ms = membersOfYear(y), h = '';
+    if (ed) {
+      h += '<div style="background:#f8f9fa;border:1px solid #dfe6e9;padding:10px;border-radius:8px;margin-bottom:10px;"><div class="form-grid">' +
+        '<div class="form-group"><label>الدرجة العظمى</label><input id="cm_max" type="number" value="' + esc(state.settings.max) + '" onchange="CM.saveGradeSettings()"></div>' +
+        '<div class="form-group"><label>نسبة النجاح %</label><input id="cm_pct" type="number" value="' + esc(state.settings.passPct) + '" onchange="CM.saveGradeSettings()"></div></div></div>';
+    }
+    h += '<div class="form-group" style="margin-bottom:10px;"><label>اختر الامتحان</label><select onchange="CM.setBlock(this.value)">' +
+      bl.map(function (b, i) { return '<option value="' + b.id + '"' + (b.id === ui.examBlock ? ' selected' : '') + '>' + esc(blockLabel(b, i)) + '</option>'; }).join('') + '</select></div>';
+    if (!ms.length) return h + '<div class="empty-state">لا يوجد دارسون مسجلون في ' + STAGES[y] + '.</div>';
+    var g = state.grades[ui.examBlock] || {};
+    h += '<div style="font-size:12px;color:#636e72;margin-bottom:6px;">درجة النجاح: ' + passMark() + ' — اترك الخانة فارغة لمن لم يمتحن.</div>' +
+      '<div class="table-responsive"><table class="adaptive-card-table"><thead><tr><th>الكود</th><th>الاسم</th><th>الدرجة</th><th>الحالة</th></tr></thead><tbody>';
+    ms.forEach(function (m) {
+      var st = statusOf(ui.examBlock, m.id);
+      var label = st === 'pass' ? '✅ ناجح' : st === 'fail' ? '❌ راسب (ملحق)' : '— لم يمتحن';
+      var val = g[m.id] === undefined ? '' : g[m.id];
+      h += '<tr><td data-label="الكود">' + esc(m.code) + '</td><td data-label="الاسم">' + esc(m.name) + '</td><td data-label="الدرجة">' +
+        (ed ? '<input type="number" style="width:90px;" value="' + esc(val) + '" onchange="CM.setGrade(\'' + esc(m.id) + '\',this.value)">' : (val === '' ? '—' : esc(val))) +
+        '</td><td data-label="الحالة">' + label + '</td></tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function viewResults() {
+    var y = ui.year, bl = blocksOf(y), ms = membersOfYear(y);
+    if (!bl.length) return '<div class="empty-state">لا توجد كتل بعد.</div>';
+    if (!ms.length) return '<div class="empty-state">لا يوجد دارسون في ' + STAGES[y] + '.</div>';
+    var tag = { pass: '✅ اجتاز', fail: '❌ عليه ملحق', pending: '⏳ لم يكمل', none: '—' };
+    var ok = ms.filter(function (m) { return yearResult(y, m.id) === 'pass'; }).length;
+    var h = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+      '<div style="font-size:13px;font-weight:bold;">اجتازوا كل الامتحانات: ' + ok + ' من ' + ms.length + '</div>' +
+      '<button class="btn-mini btn-success" onclick="CM.exportResults()">📊 Excel</button></div>' +
+      '<div class="table-responsive"><table class="adaptive-card-table"><thead><tr><th>الكود</th><th>الاسم</th>' +
+      bl.map(function (b, i) { return '<th>كتلة ' + (i + 1) + '</th>'; }).join('') + '<th>النتيجة</th></tr></thead><tbody>';
+    ms.forEach(function (m) {
+      h += '<tr><td data-label="الكود">' + esc(m.code) + '</td><td data-label="الاسم">' + esc(m.name) + '</td>' +
+        bl.map(function (b, i) {
+          var v = (state.grades[b.id] || {})[m.id], st = statusOf(b.id, m.id);
+          return '<td data-label="كتلة ' + (i + 1) + '" style="color:' + (st === 'fail' ? 'var(--danger)' : st === 'pass' ? 'var(--success)' : '#888') + ';">' + (v === undefined || v === '' ? '—' : esc(v)) + '</td>';
+        }).join('') + '<td data-label="النتيجة">' + tag[yearResult(y, m.id)] + '</td></tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function render() {
+    var el = document.getElementById('coursesTab');
+    if (!el) return;
+    var body = ui.view === 'plan' ? viewPlan() : ui.view === 'grades' ? viewGrades() : ui.view === 'results' ? viewResults() : viewCourses();
+    el.innerHTML = '<h2>🎓 المواد والكتل والامتحانات</h2>' +
+      '<p style="font-size:12px;color:#636e72;margin-top:0;">دراسة متتابعة: كل كتلة (٢ أو ٣ مواد) يعقبها امتحان، ثم الكتلة التالية.</p>' +
+      nav() + progressBanner() + body;
+  }
+  function xlsx(rows, headers, name) {
+    if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محمّلة.'); return; }
+    var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows)), wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, name);
+  }
+  function guard() { if (!canEdit()) { alert('هذه العملية متاحة للأدمن والخادم المتكامل فقط.'); return false; } return true; }
+
+  window.CM = {
+    go: function (v) { ui.view = v; render(); },
+    setYear: function (v) { ui.year = Number(v); ui.examBlock = null; render(); },
+    setBlock: function (v) { ui.examBlock = v; render(); },
+    addCourse: function () {
+      if (!guard()) return;
+      var n = document.getElementById('cm_name').value.trim();
+      if (!n) { showToast('اكتب اسم المادة', true); return; }
+      state.courses.push({ id: uid('crs'), year: ui.year, name: n, lecturer: document.getElementById('cm_lect').value.trim(),
+        weeks: Math.max(1, parseInt(document.getElementById('cm_weeks').value, 10) || 4) });
+      save(); render(); showToast('تمت إضافة المادة');
+    },
+    addBulk: function () {
+      if (!guard()) return;
+      var lines = document.getElementById('cm_bulk').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+      if (!lines.length) return;
+      lines.forEach(function (n) { state.courses.push({ id: uid('crs'), year: ui.year, name: n, lecturer: '', weeks: 4 }); });
+      save(); render(); showToast('تمت إضافة ' + lines.length + ' مادة');
+    },
+    editCourse: function (id) {
+      if (!guard()) return;
+      var c = courseById(id); if (!c) return;
+      var n = prompt('اسم المادة:', c.name); if (n === null) return;
+      var l = prompt('المحاضر:', c.lecturer || ''); if (l === null) return;
+      var w = prompt('عدد الأسابيع:', c.weeks); if (w === null) return;
+      c.name = n.trim() || c.name; c.lecturer = l.trim(); c.weeks = Math.max(1, parseInt(w, 10) || c.weeks);
+      save(); render();
+    },
+    delCourse: function (id) {
+      if (!guard()) return;
+      if (!confirm('حذف المادة؟ سيتم إلغاء الكتل الحالية لهذه الفرقة لإعادة توليدها.')) return;
+      var c = courseById(id); if (!c) return;
+      state.courses = state.courses.filter(function (x) { return x.id !== id; });
+      state.blocks = state.blocks.filter(function (b) { return b.year !== c.year; });
+      save(); render();
+    },
+    move: function (id, dir) {
+      if (!guard()) return;
+      var c = courseById(id); if (!c) return;
+      var idxs = []; state.courses.forEach(function (x, i) { if (x.year === c.year) idxs.push(i); });
+      var pos = idxs.indexOf(state.courses.indexOf(c)), tgt = pos + dir;
+      if (tgt < 0 || tgt >= idxs.length) return;
+      var a = idxs[pos], b = idxs[tgt], t = state.courses[a]; state.courses[a] = state.courses[b]; state.courses[b] = t;
+      state.blocks = state.blocks.filter(function (x) { return x.year !== c.year; });
+      save(); render();
+    },
+    savePlanSettings: function (rebuild) {
+      if (!guard()) return;
+      var s = state.settings;
+      s.start[ui.year] = document.getElementById('cm_start').value;
+      s.weekday = Number(document.getElementById('cm_weekday').value);
+      s.pattern = document.getElementById('cm_pattern').value.trim() || '2';
+      s.skip = document.getElementById('cm_skip').value.trim();
+      s.requireExams = document.getElementById('cm_req').checked;
+      if (rebuild) {
+        if (!coursesOf(ui.year).length) { showToast('أضف المواد أولاً', true); return; }
+        if (blocksOf(ui.year).length && !confirm('إعادة التقسيم ستستبدل الكتل الحالية (الدرجات المسجلة للكتل القديمة لن تظهر). متابعة؟')) return;
+        rebuildBlocks(ui.year);
+      }
+      save(); render(); showToast(rebuild ? 'تم توليد الكتل والخطة' : 'تم الحفظ');
+    },
+    pushToPlan: function () {
+      if (!guard()) return;
+      var rows = schedule(ui.year); if (!rows.length) return;
+      var added = 0;
+      rows.forEach(function (r) {
+        var dup = masterPlan.some(function (e) { return e.date === r.date && e.title === r.title && e.stage === r.stage; });
+        if (dup) return;
+        masterPlan.push({ id: Date.now() + Math.floor(Math.random() * 100000), type: r.type, date: r.date, title: r.title,
+          location: 'الكنيسة', stage: r.stage, responsible: r.who || 'غير محدد' });
+        added++;
+      });
+      saveMasterPlan();
+      renderMasterPlanTable();
+      if (typeof checkUpcomingMasterPlanEvents === 'function') checkUpcomingMasterPlanEvents();
+      if (typeof logActivity === 'function') logActivity('توليد خطة المواد', STAGES[ui.year], 'تمت إضافة ' + added + ' فعالية للخطة');
+      alert('✅ تمت إضافة ' + added + ' فعالية إلى خطة السنة' + (added < rows.length ? ' (تم تجاهل المكرر).' : '.'));
+    },
+    exportPlan: function () {
+      var rows = schedule(ui.year).map(function (r) { return [r.type, r.date, r.title, 'الكنيسة', r.stage, r.who]; });
+      xlsx(rows, ['النوع', 'التاريخ (YYYY-MM-DD)', 'عنوان الفعالية', 'المكان', 'المرحلة', 'المسؤول / المحاضر'], 'خطة_المواد_' + STAGES[ui.year] + '.xlsx');
+    },
+    saveGradeSettings: function () {
+      if (!guard()) return;
+      state.settings.max = Number(document.getElementById('cm_max').value) || 100;
+      state.settings.passPct = Number(document.getElementById('cm_pct').value) || 50;
+      save(); render();
+    },
+    setGrade: function (mid, v) {
+      if (!guard()) return;
+      if (!state.grades[ui.examBlock]) state.grades[ui.examBlock] = {};
+      if (v === '') delete state.grades[ui.examBlock][mid]; else state.grades[ui.examBlock][mid] = Number(v);
+      save(); render();
+    },
+    exportResults: function () {
+      var y = ui.year, bl = blocksOf(y), ms = membersOfYear(y);
+      var names = { pass: 'اجتاز', fail: 'عليه ملحق', pending: 'لم يكمل', none: '' };
+      var rows = ms.map(function (m) {
+        return [m.code, m.name].concat(bl.map(function (b) { var v = (state.grades[b.id] || {})[m.id]; return v === undefined ? '' : v; })).concat([names[yearResult(y, m.id)]]);
+      });
+      xlsx(rows, ['الكود', 'الاسم'].concat(bl.map(function (b, i) { return 'كتلة ' + (i + 1); })).concat(['النتيجة']), 'نتائج_' + STAGES[y] + '.xlsx');
+    }
+  };
+
+  window.CoursesModule = {
+    render: render,
+    graduationInfo: graduationInfo,
+    exportState: function () { return state; },
+    importState: function (v) { state = norm(v); localStorage.setItem(LS_KEY, JSON.stringify(state)); render(); },
+    applyCloud: function (v) {
+      if (v) { state = norm(v); localStorage.setItem(LS_KEY, JSON.stringify(state)); render(); }
+    }
+  };
+  render();
+})();
     </script>
 </body>
 </html>
