@@ -1,4 +1,4 @@
-const CACHE_NAME = 'khedmety-pro-v9';
+const CACHE_NAME = 'khedmety-pro-v10';
 
 // قائمة الملفات الأساسية والمكتبات الخارجية المطلوبة أوفلاين
 const ASSETS_TO_CACHE = [
